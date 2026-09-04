@@ -1,2400 +1,1871 @@
-/* =====================================================
-   TENNISPILOT
-   Connected Coach + Player Demo
-===================================================== */
+const KEY = 'tpLinkedDemoV5';
+const SESSION_KEY = 'tpSessionV5';
 
-
-const STORAGE_KEY =
-    "tennisPilotLinkedDemo";
-
-
-/* =====================================================
-   DEFAULT DATA
-===================================================== */
+const SESSION_DAYS = 30;
 
 const defaultData = {
+  users: [],
 
-    coach: {
+  coach: {
+    name: 'Coach Demo',
+    code: 'KTP482',
+    requests: [],
+    players: [],
+    logged: false
+  },
 
-        name: "Coach Demo",
-
-        code: "MYK7P2",
-
-        logged: false,
-
-        requests: [],
-
-        players: []
-
-    },
-
-    player: null
-
+  player: null
 };
 
 
-/* =====================================================
-   STORAGE
-===================================================== */
+/* =========================
+   DATABASE
+========================= */
 
-function getData() {
+function data(){
 
-    const saved =
-        localStorage.getItem(
-            STORAGE_KEY
-        );
+  return JSON.parse(
+    localStorage.getItem(KEY) ||
+    JSON.stringify(defaultData)
+  );
+
+}
 
 
-    if (!saved) {
+function save(d){
 
-        return JSON.parse(
-            JSON.stringify(defaultData)
-        );
+  localStorage.setItem(
+    KEY,
+    JSON.stringify(d)
+  );
 
+}
+
+
+/* =========================
+   LOGIN SESSION
+========================= */
+
+function getSession(){
+
+  const raw =
+    localStorage.getItem(SESSION_KEY);
+
+  if(!raw){
+    return null;
+  }
+
+  try{
+
+    const s = JSON.parse(raw);
+
+    if(Date.now() > s.expiresAt){
+
+      localStorage.removeItem(SESSION_KEY);
+
+      return null;
     }
 
+    return s;
 
-    return JSON.parse(saved);
+  }catch{
 
-}
+    return null;
 
-
-function saveData(data) {
-
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(data)
-    );
+  }
 
 }
 
 
-/* =====================================================
-   LOGIN
-===================================================== */
+function setSession(role){
+
+  localStorage.setItem(
+    SESSION_KEY,
+    JSON.stringify({
+
+      role,
+
+      expiresAt:
+        Date.now() +
+        SESSION_DAYS *
+        86400000
+
+    })
+  );
+
+}
+
+
+function refreshSession(){
+
+  const s = getSession();
+
+  if(!s){
+    return;
+  }
+
+  s.expiresAt =
+    Date.now() +
+    SESSION_DAYS *
+    86400000;
+
+  localStorage.setItem(
+    SESSION_KEY,
+    JSON.stringify(s)
+  );
+
+}
+
+
+/* =========================
+   AUTH
+========================= */
+
+let authMode = 'login';
 
 let selectedRole = null;
 
 
-function chooseRole(role) {
+function showAuthMode(mode){
 
-    selectedRole = role;
+  authMode = mode;
 
+  document
+    .getElementById('loginTab')
+    .classList
+    .toggle(
+      'active',
+      mode === 'login'
+    );
 
-    document
-        .getElementById("roleStep")
-        .classList
-        .add("hidden");
+  document
+    .getElementById('signupTab')
+    .classList
+    .toggle(
+      'active',
+      mode === 'signup'
+    );
 
+  document
+    .getElementById('authHeading')
+    .textContent =
+      mode === 'login'
+        ? 'Log in to TennisPilot'
+        : 'Create your TennisPilot account';
 
-    document
-        .getElementById("loginForm")
-        .classList
-        .remove("hidden");
-
-
-    document
-        .getElementById("loginTitle")
-        .textContent =
-        role === "coach"
-            ? "Create your coach account"
-            : "Create your player account";
-
-
-    document
-        .getElementById("codeWrap")
-        .classList
-        .toggle(
-            "hidden",
-            role !== "player"
-        );
+  backRole();
 
 }
 
 
-function backRole() {
+function chooseRole(role){
 
-    document
-        .getElementById("roleStep")
-        .classList
-        .remove("hidden");
+  selectedRole = role;
 
+  document
+    .getElementById('roleStep')
+    .classList
+    .add('hidden');
 
-    document
-        .getElementById("loginForm")
-        .classList
-        .add("hidden");
+  document
+    .getElementById('authForm')
+    .classList
+    .remove('hidden');
+
+  document
+    .getElementById('formEyebrow')
+    .textContent =
+      authMode === 'login'
+        ? 'LOG IN'
+        : 'SIGN UP';
+
+  document
+    .getElementById('formTitle')
+    .textContent =
+      (role === 'coach'
+        ? 'Coach'
+        : 'Player')
+      +
+      ' '
+      +
+      (
+        authMode === 'login'
+          ? 'Log In'
+          : 'Sign Up'
+      );
+
+  document
+    .getElementById('submitBtn')
+    .textContent =
+      authMode === 'login'
+        ? 'Log In'
+        : 'Create Account';
+
+  document
+    .getElementById('nameLabel')
+    .classList
+    .toggle(
+      'hidden',
+      authMode === 'login'
+    );
+
+  document
+    .getElementById('confirmLabel')
+    .classList
+    .toggle(
+      'hidden',
+      authMode === 'login'
+    );
+
+  document
+    .getElementById('passwordRules')
+    .classList
+    .toggle(
+      'hidden',
+      authMode !== 'signup'
+    );
+
+  document
+    .getElementById('codeWrap')
+    .classList
+    .toggle(
+      'hidden',
+      !(
+        authMode === 'signup' &&
+        role === 'player'
+      )
+    );
+
+  document
+    .getElementById('authMessage')
+    .textContent = '';
 
 }
 
 
-function demoLogin(event) {
+function backRole(){
 
-    event.preventDefault();
+  document
+    .getElementById('roleStep')
+    .classList
+    .remove('hidden');
 
+  document
+    .getElementById('authForm')
+    .classList
+    .add('hidden');
 
-    const data = getData();
+  document
+    .getElementById('authMessage')
+    .textContent = '';
 
-
-    const name =
-        document
-            .getElementById("name")
-            .value
-            .trim();
-
-
-    if (selectedRole === "coach") {
-
-        data.coach.name =
-            name;
+}
 
 
-        data.coach.logged =
-            true;
+/* =========================
+   PASSWORD REQUIREMENTS
+========================= */
+
+function validPassword(password){
+
+  return (
+    password.length >= 8 &&
+    /[0-9]/.test(password) &&
+    /[^A-Za-z0-9]/.test(password) &&
+    /[A-Z]/.test(password)
+  );
+
+}
 
 
-        data.player =
-            null;
+function updatePasswordRules(){
+
+  const input =
+    document.getElementById('password');
+
+  if(!input){
+    return;
+  }
+
+  const p = input.value;
+
+  const rules = [
+
+    [
+      'rLength',
+      p.length >= 8
+    ],
+
+    [
+      'rNumber',
+      /[0-9]/.test(p)
+    ],
+
+    [
+      'rSpecial',
+      /[^A-Za-z0-9]/.test(p)
+    ],
+
+    [
+      'rUpper',
+      /[A-Z]/.test(p)
+    ]
+
+  ];
 
 
-        saveData(data);
+  rules.forEach(
+    ([id, ok]) => {
 
+      const el =
+        document.getElementById(id);
 
-        window.location.href =
-            "dashboard.html";
-
-
+      if(!el){
         return;
+      }
+
+      const original =
+        el.textContent.slice(2);
+
+      el.textContent =
+        (ok ? '✓ ' : '○ ')
+        +
+        original;
+
+      el.classList.toggle(
+        'valid',
+        ok
+      );
+
+    }
+  );
+
+}
+
+
+function msg(text){
+
+  document
+    .getElementById('authMessage')
+    .textContent = text;
+
+}
+
+
+/* =========================
+   COACH CODE
+========================= */
+
+function generateCoachCode(d){
+
+  const letters =
+    'ABCDEFGHJKLMNPQRSTUVWXYZ';
+
+  const nums =
+    '0123456789';
+
+  let code;
+
+  do{
+
+    code = '';
+
+    for(let i = 0; i < 3; i++){
+
+      code +=
+        letters[
+          Math.floor(
+            Math.random() *
+            letters.length
+          )
+        ];
+
+    }
+
+    for(let i = 0; i < 3; i++){
+
+      code +=
+        nums[
+          Math.floor(
+            Math.random() *
+            nums.length
+          )
+        ];
+
+    }
+
+  }
+  while(
+    d.users.some(
+      u =>
+        u.role === 'coach' &&
+        u.coachCode.toUpperCase() ===
+        code.toUpperCase()
+    )
+  );
+
+  return code;
+
+}
+
+
+/* =========================
+   SUBMIT LOGIN / SIGNUP
+========================= */
+
+function submitAuth(e){
+
+  e.preventDefault();
+
+  const d = data();
+
+  const email =
+    document
+      .getElementById('email')
+      .value
+      .trim()
+      .toLowerCase();
+
+  const password =
+    document
+      .getElementById('password')
+      .value;
+
+  const name =
+    document
+      .getElementById('name')
+      .value
+      .trim();
+
+
+  /* LOGIN */
+
+  if(authMode === 'login'){
+
+    const user =
+      d.users.find(
+        x =>
+          x.email === email &&
+          x.role === selectedRole
+      );
+
+
+    if(
+      !user ||
+      user.password !== password
+    ){
+
+      msg(
+        'Incorrect email, password, or account type.'
+      );
+
+      return;
+    }
+
+
+    if(selectedRole === 'coach'){
+
+      d.coach =
+        user.profile;
+
+      d.coach.logged = true;
+
+      d.player = null;
+
+    }
+
+    else{
+
+      d.player =
+        user.profile;
+
+      d.coach.logged = false;
 
     }
 
 
-    /* =========================
-       PLAYER
-    ========================= */
+    save(d);
 
-    const player = {
+    setSession(selectedRole);
 
-        name: name,
+    location.href =
+      'dashboard.html';
 
-        level: "Competitive Player",
+    return;
 
-        focus: "None",
+  }
 
-        coachStatus: "none",
 
-        matches: []
+  /* SIGN UP */
+
+  if(!name){
+
+    msg(
+      'Please enter your name.'
+    );
+
+    return;
+
+  }
+
+
+  if(!validPassword(password)){
+
+    msg(
+      'Please meet all password requirements.'
+    );
+
+    return;
+
+  }
+
+
+  const confirm =
+    document
+      .getElementById('confirmPassword')
+      .value;
+
+
+  if(password !== confirm){
+
+    msg(
+      'Passwords do not match.'
+    );
+
+    return;
+
+  }
+
+
+  if(
+    d.users.some(
+      u =>
+        u.email === email
+    )
+  ){
+
+    msg(
+      'An account with this email already exists.'
+    );
+
+    return;
+
+  }
+
+
+  /* COACH SIGNUP */
+
+  if(selectedRole === 'coach'){
+
+    const profile = {
+
+      name,
+
+      code:
+        generateCoachCode(d),
+
+      requests: [],
+
+      players: [],
+
+      logged: true
 
     };
 
 
-    const code =
-        document
-            .getElementById("coachCode")
-            .value
-            .trim()
-            .toUpperCase();
+    d.users.push({
 
+      email,
 
-    if (code === data.coach.code) {
+      password,
 
-        player.coachStatus =
-            "pending";
+      role: 'coach',
 
+      coachCode:
+        profile.code,
 
-        data.coach.requests.push(
-            player
-        );
+      profile
 
-    }
+    });
 
 
-    data.player =
-        player;
+    d.coach =
+      profile;
 
+    d.player =
+      null;
 
-    saveData(data);
 
+    save(d);
 
-    window.location.href =
-        "dashboard.html";
+    setSession('coach');
 
-}
+    location.href =
+      'dashboard.html';
 
+    return;
 
-/* =====================================================
-   RESET
-===================================================== */
+  }
 
-function resetDemo() {
 
-    localStorage.removeItem(
-        STORAGE_KEY
-    );
+  /* PLAYER SIGNUP */
 
+  const player = {
 
-    window.location.reload();
+    name,
 
-}
+    level: 'Junior',
 
+    focus: 'None',
 
-/* =====================================================
-   DASHBOARD INITIALIZATION
-===================================================== */
+    coachStatus: 'none',
 
-function initializeDashboard() {
+    connectedCoachId: null,
 
-    const dashboard =
-        document.getElementById(
-            "dashboard"
-        );
+    matches: []
 
+  };
 
-    if (!dashboard) {
 
-        return;
+  let code =
+    document
+      .getElementById('coachCode')
+      .value
+      .trim()
+      .toUpperCase();
 
-    }
 
+  if(code){
 
-    const data =
-        getData();
+    const coach =
+      d.users.find(
+        u =>
+          u.role === 'coach' &&
+          u.coachCode.toUpperCase() ===
+          code
+      );
 
 
-    const isCoach =
-        data.coach.logged === true;
+    if(!coach){
 
+      msg(
+        'That coach connection code was not found.'
+      );
 
-    const profileBox =
-        document.getElementById(
-            "profileBox"
-        );
-
-
-    if (isCoach) {
-
-        profileBox.innerHTML = `
-
-            <b>
-                ${escapeHTML(
-                    data.coach.name
-                )}
-            </b>
-
-            <small>
-                Coach Account
-            </small>
-
-        `;
-
-    } else {
-
-        profileBox.innerHTML = `
-
-            <b>
-                ${escapeHTML(
-                    data.player?.name ||
-                    "Player"
-                )}
-            </b>
-
-            <small>
-                Player Account
-            </small>
-
-        `;
-
-    }
-
-
-    const nav =
-        document.getElementById(
-            "nav"
-        );
-
-
-    if (isCoach) {
-
-        nav.innerHTML = `
-
-            <button
-                class="active"
-                onclick="renderCoach()"
-            >
-                ▦ Overview
-            </button>
-
-            <button
-                onclick="renderPlayers()"
-            >
-                ♟ Players
-            </button>
-
-            <button
-                onclick="renderRequests()"
-            >
-                🔗 Connections
-            </button>
-
-            <button
-                onclick="renderCoachMatches()"
-            >
-                🎾 Match Reviews
-            </button>
-
-        `;
-
-
-        renderCoach();
-
-    } else {
-
-        nav.innerHTML = `
-
-            <button
-                class="active"
-                onclick="renderPlayer()"
-            >
-                ▦ My Dashboard
-            </button>
-
-            <button
-                onclick="renderPlayerMatch()"
-            >
-                🎾 Log Match
-            </button>
-
-            <button
-                onclick="renderPlayerHistory()"
-            >
-                📋 Match History
-            </button>
-
-            <button
-                onclick="renderPlayerConnection()"
-            >
-                🔗 My Coach
-            </button>
-
-        `;
-
-
-        renderPlayer();
-
-    }
-
-}
-
-
-/* =====================================================
-   COACH OVERVIEW
-===================================================== */
-
-function renderCoach() {
-
-    const data =
-        getData();
-
-
-    const players =
-        data.coach.players || [];
-
-
-    const matchCount =
-        players.reduce(
-            (total, player) => {
-
-                return total +
-                    (
-                        player.matches?.length ||
-                        0
-                    );
-
-            },
-            0
-        );
-
-
-    document.getElementById(
-        "dashboard"
-    ).innerHTML = `
-
-        <div class="eyebrow">
-            COACH DASHBOARD
-        </div>
-
-        <h1>
-            Good coaching starts
-            with better information.
-        </h1>
-
-        <p class="sub">
-            See your players, their matches
-            and what needs attention.
-        </p>
-
-
-        <div class="cards">
-
-
-            <div class="card">
-
-                <h3>
-                    Players
-                </h3>
-
-                <div class="stat">
-                    ${players.length}
-                </div>
-
-            </div>
-
-
-            <div class="card">
-
-                <h3>
-                    Pending Connections
-                </h3>
-
-                <div class="stat">
-                    ${data.coach.requests.length}
-                </div>
-
-            </div>
-
-
-            <div class="card">
-
-                <h3>
-                    Match Reports
-                </h3>
-
-                <div class="stat">
-                    ${matchCount}
-                </div>
-
-            </div>
-
-
-        </div>
-
-
-        <div class="card">
-
-            <h3>
-                Your Players
-            </h3>
-
-
-            ${
-                players.length
-
-                ? players
-                    .map(playerCard)
-                    .join("")
-
-                : `
-
-                    <div class="empty">
-
-                        <p>
-                            No players connected yet.
-                        </p>
-
-                        <p>
-                            Give players your connection code:
-                        </p>
-
-                        <div class="code">
-                            ${data.coach.code}
-                        </div>
-
-                    </div>
-
-                `
-            }
-
-        </div>
-
-    `;
-
-}
-
-
-/* =====================================================
-   PLAYER CARD
-===================================================== */
-
-function playerCard(player) {
-
-    const matches =
-        player.matches || [];
-
-
-    const lastMatch =
-        matches.length
-            ? matches[matches.length - 1]
-            : null;
-
-
-    return `
-
-        <div class="row">
-
-            <div class="row-main">
-
-                <b>
-                    ${escapeHTML(
-                        player.name
-                    )}
-                </b>
-
-                <div class="row-details">
-
-                    ${escapeHTML(
-                        player.level
-                    )}
-
-                    · Focus:
-
-                    ${escapeHTML(
-                        player.focus ||
-                        "None"
-                    )}
-
-                </div>
-
-            </div>
-
-
-            <span class="pill">
-
-                ${matches.length}
-                ${
-                    matches.length === 1
-                        ? "match"
-                        : "matches"
-                }
-
-            </span>
-
-
-            ${
-                lastMatch
-
-                ? `
-
-                    <span
-                        class="pill
-                        ${
-                            lastMatch.result === "Win"
-                                ? "green"
-                                : "red"
-                        }"
-                    >
-
-                        Last:
-                        ${escapeHTML(
-                            lastMatch.result
-                        )}
-
-                    </span>
-
-                `
-
-                : ""
-
-            }
-
-        </div>
-
-    `;
-
-}
-
-
-/* =====================================================
-   PLAYERS
-===================================================== */
-
-function renderPlayers() {
-
-    const data =
-        getData();
-
-
-    const players =
-        data.coach.players || [];
-
-
-    document.getElementById(
-        "dashboard"
-    ).innerHTML = `
-
-        <div class="eyebrow">
-            PLAYERS
-        </div>
-
-        <h1>
-            Your Players
-        </h1>
-
-        <p class="sub">
-            Every connected player can send
-            match reports directly to you.
-        </p>
-
-
-        <div class="card">
-
-            ${
-                players.length
-
-                ? players
-                    .map(detailedPlayerCard)
-                    .join("")
-
-                : `
-
-                    <div class="empty">
-
-                        No players connected yet.
-
-                    </div>
-
-                `
-            }
-
-        </div>
-
-    `;
-
-}
-
-
-function detailedPlayerCard(player) {
-
-    const matches =
-        player.matches || [];
-
-
-    return `
-
-        <div class="row">
-
-            <div class="row-main">
-
-                <b>
-                    ${escapeHTML(
-                        player.name
-                    )}
-                </b>
-
-                <div class="row-details">
-
-                    Level:
-                    ${escapeHTML(
-                        player.level
-                    )}
-
-                    <br>
-
-                    Current Focus:
-                    <b>
-                        ${escapeHTML(
-                            player.focus ||
-                            "None"
-                        )}
-                    </b>
-
-                </div>
-
-            </div>
-
-
-            <span class="pill">
-
-                ${matches.length}
-                ${
-                    matches.length === 1
-                        ? "match"
-                        : "matches"
-                }
-
-            </span>
-
-
-            <button
-                class="btn ghost small"
-                onclick="renderCoachPlayerHistory(
-                    '${encodeURIComponent(
-                        player.name
-                    )}'
-                )"
-            >
-
-                View History
-
-            </button>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =====================================================
-   COACH PLAYER HISTORY
-===================================================== */
-
-function renderCoachPlayerHistory(encodedName) {
-
-    const playerName =
-        decodeURIComponent(
-            encodedName
-        );
-
-
-    const data =
-        getData();
-
-
-    const player =
-        data.coach.players.find(
-            p =>
-                p.name === playerName
-        );
-
-
-    if (!player) {
-
-        return;
-
-    }
-
-
-    const matches =
-        player.matches || [];
-
-
-    document.getElementById(
-        "dashboard"
-    ).innerHTML = `
-
-        <div class="eyebrow">
-            PLAYER HISTORY
-        </div>
-
-        <h1>
-            ${escapeHTML(
-                player.name
-            )}
-        </h1>
-
-        <p class="sub">
-
-            Complete match history.
-            Nothing is automatically deleted.
-
-        </p>
-
-
-        ${renderYearlyHistory(matches)}
-
-    `;
-
-}
-
-
-/* =====================================================
-   CONNECTIONS
-===================================================== */
-
-function renderRequests() {
-
-    const data =
-        getData();
-
-
-    document.getElementById(
-        "dashboard"
-    ).innerHTML = `
-
-        <div class="eyebrow">
-            CONNECTIONS
-        </div>
-
-        <h1>
-            Connect Players
-        </h1>
-
-        <p class="sub">
-            Give your players this code.
-            They enter it when creating their account.
-        </p>
-
-
-        <div class="card">
-
-            <p>
-                Your Coach Connection Code
-            </p>
-
-            <div class="code">
-                ${data.coach.code}
-            </div>
-
-        </div>
-
-
-        <div
-            class="card"
-            style="margin-top:18px"
-        >
-
-            <h3>
-                Pending Requests
-            </h3>
-
-
-            ${
-                data.coach.requests.length
-
-                ? data.coach.requests
-                    .map(
-                        requestRow
-                    )
-                    .join("")
-
-                : `
-
-                    <div class="empty">
-
-                        No pending connection requests.
-
-                    </div>
-
-                `
-            }
-
-        </div>
-
-    `;
-
-}
-
-
-function requestRow(
-    player,
-    index
-) {
-
-    return `
-
-        <div class="row">
-
-            <div class="row-main">
-
-                <b>
-                    ${escapeHTML(
-                        player.name
-                    )}
-                </b>
-
-                <div class="row-details">
-
-                    ${escapeHTML(
-                        player.level
-                    )}
-
-                </div>
-
-            </div>
-
-
-            <button
-                class="btn primary small"
-                onclick="acceptRequest(${index})"
-            >
-
-                Accept
-
-            </button>
-
-        </div>
-
-    `;
-
-}
-
-
-function acceptRequest(index) {
-
-    const data =
-        getData();
-
-
-    const player =
-        data.coach.requests
-            .splice(index, 1)[0];
-
-
-    if (!player) {
-
-        return;
+      return;
 
     }
 
 
     player.coachStatus =
-        "connected";
+      'pending';
+
+    player.connectedCoachId =
+      coach.email;
 
 
-    data.coach.players.push(
-        player
-    );
+    coach.profile.requests =
+      coach.profile.requests || [];
 
 
-    if (
-        data.player &&
-        data.player.name ===
-        player.name
-    ) {
+    coach.profile.requests.push({
 
-        data.player.coachStatus =
-            "connected";
+      name: player.name,
 
-    }
+      level: player.level,
 
+      email,
 
-    saveData(data);
+      playerId: email
 
+    });
 
-    renderRequests();
-
-}
+  }
 
 
-/* =====================================================
-   COACH MATCH REVIEWS
-===================================================== */
+  d.users.push({
 
-function renderCoachMatches() {
+    email,
 
-    const data =
-        getData();
+    password,
 
+    role: 'player',
 
-    const players =
-        data.coach.players || [];
+    profile: player
 
-
-    const allMatches = [];
+  });
 
 
-    players.forEach(
-        player => {
+  d.player =
+    player;
 
-            (
-                player.matches || []
-            ).forEach(
-                match => {
-
-                    allMatches.push({
-
-                        ...match,
-
-                        playerName:
-                            player.name
-
-                    });
-
-                }
-            );
-
-        }
-    );
+  d.coach.logged =
+    false;
 
 
-    allMatches.sort(
-        (a, b) =>
-            new Date(b.timestamp) -
-            new Date(a.timestamp)
-    );
+  save(d);
 
+  setSession('player');
 
-    const recent =
-        allMatches.slice(0, 5);
-
-
-    document.getElementById(
-        "dashboard"
-    ).innerHTML = `
-
-        <div class="eyebrow">
-            MATCH REVIEWS
-        </div>
-
-        <h1>
-            Recent Match Reviews
-        </h1>
-
-        <p class="sub">
-            The five most recent player-submitted
-            matches are shown here.
-        </p>
-
-
-        <div class="card">
-
-            ${
-                recent.length
-
-                ? recent
-                    .map(
-                        coachMatchRow
-                    )
-                    .join("")
-
-                : `
-
-                    <div class="empty">
-
-                        No match reviews yet.
-
-                    </div>
-
-                `
-            }
-
-        </div>
-
-
-        ${
-            allMatches.length > 5
-
-            ? `
-
-                <div class="notice">
-
-                    Showing the 5 most recent matches.
-
-                    <br><br>
-
-                    To see a player's complete
-                    history, go to
-                    <b>Players → View History</b>.
-
-                </div>
-
-            `
-
-            : ""
-
-        }
-
-    `;
+  location.href =
+    'dashboard.html';
 
 }
 
 
-function coachMatchRow(match) {
+/* =========================
+   LOGOUT
+========================= */
 
-    return `
+function logout(){
 
-        <div class="match-card">
+  localStorage.removeItem(
+    SESSION_KEY
+  );
 
-            <div class="match-top">
+  const d =
+    data();
 
-                <div>
+  d.coach.logged =
+    false;
 
-                    <div class="match-opponent">
+  save(d);
 
-                        ${escapeHTML(
-                            match.playerName
-                        )}
-
-                        vs.
-
-                        ${escapeHTML(
-                            match.opponent ||
-                            "Unknown Opponent"
-                        )}
-
-                    </div>
-
-
-                    <div class="match-meta">
-
-                        ${escapeHTML(
-                            match.date
-                        )}
-
-                        ·
-
-                        ${escapeHTML(
-                            match.score
-                        )}
-
-                    </div>
-
-                </div>
-
-
-                <span
-                    class="pill
-                    ${
-                        match.result === "Win"
-                            ? "green"
-                            : "red"
-                    }"
-                >
-
-                    ${escapeHTML(
-                        match.result
-                    )}
-
-                </span>
-
-            </div>
-
-
-            <div class="match-details">
-
-                <div class="match-detail">
-
-                    <span>
-                        Biggest Weakness
-                    </span>
-
-                    <b>
-                        ${escapeHTML(
-                            match.weakness
-                        )}
-                    </b>
-
-                </div>
-
-
-                <div class="match-detail">
-
-                    <span>
-                        Biggest Positive
-                    </span>
-
-                    <b>
-                        ${escapeHTML(
-                            match.positive
-                        )}
-                    </b>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    `;
+  location.href =
+    'login.html';
 
 }
 
 
-/* =====================================================
-   PLAYER DASHBOARD
-===================================================== */
+/* =========================
+   RESET
+========================= */
 
-function renderPlayer() {
+function resetDemo(){
 
-    const data =
-        getData();
+  localStorage.removeItem(KEY);
 
+  localStorage.removeItem(
+    SESSION_KEY
+  );
 
-    const player =
-        data.player;
-
-
-    if (!player) {
-
-        return;
-
-    }
-
-
-    const matches =
-        player.matches || [];
-
-
-    const recent =
-        matches
-            .slice()
-            .reverse()
-            .slice(0, 5);
-
-
-    document.getElementById(
-        "dashboard"
-    ).innerHTML = `
-
-        <div class="eyebrow">
-            PLAYER DASHBOARD
-        </div>
-
-        <h1>
-            Welcome,
-            ${escapeHTML(
-                player.name
-            )}.
-        </h1>
-
-        <p class="sub">
-            Your match feedback goes directly
-            to your connected coach.
-        </p>
-
-
-        <div class="cards">
-
-
-            <div class="card">
-
-                <h3>
-                    Current Focus
-                </h3>
-
-                <div
-                    class="stat"
-                    style="font-size:24px"
-                >
-
-                    ${escapeHTML(
-                        player.focus ||
-                        "None"
-                    )}
-
-                </div>
-
-            </div>
-
-
-            <div class="card">
-
-                <h3>
-                    Matches Logged
-                </h3>
-
-                <div class="stat">
-
-                    ${matches.length}
-
-                </div>
-
-            </div>
-
-
-            <div class="card">
-
-                <h3>
-                    Coach
-                </h3>
-
-                <div
-                    class="stat"
-                    style="font-size:20px"
-                >
-
-                    ${
-                        player.coachStatus ===
-                        "connected"
-
-                        ? escapeHTML(
-                            data.coach.name
-                        )
-
-                        : player.coachStatus ===
-                          "pending"
-
-                        ? "Pending"
-
-                        : "Not Connected"
-                    }
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="card">
-
-            <h3>
-                Recent Matches
-            </h3>
-
-
-            ${
-                recent.length
-
-                ? recent
-                    .map(
-                        playerMatchRow
-                    )
-                    .join("")
-
-                : `
-
-                    <div class="empty">
-
-                        No matches logged yet.
-
-                        <br><br>
-
-                        After a match, log the
-                        opponent, score, positives
-                        and weaknesses.
-
-                    </div>
-
-                `
-            }
-
-
-            ${
-                matches.length > 5
-
-                ? `
-
-                    <button
-                        class="btn ghost"
-                        style="margin-top:15px"
-                        onclick="renderPlayerHistory()"
-                    >
-
-                        View Full Match History →
-
-                    </button>
-
-                `
-
-                : ""
-
-            }
-
-        </div>
-
-    `;
+  location.reload();
 
 }
 
 
-/* =====================================================
-   PLAYER MATCH ROW
-===================================================== */
+/* =========================
+   DASHBOARD
+========================= */
 
-function playerMatchRow(match) {
+function dashboard(){
 
-    return `
+  const session =
+    getSession();
 
-        <div class="match-card">
 
-            <div class="match-top">
+  if(!session){
 
-                <div>
+    location.href =
+      'login.html';
 
-                    <div class="match-opponent">
+    return;
 
-                        vs.
-                        ${escapeHTML(
-                            match.opponent ||
-                            "Unknown Opponent"
-                        )}
+  }
 
-                    </div>
 
-                    <div class="match-meta">
+  refreshSession();
 
-                        ${escapeHTML(
-                            match.date
-                        )}
 
-                        ·
+  const d =
+    current();
 
-                        ${escapeHTML(
-                            match.score
-                        )}
 
-                    </div>
+  let role =
+    session.role;
 
-                </div>
 
+  document
+    .getElementById('profileBox')
+    .innerHTML =
 
-                <span
-                    class="pill
-                    ${
-                        match.result === "Win"
-                            ? "green"
-                            : "red"
-                    }"
-                >
+    role === 'coach'
 
-                    ${escapeHTML(
-                        match.result
-                    )}
+      ?
 
-                </span>
+      `
+      <b>${esc(d.coach.name)}</b>
+      <small>Coach Account</small>
+      `
 
-            </div>
+      :
 
+      `
+      <b>${esc(d.player?.name || 'Player')}</b>
+      <small>Player Account</small>
+      `;
 
-            <div class="match-details">
 
-                <div class="match-detail">
+  document
+    .getElementById('nav')
+    .innerHTML =
 
-                    <span>
-                        Biggest Weakness
-                    </span>
+    role === 'coach'
 
-                    <b>
-                        ${escapeHTML(
-                            match.weakness
-                        )}
-                    </b>
+      ?
 
-                </div>
+      `
+      <button
+        class="active"
+        onclick="renderCoach()">
+        ▦ Overview
+      </button>
 
+      <button
+        onclick="renderPlayers()">
+        ♟ Players
+      </button>
 
-                <div class="match-detail">
+      <button
+        onclick="renderRequests()">
+        🔗 Connections
+      </button>
+      `
 
-                    <span>
-                        Biggest Positive
-                    </span>
+      :
 
-                    <b>
-                        ${escapeHTML(
-                            match.positive
-                        )}
-                    </b>
+      `
+      <button
+        class="active"
+        onclick="renderPlayer()">
+        ▦ My Dashboard
+      </button>
 
-                </div>
+      <button
+        onclick="renderPlayerMatch()">
+        🎾 Log Match
+      </button>
 
-            </div>
+      <button
+        onclick="renderPlayerConnection()">
+        🔗 My Coach
+      </button>
+      `;
 
-        </div>
 
-    `;
+  if(role === 'coach'){
 
-}
+    renderCoach();
 
+  }
 
-/* =====================================================
-   PLAYER FULL HISTORY
-===================================================== */
-
-function renderPlayerHistory() {
-
-    const data =
-        getData();
-
-
-    const player =
-        data.player;
-
-
-    if (!player) {
-
-        return;
-
-    }
-
-
-    const matches =
-        player.matches || [];
-
-
-    document.getElementById(
-        "dashboard"
-    ).innerHTML = `
-
-        <div class="eyebrow">
-            MATCH HISTORY
-        </div>
-
-        <h1>
-            ${escapeHTML(
-                player.name
-            )}
-        </h1>
-
-        <p class="sub">
-
-            Your complete match history,
-            organized by year.
-
-        </p>
-
-
-        ${
-            renderYearlyHistory(
-                matches
-            )
-        }
-
-    `;
-
-}
-
-
-/* =====================================================
-   YEARLY HISTORY
-===================================================== */
-
-function renderYearlyHistory(matches) {
-
-    if (!matches.length) {
-
-        return `
-
-            <div class="empty">
-
-                No matches have been recorded yet.
-
-            </div>
-
-        `;
-
-    }
-
-
-    const grouped = {};
-
-
-    matches.forEach(
-        match => {
-
-            const date =
-                new Date(
-                    match.timestamp
-                );
-
-
-            const year =
-                isNaN(date.getTime())
-                    ? "Unknown Year"
-                    : date.getFullYear();
-
-
-            if (!grouped[year]) {
-
-                grouped[year] = [];
-
-            }
-
-
-            grouped[year].push(
-                match
-            );
-
-        }
-    );
-
-
-    const years =
-        Object.keys(grouped)
-            .sort(
-                (a, b) =>
-                    Number(b) -
-                    Number(a)
-            );
-
-
-    return years
-        .map(
-            year => {
-
-                const yearMatches =
-                    grouped[year];
-
-
-                const wins =
-                    yearMatches.filter(
-                        m =>
-                            m.result ===
-                            "Win"
-                    ).length;
-
-
-                const losses =
-                    yearMatches.filter(
-                        m =>
-                            m.result ===
-                            "Loss"
-                    ).length;
-
-
-                const total =
-                    yearMatches.length;
-
-
-                const winRate =
-                    total
-                        ? Math.round(
-                            (
-                                wins /
-                                total
-                            ) * 100
-                        )
-                        : 0;
-
-
-                return `
-
-                    <div class="year-section">
-
-
-                        <div class="year-header">
-
-                            <h2>
-                                ${escapeHTML(
-                                    year
-                                )}
-                            </h2>
-
-
-                            <div class="year-stats">
-
-                                <span
-                                    class="year-stat"
-                                >
-
-                                    ${total}
-                                    Matches
-
-                                </span>
-
-
-                                <span
-                                    class="year-stat"
-                                >
-
-                                    ${wins} Wins
-
-                                </span>
-
-
-                                <span
-                                    class="year-stat"
-                                >
-
-                                    ${losses} Losses
-
-                                </span>
-
-
-                                <span
-                                    class="year-stat"
-                                >
-
-                                    ${winRate}%
-                                    Win Rate
-
-                                </span>
-
-                            </div>
-
-                        </div>
-
-
-                        ${
-
-                            yearMatches
-                                .slice()
-                                .sort(
-                                    (a, b) =>
-                                        new Date(
-                                            b.timestamp
-                                        ) -
-                                        new Date(
-                                            a.timestamp
-                                        )
-                                )
-                                .map(
-                                    historyMatchCard
-                                )
-                                .join("")
-
-                        }
-
-                    </div>
-
-                `;
-
-            }
-        )
-        .join("");
-
-}
-
-
-/* =====================================================
-   HISTORY MATCH CARD
-===================================================== */
-
-function historyMatchCard(match) {
-
-    return `
-
-        <div class="match-card">
-
-            <div class="match-top">
-
-
-                <div>
-
-                    <div class="match-opponent">
-
-                        vs.
-                        ${escapeHTML(
-                            match.opponent ||
-                            "Unknown Opponent"
-                        )}
-
-                    </div>
-
-
-                    <div class="match-meta">
-
-                        ${escapeHTML(
-                            match.date
-                        )}
-
-                        ·
-
-                        ${escapeHTML(
-                            match.score
-                        )}
-
-                    </div>
-
-                </div>
-
-
-                <span
-                    class="pill
-                    ${
-                        match.result === "Win"
-                            ? "green"
-                            : "red"
-                    }"
-                >
-
-                    ${escapeHTML(
-                        match.result
-                    )}
-
-                </span>
-
-
-            </div>
-
-
-            <div class="match-details">
-
-
-                <div class="match-detail">
-
-                    <span>
-                        Biggest Weakness
-                    </span>
-
-                    <b>
-                        ${escapeHTML(
-                            match.weakness
-                        )}
-                    </b>
-
-                </div>
-
-
-                <div class="match-detail">
-
-                    <span>
-                        Biggest Positive
-                    </span>
-
-                    <b>
-                        ${escapeHTML(
-                            match.positive
-                        )}
-                    </b>
-
-                </div>
-
-
-                <div class="match-detail">
-
-                    <span>
-                        Notes
-                    </span>
-
-                    <b>
-                        ${
-                            escapeHTML(
-                                match.notes ||
-                                "No notes"
-                            )
-                        }
-                    </b>
-
-                </div>
-
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =====================================================
-   PLAYER MATCH FORM
-===================================================== */
-
-function renderPlayerMatch() {
-
-    document.getElementById(
-        "dashboard"
-    ).innerHTML = `
-
-        <div class="eyebrow">
-            POST-MATCH
-        </div>
-
-        <h1>
-            Log a Match
-        </h1>
-
-        <p class="sub">
-
-            Your coach doesn't have to be
-            at the match. Tell them what
-            you experienced.
-
-        </p>
-
-
-        <div class="card">
-
-
-            <label>
-
-                Opponent
-
-                <input
-                    id="matchOpponent"
-                    placeholder="Opponent's name"
-                    required
-                >
-
-            </label>
-
-
-            <label>
-
-                Result
-
-                <select id="matchResult">
-
-                    <option value="Win">
-                        Win
-                    </option>
-
-                    <option value="Loss">
-                        Loss
-                    </option>
-
-                </select>
-
-            </label>
-
-
-            <label>
-
-                Score
-
-                <input
-                    id="matchScore"
-                    placeholder="6-3, 6-4"
-                >
-
-            </label>
-
-
-            <label>
-
-                Biggest Weakness
-
-                <select id="matchWeakness">
-
-                    ${focusOptions()}
-
-                </select>
-
-            </label>
-
-
-            <label>
-
-                Biggest Positive
-
-                <select id="matchPositive">
-
-                    ${positiveOptions()}
-
-                </select>
-
-            </label>
-
-
-            <label>
-
-                Match Notes
-
-                <textarea
-                    id="matchNotes"
-                    rows="5"
-                    placeholder="What happened? What felt good? What caused problems?"
-                ></textarea>
-
-            </label>
-
-
-            <button
-                class="btn primary"
-                onclick="saveMatch()"
-            >
-
-                Submit Match Review
-
-            </button>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =====================================================
-   SAVE MATCH
-===================================================== */
-
-function saveMatch() {
-
-    const data =
-        getData();
-
-
-    const player =
-        data.player;
-
-
-    if (!player) {
-
-        return;
-
-    }
-
-
-    const opponent =
-        document
-            .getElementById(
-                "matchOpponent"
-            )
-            .value
-            .trim();
-
-
-    if (!opponent) {
-
-        alert(
-            "Please enter the opponent's name."
-        );
-
-        return;
-
-    }
-
-
-    const result =
-        document
-            .getElementById(
-                "matchResult"
-            )
-            .value;
-
-
-    const score =
-        document
-            .getElementById(
-                "matchScore"
-            )
-            .value
-            .trim();
-
-
-    const weakness =
-        document
-            .getElementById(
-                "matchWeakness"
-            )
-            .value;
-
-
-    const positive =
-        document
-            .getElementById(
-                "matchPositive"
-            )
-            .value;
-
-
-    const notes =
-        document
-            .getElementById(
-                "matchNotes"
-            )
-            .value
-            .trim();
-
-
-    const now =
-        new Date();
-
-
-    const match = {
-
-        opponent:
-            opponent,
-
-        result:
-            result,
-
-        score:
-            score ||
-            "Not entered",
-
-        weakness:
-            weakness,
-
-        positive:
-            positive,
-
-        notes:
-            notes,
-
-        date:
-            now.toLocaleDateString(),
-
-        timestamp:
-            now.toISOString()
-
-    };
-
-
-    if (!player.matches) {
-
-        player.matches = [];
-
-    }
-
-
-    /*
-        IMPORTANT:
-        We push the match into the
-        permanent history.
-
-        Nothing automatically gets deleted.
-    */
-
-    player.matches.push(
-        match
-    );
-
-
-    /*
-        Update matching player
-        inside coach account.
-    */
-
-    const coachPlayer =
-        data.coach.players.find(
-            p =>
-                p.name ===
-                player.name
-        );
-
-
-    if (coachPlayer) {
-
-        coachPlayer.matches =
-            player.matches;
-
-    }
-
-
-    saveData(data);
-
+  else{
 
     renderPlayer();
 
+  }
+
 }
 
 
-/* =====================================================
-   PLAYER CONNECTION
-===================================================== */
+function current(){
 
-function renderPlayerConnection() {
+  return data();
 
-    const data =
-        getData();
+}
 
 
-    const player =
-        data.player;
+/* =========================
+   COACH DASHBOARD
+========================= */
+
+function renderCoach(){
+
+  const d =
+    current();
+
+  const players =
+    d.coach.players || [];
 
 
-    document.getElementById(
-        "dashboard"
-    ).innerHTML = `
+  document
+    .getElementById('dashboard')
+    .innerHTML =
 
-        <div class="eyebrow">
-            MY COACH
+    `
+    <div class="eyebrow">
+      COACH DASHBOARD
+    </div>
+
+    <h1>
+      Good coaching starts with better information.
+    </h1>
+
+    <p class="sub">
+      See your players, their match reports and what needs attention.
+    </p>
+
+    <div class="cards">
+
+      <div class="card">
+        <h3>Players</h3>
+        <div class="stat">
+          ${players.length}
         </div>
+      </div>
 
-        <h1>
-            Coach Connection
-        </h1>
+      <div class="card">
+        <h3>Pending connections</h3>
+        <div class="stat">
+          ${d.coach.requests.length}
+        </div>
+      </div>
 
+      <div class="card">
+        <h3>Match reports</h3>
+        <div class="stat">
+          ${
+            players.reduce(
+              (a,p) =>
+                a +
+                (p.matches?.length || 0),
+              0
+            )
+          }
+        </div>
+      </div>
 
-        <div class="card">
+    </div>
 
-            ${
-                player.coachStatus ===
-                "connected"
+    <div class="card">
 
-                ? `
+      <h3>
+        Recent player activity
+      </h3>
 
-                    <h3>
+      ${
+        players.length
 
-                        ${escapeHTML(
-                            data.coach.name
-                        )}
+        ?
 
-                    </h3>
+        players
+          .map(
+            p =>
 
-                    <p class="muted">
+            `
+            <div class="row">
 
-                        🟢 Connected
+              <div>
 
-                    </p>
+                <b>
+                  ${esc(p.name)}
+                </b>
 
-                    <p>
+                <div class="muted">
+                  ${esc(
+                    p.focus ||
+                    'No focus set'
+                  )}
+                </div>
 
-                        Your match reviews are
-                        shared with your coach.
+              </div>
 
-                    </p>
+              <span class="pill">
+                ${
+                  p.matches?.length || 0
+                }
+                matches
+              </span>
 
-                `
+            </div>
+            `
+          )
+          .join('')
 
-                :
+        :
 
-                player.coachStatus ===
-                "pending"
+        `
+        <div class="empty">
 
-                ? `
+          No connected players yet.
 
-                    <h3>
-                        Connection Pending
-                    </h3>
+          Share your connection code:
 
-                    <p class="muted">
-
-                        🟡 Waiting for your coach
-                        to approve the connection.
-
-                    </p>
-
-                `
-
-                : `
-
-                    <h3>
-                        No Coach Connected
-                    </h3>
-
-                    <p class="muted">
-
-                        Ask your coach for their
-                        connection code.
-
-                    </p>
-
-                `
-            }
+          <div class="code">
+            ${d.coach.code}
+          </div>
 
         </div>
+        `
+      }
 
+    </div>
     `;
 
 }
 
 
-/* =====================================================
-   FOCUS OPTIONS
-===================================================== */
+/* =========================
+   PLAYERS
+========================= */
 
-function focusOptions() {
+function renderPlayers(){
 
-    const options = [
+  const d =
+    current();
 
-        "None",
-
-        /* Technical */
-
-        "Serve",
-        "Return",
-        "Forehand",
-        "Backhand",
-        "Volley",
-        "Overhead",
-        "Slice",
-        "Drop Shot",
-        "Approach Shot",
-        "Passing Shot",
-
-        /* Consistency */
-
-        "Rally Consistency",
-        "Shot Depth",
-        "Directional Control",
-        "Reducing Unforced Errors",
-        "Playing Under Pressure",
-
-        /* Movement */
-
-        "Footwork",
-        "Court Positioning",
-        "Recovery Position",
-        "Movement to the Ball",
-        "Transition Movement",
-
-        /* Tactical */
-
-        "Point Construction",
-        "Serve + 1",
-        "Return + 1",
-        "Attacking Short Balls",
-        "Defending",
-        "Net Play",
-        "Shot Selection",
-        "Opponent Patterns",
-        "Match Strategy",
-
-        /* Mental */
-
-        "Confidence",
-        "Focus",
-        "Decision Making",
-        "Competing Under Pressure",
-        "Between-Point Routine",
-        "Match Preparation",
-
-        /* Physical */
-
-        "Speed",
-        "Agility",
-        "Endurance",
-        "Explosiveness",
-        "Mobility",
-
-        /* Other */
-
-        "Match Fitness",
-        "Tournament Preparation",
-        "Overall Game"
-
-    ];
+  const players =
+    d.coach.players || [];
 
 
-    return options
-        .map(
-            option => `
+  document
+    .getElementById('dashboard')
+    .innerHTML =
 
-                <option
-                    value="${escapeHTML(
-                        option
-                    )}"
-                >
+    `
+    <div class="eyebrow">
+      PLAYERS
+    </div>
 
-                    ${escapeHTML(
-                        option
-                    )}
+    <h1>
+      Your Players
+    </h1>
 
-                </option>
+    <p class="sub">
+      Every connected player can send match reports directly to you.
+    </p>
+
+    <div class="card">
+
+      ${
+        players.length
+
+        ?
+
+        players
+          .map(
+            p =>
 
             `
+            <div class="row">
+
+              <div>
+
+                <b>
+                  ${esc(p.name)}
+                </b>
+
+                <div class="muted">
+                  ${esc(p.level)}
+                  · Focus:
+                  ${esc(p.focus || 'None')}
+                </div>
+
+              </div>
+
+              <span class="pill">
+
+                ${
+                  p.matches?.length || 0
+                }
+                matches
+
+              </span>
+
+            </div>
+            `
+          )
+          .join('')
+
+        :
+
+        `
+        <div class="empty">
+          No players connected yet.
+        </div>
+        `
+      }
+
+    </div>
+    `;
+
+}
+
+
+/* =========================
+   CONNECTION REQUESTS
+========================= */
+
+function renderRequests(){
+
+  const d =
+    current();
+
+
+  document
+    .getElementById('dashboard')
+    .innerHTML =
+
+    `
+    <div class="eyebrow">
+      CONNECTIONS
+    </div>
+
+    <h1>
+      Connect players
+    </h1>
+
+    <p class="sub">
+      Give this code to your players.
+      They enter it when creating their account.
+    </p>
+
+    <div class="card">
+
+      <p>
+        Your coach connection code
+      </p>
+
+      <div class="code">
+        ${d.coach.code}
+      </div>
+
+    </div>
+
+    <div
+      class="card"
+      style="margin-top:18px">
+
+      <h3>
+        Pending requests
+      </h3>
+
+      ${
+        d.coach.requests.length
+
+        ?
+
+        d.coach.requests
+          .map(
+            (p,i) =>
+
+            `
+            <div class="row">
+
+              <div>
+
+                <b>
+                  ${esc(p.name)}
+                </b>
+
+                <div class="muted">
+                  ${esc(p.level)}
+                </div>
+
+              </div>
+
+              <button
+                class="btn primary small"
+                onclick="acceptRequest(${i})">
+
+                Accept
+
+              </button>
+
+            </div>
+            `
+          )
+          .join('')
+
+        :
+
+        `
+        <div class="empty">
+          No pending requests.
+        </div>
+        `
+      }
+
+    </div>
+    `;
+
+}
+
+
+/* =========================
+   ACCEPT PLAYER
+========================= */
+
+function acceptRequest(i){
+
+  const d =
+    current();
+
+
+  const request =
+    d.coach.requests.splice(
+      i,
+      1
+    )[0];
+
+
+  if(!request){
+
+    return;
+
+  }
+
+
+  const playerUser =
+    d.users.find(
+      u =>
+        u.role === 'player' &&
+        (
+          u.email === request.email ||
+          u.profile?.name === request.name
         )
-        .join("");
-
-}
-
-
-function positiveOptions() {
-
-    return focusOptions();
-
-}
-
-
-/* =====================================================
-   ESCAPE HTML
-===================================================== */
-
-function escapeHTML(value) {
-
-    return String(
-        value ?? ""
-    ).replace(
-        /[&<>"']/g,
-        character => ({
-
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#039;"
-
-        })[character]
     );
 
+
+  if(!playerUser){
+
+    save(d);
+
+    renderRequests();
+
+    return;
+
+  }
+
+
+  playerUser.profile.coachStatus =
+    'connected';
+
+  playerUser.profile.connectedCoachId =
+    d.coach.code;
+
+
+  d.coach.players.push(
+    playerUser.profile
+  );
+
+
+  save(d);
+
+  renderRequests();
+
 }
 
 
-/* =====================================================
-   START
-===================================================== */
+/* =========================
+   PLAYER DASHBOARD
+========================= */
 
-if (
-    document.getElementById(
-        "dashboard"
+function renderPlayer(){
+
+  const d =
+    current();
+
+  const p =
+    d.player;
+
+  const matches =
+    p?.matches || [];
+
+
+  document
+    .getElementById('dashboard')
+    .innerHTML =
+
+    `
+    <div class="eyebrow">
+      PLAYER DASHBOARD
+    </div>
+
+    <h1>
+      Welcome, ${esc(p.name)}.
+    </h1>
+
+    <p class="sub">
+      Your match feedback goes directly to your connected coach.
+    </p>
+
+    <div class="cards">
+
+      <div class="card">
+
+        <h3>
+          Current Focus
+        </h3>
+
+        <div
+          class="stat"
+          style="font-size:24px">
+
+          ${esc(
+            p.focus || 'None'
+          )}
+
+        </div>
+
+      </div>
+
+
+      <div class="card">
+
+        <h3>
+          Matches Logged
+        </h3>
+
+        <div class="stat">
+          ${matches.length}
+        </div>
+
+      </div>
+
+
+      <div class="card">
+
+        <h3>
+          Coach
+        </h3>
+
+        <div
+          class="stat"
+          style="font-size:20px">
+
+          ${
+            p.coachStatus === 'connected'
+
+              ? 'Connected'
+
+              : p.coachStatus === 'pending'
+
+              ? 'Pending'
+
+              : 'Not connected'
+          }
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="card">
+
+      <h3>
+        Recent Matches
+      </h3>
+
+      ${
+        matches.length
+
+        ?
+
+        matches
+          .slice(-5)
+          .reverse()
+          .map(
+            match =>
+              matchRow(match)
+          )
+          .join('')
+
+        :
+
+        `
+        <div class="empty">
+
+          No matches logged yet.
+
+          After a match, log the score and what
+          you felt were your biggest weaknesses
+          and positives.
+
+        </div>
+        `
+      }
+
+    </div>
+    `;
+
+}
+
+
+/* =========================
+   PLAYER MATCH
+========================= */
+
+function renderPlayerMatch(){
+
+  document
+    .getElementById('dashboard')
+    .innerHTML =
+
+    `
+    <div class="eyebrow">
+      POST-MATCH
+    </div>
+
+    <h1>
+      Log a match
+    </h1>
+
+    <p class="sub">
+      You don't need your coach to have watched the match.
+      Report what you experienced.
+    </p>
+
+    <div class="card">
+
+      <label>
+
+        Result
+
+        <select id="mr">
+
+          <option>
+            Win
+          </option>
+
+          <option>
+            Loss
+          </option>
+
+        </select>
+
+      </label>
+
+
+      <label>
+
+        Opponent
+
+        <input
+          id="mo"
+          placeholder="Opponent name">
+
+      </label>
+
+
+      <label>
+
+        Match Date
+
+        <input
+          id="md"
+          type="date">
+
+      </label>
+
+
+      <label>
+
+        Score
+
+        <input
+          id="ms"
+          placeholder="6-3, 6-4">
+
+      </label>
+
+
+      <label>
+
+        Biggest Weakness
+
+        <select id="mw">
+
+          ${focusOptions()}
+
+        </select>
+
+      </label>
+
+
+      <label>
+
+        Biggest Positive
+
+        <select id="mp">
+
+          ${positiveOptions()}
+
+        </select>
+
+      </label>
+
+
+      <label>
+
+        Player Notes
+
+        <textarea
+          id="mn"
+          rows="4"
+          placeholder="What happened in the match?">
+        </textarea>
+
+      </label>
+
+
+      <button
+        class="btn primary"
+        onclick="saveMatch()">
+
+        Submit Match Review
+
+      </button>
+
+    </div>
+    `;
+
+}
+
+
+/* =========================
+   SAVE MATCH
+========================= */
+
+function saveMatch(){
+
+  const d =
+    current();
+
+  const p =
+    d.player;
+
+
+  const match = {
+
+    result:
+      document.getElementById('mr').value,
+
+    opponent:
+      document.getElementById('mo').value.trim()
+      || 'Unknown',
+
+    date:
+      document.getElementById('md').value
+      ||
+      new Date()
+        .toISOString()
+        .split('T')[0],
+
+    score:
+      document.getElementById('ms').value
+      ||
+      'Not entered',
+
+    weakness:
+      document.getElementById('mw').value,
+
+    positive:
+      document.getElementById('mp').value,
+
+    notes:
+      document.getElementById('mn').value.trim()
+
+  };
+
+
+  p.matches =
+    p.matches || [];
+
+
+  p.matches.push(match);
+
+
+  save(d);
+
+
+  renderPlayer();
+
+}
+
+
+/* =========================
+   PLAYER CONNECTION
+========================= */
+
+function renderPlayerConnection(){
+
+  const d =
+    current();
+
+  const p =
+    d.player;
+
+
+  document
+    .getElementById('dashboard')
+    .innerHTML =
+
+    `
+    <div class="eyebrow">
+      MY COACH
+    </div>
+
+    <h1>
+      Coach connection
+    </h1>
+
+    <div class="card">
+
+      <h3>
+
+        ${
+          p.coachStatus === 'connected'
+
+            ? 'Connected to your coach'
+
+            : p.coachStatus === 'pending'
+
+            ? 'Connection pending'
+
+            : 'No coach connected'
+        }
+
+      </h3>
+
+      <p class="muted">
+
+        ${
+          p.coachStatus === 'connected'
+
+            ?
+
+            'Your match reviews are shared with your coach.'
+
+            :
+
+          p.coachStatus === 'pending'
+
+            ?
+
+            'Your coach needs to approve your request.'
+
+            :
+
+            'Ask your coach for their connection code and use it when creating your account.'
+        }
+
+      </p>
+
+    </div>
+    `;
+
+}
+
+
+/* =========================
+   TENNIS OPTIONS
+========================= */
+
+function focusOptions(){
+
+  const options = [
+
+    'None',
+
+    'Serve',
+    'First Serve',
+    'Second Serve',
+    'Serve Placement',
+    'Serve + 1',
+
+    'Return',
+    'Return Depth',
+    'Return + 1',
+
+    'Forehand',
+    'Backhand',
+
+    'Volley',
+    'Overhead',
+    'Slice',
+
+    'Drop Shot',
+    'Approach Shot',
+    'Passing Shot',
+
+    'Rally Consistency',
+    'Shot Depth',
+    'Directional Control',
+    'Reducing Unforced Errors',
+
+    'Footwork',
+    'Court Positioning',
+    'Recovery Position',
+    'Movement to the Ball',
+    'Transition Movement',
+
+    'Point Construction',
+    'Attacking Short Balls',
+    'Defending',
+    'Net Play',
+
+    'Shot Selection',
+    'Opponent Patterns',
+    'Match Strategy',
+
+    'Confidence',
+    'Focus',
+    'Decision Making',
+    'Playing Under Pressure',
+
+    'Between-Point Routine',
+    'Match Preparation',
+
+    'Speed',
+    'Agility',
+    'Endurance',
+    'Explosiveness',
+    'Mobility',
+    'Match Fitness',
+
+    'Tournament Preparation',
+
+    'Overall Game'
+
+  ];
+
+
+  return options
+    .map(
+      x =>
+        `<option>${x}</option>`
     )
-) {
+    .join('');
 
-    initializeDashboard();
+}
+
+
+function positiveOptions(){
+
+  return focusOptions();
+
+}
+
+
+/* =========================
+   MATCH DISPLAY
+========================= */
+
+function matchRow(m){
+
+  return `
+
+    <div class="row">
+
+      <div>
+
+        <b>
+          ${esc(
+            m.opponent ||
+            'Unknown'
+          )}
+        </b>
+
+        <div class="muted">
+
+          ${esc(
+            m.date
+          )}
+
+          ·
+
+          ${esc(
+            m.score
+          )}
+
+        </div>
+
+      </div>
+
+
+      <span
+        class="pill ${
+          m.result === 'Win'
+            ? 'green'
+            : 'red'
+        }">
+
+        ${esc(m.result)}
+
+      </span>
+
+
+      <div>
+
+        Weakness:
+
+        <b>
+          ${esc(
+            m.weakness
+          )}
+        </b>
+
+      </div>
+
+
+      <div>
+
+        Positive:
+
+        <b>
+          ${esc(
+            m.positive
+          )}
+        </b>
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================
+   SECURITY / HTML ESCAPING
+========================= */
+
+function esc(s){
+
+  return String(
+    s ?? ''
+  ).replace(
+    /[&<>"']/g,
+
+    c => ({
+
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#039;'
+
+    }[c])
+
+  );
+
+}
+
+
+/* =========================
+   START DASHBOARD
+========================= */
+
+if(
+  document.getElementById(
+    'dashboard'
+  )
+){
+
+  dashboard();
 
 }
