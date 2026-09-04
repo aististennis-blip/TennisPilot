@@ -2,206 +2,246 @@
 <html lang="en">
 
 <head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Login — TennisPilot</title>
-
-    <link rel="stylesheet" href="style.css">
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Account — TennisPilot</title>
+<link rel="stylesheet" href="style.css">
 </head>
-
 
 <body>
 
 <main class="auth-wrap">
 
-    <div class="auth-card">
+<div class="auth-card">
 
+  <a class="brand center" href="index.html">
+    <span class="logo">TP<span>•</span></span>
+    <span>
+      TennisPilot
+      <small>Train smarter. Coach better.</small>
+    </span>
+  </a>
 
-        <a class="brand center" href="index.html">
+  <!-- LOGIN / SIGNUP -->
 
-            <span class="logo">
-                TP<span>•</span>
-            </span>
+  <div class="auth-tabs">
 
-            <span>
-                TennisPilot
-                <small>Train smarter. Coach better.</small>
-            </span>
+    <button
+      id="loginTab"
+      class="auth-tab active"
+      onclick="showAuthMode('login')">
+      Log In
+    </button>
 
-        </a>
+    <button
+      id="signupTab"
+      class="auth-tab"
+      onclick="showAuthMode('signup')">
+      Sign Up
+    </button>
 
+  </div>
 
-        <div id="roleStep">
+  <!-- ROLE SELECTION -->
 
-            <div class="eyebrow">
-                WELCOME
-            </div>
+  <div id="roleStep">
 
-            <h1>
-                How will you use TennisPilot?
-            </h1>
+    <div class="eyebrow">ACCOUNT</div>
 
-            <p class="muted">
-                Choose your account type.
-            </p>
+    <h1 id="authHeading">
+      Log in to TennisPilot
+    </h1>
 
+    <p class="muted">
+      Choose your account type.
+    </p>
 
-            <div class="role-grid">
+    <div class="role-grid">
 
-                <button
-                    class="role-card"
-                    onclick="chooseRole('coach')"
-                >
+      <button
+        class="role-card"
+        onclick="chooseRole('coach')">
 
-                    <span>👨‍🏫</span>
+        <span>👨‍🏫</span>
 
-                    <b>
-                        I'm a Coach
-                    </b>
+        <b>Coach</b>
 
-                    <small>
-                        Manage players, matches and training.
-                    </small>
+        <small>
+          Manage players, reviews and training plans.
+        </small>
 
-                </button>
+      </button>
 
+      <button
+        class="role-card"
+        onclick="chooseRole('player')">
 
-                <button
-                    class="role-card"
-                    onclick="chooseRole('player')"
-                >
+        <span>🎾</span>
 
-                    <span>🎾</span>
+        <b>Player</b>
 
-                    <b>
-                        I'm a Player
-                    </b>
+        <small>
+          Log matches and follow your coach's plan.
+        </small>
 
-                    <small>
-                        Log matches and follow my coach's plan.
-                    </small>
-
-                </button>
-
-            </div>
-
-        </div>
-
-
-        <form
-            id="loginForm"
-            class="hidden"
-            onsubmit="demoLogin(event)"
-        >
-
-            <button
-                type="button"
-                class="backlink"
-                onclick="backRole()"
-            >
-                ← Change role
-            </button>
-
-
-            <div class="eyebrow">
-                ACCOUNT
-            </div>
-
-
-            <h1 id="loginTitle">
-                Create your account
-            </h1>
-
-
-            <label>
-
-                Name
-
-                <input
-                    id="name"
-                    required
-                    placeholder="Your name"
-                >
-
-            </label>
-
-
-            <label>
-
-                Email
-
-                <input
-                    type="email"
-                    required
-                    placeholder="you@example.com"
-                >
-
-            </label>
-
-
-            <label>
-
-                Password
-
-                <input
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                >
-
-            </label>
-
-
-            <div id="codeWrap" class="hidden">
-
-                <label>
-
-                    Coach Connection Code
-
-                    <span class="optional">
-                        optional
-                    </span>
-
-                    <input
-                        id="coachCode"
-                        placeholder="Example: MYK7P2"
-                    >
-
-                </label>
-
-
-                <p class="hint">
-
-                    Enter your coach's code to request
-                    a connection.
-
-                </p>
-
-            </div>
-
-
-            <button
-                class="btn primary full"
-                type="submit"
-            >
-
-                Continue
-
-            </button>
-
-        </form>
+      </button>
 
     </div>
 
-</main>
+  </div>
 
+  <!-- FORM -->
+
+  <form
+    id="authForm"
+    class="hidden"
+    onsubmit="submitAuth(event)">
+
+    <button
+      type="button"
+      class="backlink"
+      onclick="backRole()">
+      ← Back
+    </button>
+
+    <div
+      class="eyebrow"
+      id="formEyebrow">
+      LOG IN
+    </div>
+
+    <h1 id="formTitle">
+      Coach Log In
+    </h1>
+
+    <!-- NAME -->
+
+    <label
+      id="nameLabel"
+      class="hidden">
+
+      Full name
+
+      <input
+        id="name"
+        placeholder="Your name">
+
+    </label>
+
+    <!-- EMAIL -->
+
+    <label>
+
+      Email
+
+      <input
+        id="email"
+        type="email"
+        required
+        autocomplete="email"
+        placeholder="you@example.com">
+
+    </label>
+
+    <!-- PASSWORD -->
+
+    <label>
+
+      Password
+
+      <input
+        id="password"
+        type="password"
+        required
+        autocomplete="new-password"
+        placeholder="Create a password"
+        oninput="updatePasswordRules()">
+
+    </label>
+
+    <!-- PASSWORD RULES -->
+
+    <div
+      id="passwordRules"
+      class="password-rules hidden">
+
+      <div id="rLength">
+        ○ At least 8 characters
+      </div>
+
+      <div id="rNumber">
+        ○ At least 1 number
+      </div>
+
+      <div id="rSpecial">
+        ○ At least 1 special symbol
+      </div>
+
+      <div id="rUpper">
+        ○ At least 1 uppercase letter
+      </div>
+
+    </div>
+
+    <!-- CONFIRM PASSWORD -->
+
+    <label
+      id="confirmLabel"
+      class="hidden">
+
+      Confirm password
+
+      <input
+        id="confirmPassword"
+        type="password"
+        autocomplete="new-password"
+        placeholder="Re-enter your password">
+
+    </label>
+
+    <!-- COACH CODE -->
+
+    <div
+      id="codeWrap"
+      class="hidden">
+
+      <label>
+
+        Coach connection code
+        <span class="optional">optional</span>
+
+        <input
+          id="coachCode"
+          placeholder="Example: KTP482"
+          maxlength="6"
+          style="text-transform:uppercase">
+
+      </label>
+
+      <p class="hint">
+        If you have a coach's code, enter it here.
+        The coach will approve the connection.
+      </p>
+
+    </div>
+
+    <p
+      id="authMessage"
+      class="auth-message">
+    </p>
+
+    <button
+      id="submitBtn"
+      class="btn primary full"
+      type="submit">
+      Log In
+    </button>
+
+  </form>
+
+</div>
+
+</main>
 
 <script src="script.js"></script>
 
