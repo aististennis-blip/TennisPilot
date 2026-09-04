@@ -5,11 +5,10 @@
 
 <meta charset="UTF-8">
 
-<meta
-  name="viewport"
-  content="width=device-width,initial-scale=1.0">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
 
-<title>Dashboard — TennisPilot</title>
+<title>TennisPilot Dashboard</title>
 
 <link rel="stylesheet" href="style.css">
 
@@ -19,60 +18,42 @@
 
 <div class="app">
 
-  <aside class="sidebar">
+<aside class="sidebar">
 
-    <a class="brand" href="index.html">
+<a class="brand" href="index.html">
 
-      <span class="logo">
-        TP<span>•</span>
-      </span>
+<span class="logo">TP</span>
 
-      <span>
-        TennisPilot
-        <small>Train smarter. Coach better.</small>
-      </span>
+<span>TennisPilot</span>
 
-    </a>
+</a>
 
-    <div
-      id="profileBox"
-      class="profile">
-    </div>
+<div id="profileBox" class="profile"></div>
 
-    <nav id="nav"></nav>
+<nav id="sideNav"></nav>
 
-    <button
-      class="btn small"
-      onclick="logout()"
-      style="margin-top:16px">
-      Log Out
-    </button>
+<button id="logoutBtn" class="side-btn">
+Log out
+</button>
 
-    <div class="side-bottom">
+</aside>
 
-      <a href="index.html">
-        ← Back to Home
-      </a>
+<main class="content">
 
-      <button onclick="resetDemo()">
-        Reset Demo
-      </button>
+<div id="app"></div>
 
-    </div>
-
-  </aside>
-
-  <main class="content">
-
-    <div id="dashboard"></div>
-
-  </main>
+</main>
 
 </div>
 
 <div id="modalRoot"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="supabase-config.js"></script>
+
 <script src="script.js"></script>
 
 </body>
+
 </html>
