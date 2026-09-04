@@ -2,248 +2,145 @@
 <html lang="en">
 
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Account — TennisPilot</title>
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Login — TennisPilot</title>
+
 <link rel="stylesheet" href="style.css">
+
 </head>
 
-<body>
+<body class="auth-page">
 
-<main class="auth-wrap">
+<div class="auth-box">
 
-<div class="auth-card">
+<a class="brand center" href="index.html">
 
-  <a class="brand center" href="index.html">
-    <span class="logo">TP<span>•</span></span>
-    <span>
-      TennisPilot
-      <small>Train smarter. Coach better.</small>
-    </span>
-  </a>
+<span class="logo">TP</span>
 
-  <!-- LOGIN / SIGNUP -->
+<span>TennisPilot</span>
 
-  <div class="auth-tabs">
+</a>
 
-    <button
-      id="loginTab"
-      class="auth-tab active"
-      onclick="showAuthMode('login')">
-      Log In
-    </button>
+<div class="tabs">
 
-    <button
-      id="signupTab"
-      class="auth-tab"
-      onclick="showAuthMode('signup')">
-      Sign Up
-    </button>
+<button class="tab active" data-mode="login">
+Log In
+</button>
 
-  </div>
-
-  <!-- ROLE SELECTION -->
-
-  <div id="roleStep">
-
-    <div class="eyebrow">ACCOUNT</div>
-
-    <h1 id="authHeading">
-      Log in to TennisPilot
-    </h1>
-
-    <p class="muted">
-      Choose your account type.
-    </p>
-
-    <div class="role-grid">
-
-      <button
-        class="role-card"
-        onclick="chooseRole('coach')">
-
-        <span>👨‍🏫</span>
-
-        <b>Coach</b>
-
-        <small>
-          Manage players, reviews and training plans.
-        </small>
-
-      </button>
-
-      <button
-        class="role-card"
-        onclick="chooseRole('player')">
-
-        <span>🎾</span>
-
-        <b>Player</b>
-
-        <small>
-          Log matches and follow your coach's plan.
-        </small>
-
-      </button>
-
-    </div>
-
-  </div>
-
-  <!-- FORM -->
-
-  <form
-    id="authForm"
-    class="hidden"
-    onsubmit="submitAuth(event)">
-
-    <button
-      type="button"
-      class="backlink"
-      onclick="backRole()">
-      ← Back
-    </button>
-
-    <div
-      class="eyebrow"
-      id="formEyebrow">
-      LOG IN
-    </div>
-
-    <h1 id="formTitle">
-      Coach Log In
-    </h1>
-
-    <!-- NAME -->
-
-    <label
-      id="nameLabel"
-      class="hidden">
-
-      Full name
-
-      <input
-        id="name"
-        placeholder="Your name">
-
-    </label>
-
-    <!-- EMAIL -->
-
-    <label>
-
-      Email
-
-      <input
-        id="email"
-        type="email"
-        required
-        autocomplete="email"
-        placeholder="you@example.com">
-
-    </label>
-
-    <!-- PASSWORD -->
-
-    <label>
-
-      Password
-
-      <input
-        id="password"
-        type="password"
-        required
-        autocomplete="new-password"
-        placeholder="Create a password"
-        oninput="updatePasswordRules()">
-
-    </label>
-
-    <!-- PASSWORD RULES -->
-
-    <div
-      id="passwordRules"
-      class="password-rules hidden">
-
-      <div id="rLength">
-        ○ At least 8 characters
-      </div>
-
-      <div id="rNumber">
-        ○ At least 1 number
-      </div>
-
-      <div id="rSpecial">
-        ○ At least 1 special symbol
-      </div>
-
-      <div id="rUpper">
-        ○ At least 1 uppercase letter
-      </div>
-
-    </div>
-
-    <!-- CONFIRM PASSWORD -->
-
-    <label
-      id="confirmLabel"
-      class="hidden">
-
-      Confirm password
-
-      <input
-        id="confirmPassword"
-        type="password"
-        autocomplete="new-password"
-        placeholder="Re-enter your password">
-
-    </label>
-
-    <!-- COACH CODE -->
-
-    <div
-      id="codeWrap"
-      class="hidden">
-
-      <label>
-
-        Coach connection code
-        <span class="optional">optional</span>
-
-        <input
-          id="coachCode"
-          placeholder="Example: KTP482"
-          maxlength="6"
-          style="text-transform:uppercase">
-
-      </label>
-
-      <p class="hint">
-        If you have a coach's code, enter it here.
-        The coach will approve the connection.
-      </p>
-
-    </div>
-
-    <p
-      id="authMessage"
-      class="auth-message">
-    </p>
-
-    <button
-      id="submitBtn"
-      class="btn primary full"
-      type="submit">
-      Log In
-    </button>
-
-  </form>
+<button class="tab" data-mode="signup">
+Sign Up
+</button>
 
 </div>
 
-</main>
+<div class="role-row">
+
+<button class="role active" data-role="coach">
+Coach
+</button>
+
+<button class="role" data-role="player">
+Player
+</button>
+
+</div>
+
+<form id="authForm">
+
+<label id="nameLabel">
+
+Full name
+
+<input
+id="name"
+autocomplete="name"
+>
+
+</label>
+
+<label>
+
+Email
+
+<input
+id="email"
+type="email"
+autocomplete="email"
+required
+>
+
+</label>
+
+<label>
+
+Password
+
+<input
+id="password"
+type="password"
+autocomplete="current-password"
+required
+>
+
+</label>
+
+<label id="confirmWrap" class="hidden">
+
+Confirm password
+
+<input
+id="confirm"
+type="password"
+autocomplete="new-password"
+>
+
+</label>
+
+<label id="codeWrap" class="hidden">
+
+Coach connection code
+
+<input
+id="coachCode"
+placeholder="ABC123"
+maxlength="6"
+style="text-transform:uppercase"
+>
+
+</label>
+
+<p id="passwordHint" class="hint hidden">
+
+8+ characters, one uppercase letter,
+one number, and one special symbol.
+
+</p>
+
+<button class="btn full" id="submitBtn">
+Log In
+</button>
+
+<p id="authMessage" class="message"></p>
+
+</form>
+
+<a class="back" href="index.html">
+← Back to home
+</a>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="supabase-config.js"></script>
 
 <script src="script.js"></script>
 
 </body>
+
 </html>
