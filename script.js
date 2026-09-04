@@ -13,6 +13,7 @@ function data() {
   let saved = localStorage.getItem(KEY);
 
   if (!saved) {
+
     const fresh = {
       users: []
     };
@@ -29,11 +30,7 @@ function data() {
       d.users = [];
     }
 
-    /*
-      Repair older coach accounts.
-      This keeps existing accounts and
-      gives them a proper coach code if needed.
-    */
+    /* Repair old coach accounts */
 
     d.users.forEach(user => {
 
@@ -52,10 +49,7 @@ function data() {
       }
 
       if (!user.coachCode) {
-
-        user.coachCode =
-          generateCoachCode(d);
-
+        user.coachCode = generateCoachCode(d);
       }
 
       user.profile.coachCode =
@@ -64,9 +58,7 @@ function data() {
     });
 
 
-    /*
-      Repair older player accounts.
-    */
+    /* Repair old player accounts */
 
     d.users.forEach(user => {
 
@@ -86,6 +78,14 @@ function data() {
 
       if (!user.profile.coachStatus) {
         user.profile.coachStatus = 'none';
+      }
+
+      if (!('connectedCoachEmail' in user.profile)) {
+        user.profile.connectedCoachEmail = null;
+      }
+
+      if (!('connectedCoachCode' in user.profile)) {
+        user.profile.connectedCoachCode = null;
       }
 
     });
@@ -125,9 +125,7 @@ function save(d) {
 function getSession() {
 
   const raw =
-    localStorage.getItem(
-      SESSION_KEY
-    );
+    localStorage.getItem(SESSION_KEY);
 
   if (!raw) return null;
 
@@ -214,7 +212,6 @@ function getCurrentUser() {
       user.email === session.email &&
       user.role === session.role
   ) || null;
-
 }
 
 
@@ -255,7 +252,6 @@ function showAuthMode(mode) {
         : 'Create your TennisPilot account';
 
   backRole();
-
 }
 
 
@@ -336,7 +332,6 @@ function chooseRole(role) {
     .textContent = '';
 
   updatePasswordRules();
-
 }
 
 
@@ -355,7 +350,6 @@ function backRole() {
   document
     .getElementById('authMessage')
     .textContent = '';
-
 }
 
 
@@ -371,16 +365,13 @@ function validPassword(password) {
     /[^A-Za-z0-9]/.test(password) &&
     /[A-Z]/.test(password)
   );
-
 }
 
 
 function updatePasswordRules() {
 
   const input =
-    document.getElementById(
-      'password'
-    );
+    document.getElementById('password');
 
   if (!input) return;
 
@@ -433,18 +424,14 @@ function updatePasswordRules() {
 
     }
   );
-
 }
 
 
 function msg(text) {
 
   document
-    .getElementById(
-      'authMessage'
-    )
+    .getElementById('authMessage')
     .textContent = text;
-
 }
 
 
@@ -496,24 +483,21 @@ function generateCoachCode(d) {
         user.role === 'coach' &&
         String(
           user.coachCode || ''
-        ).toUpperCase() ===
+        )
+        .toUpperCase() ===
         code.toUpperCase()
     )
   );
 
   return code;
-
 }
 
 
 /* =========================
-   FIND COACH
+   FIND COACH BY CODE
 ========================= */
 
-function findCoachByCode(
-  code,
-  d
-) {
+function findCoachByCode(code, d) {
 
   const cleanCode =
     String(code || '')
@@ -548,7 +532,6 @@ function findCoachByCode(
 
     }
   ) || null;
-
 }
 
 
@@ -582,13 +565,9 @@ function submitAuth(e) {
       .trim();
 
 
-  /* =========================
-     LOGIN
-  ========================= */
+  /* LOGIN */
 
-  if (
-    authMode === 'login'
-  ) {
+  if (authMode === 'login') {
 
     const user =
       d.users.find(
@@ -621,9 +600,7 @@ function submitAuth(e) {
   }
 
 
-  /* =========================
-     SIGNUP VALIDATION
-  ========================= */
+  /* SIGNUP */
 
   if (!name) {
 
@@ -647,15 +624,11 @@ function submitAuth(e) {
 
   const confirm =
     document
-      .getElementById(
-        'confirmPassword'
-      )
+      .getElementById('confirmPassword')
       .value;
 
 
-  if (
-    password !== confirm
-  ) {
+  if (password !== confirm) {
 
     msg(
       'Passwords do not match.'
@@ -673,20 +646,16 @@ function submitAuth(e) {
   ) {
 
     msg(
-      'An account with this email already exists.'
+      'An account with this email already exists. Please log in instead.'
     );
 
     return;
   }
 
 
-  /* =========================
-     COACH SIGNUP
-  ========================= */
+  /* COACH SIGNUP */
 
-  if (
-    selectedRole === 'coach'
-  ) {
+  if (selectedRole === 'coach') {
 
     const coachCode =
       generateCoachCode(d);
@@ -704,7 +673,7 @@ function submitAuth(e) {
     };
 
 
-    const coachUser = {
+    d.users.push({
 
       email,
 
@@ -716,22 +685,15 @@ function submitAuth(e) {
 
       profile
 
-    };
-
-
-    d.users.push(
-      coachUser
-    );
+    });
 
 
     save(d);
-
 
     setSession(
       email,
       'coach'
     );
-
 
     location.href =
       'dashboard.html';
@@ -740,9 +702,7 @@ function submitAuth(e) {
   }
 
 
-  /* =========================
-     PLAYER SIGNUP
-  ========================= */
+  /* PLAYER SIGNUP */
 
   const player = {
 
@@ -765,17 +725,16 @@ function submitAuth(e) {
 
   const codeInput =
     document
-      .getElementById(
-        'coachCode'
-      )
+      .getElementById('coachCode')
       .value
       .trim()
       .toUpperCase();
 
 
-  /* =========================
-     COACH CODE CHECK
-  ========================= */
+  /*
+    Coach code is OPTIONAL.
+    If provided, connect request is created.
+  */
 
   if (codeInput) {
 
@@ -807,14 +766,12 @@ function submitAuth(e) {
 
 
     if (
-      !coach.profile.requests ||
       !Array.isArray(
         coach.profile.requests
       )
     ) {
 
-      coach.profile.requests =
-        [];
+      coach.profile.requests = [];
 
     }
 
@@ -844,7 +801,7 @@ function submitAuth(e) {
   }
 
 
-  const playerUser = {
+  d.users.push({
 
     email,
 
@@ -854,26 +811,18 @@ function submitAuth(e) {
 
     profile: player
 
-  };
-
-
-  d.users.push(
-    playerUser
-  );
+  });
 
 
   save(d);
-
 
   setSession(
     email,
     'player'
   );
 
-
   location.href =
     'dashboard.html';
-
 }
 
 
@@ -889,20 +838,14 @@ function logout() {
 
   location.href =
     'login.html';
-
 }
 
 
 /* =========================
-   RESET DEMO
+   RESET
 ========================= */
 
 function resetDemo() {
-
-  /*
-    This intentionally deletes the
-    prototype accounts and data.
-  */
 
   localStorage.removeItem(
     KEY
@@ -914,7 +857,6 @@ function resetDemo() {
 
   location.href =
     'login.html';
-
 }
 
 
@@ -952,42 +894,26 @@ function dashboard() {
 
 
   document
-    .getElementById(
-      'profileBox'
-    )
+    .getElementById('profileBox')
     .innerHTML =
 
-    user.role === 'coach'
+    `
+    <b>
+      ${esc(user.profile.name)}
+    </b>
 
-      ?
-
-      `
-      <b>
-        ${esc(user.profile.name)}
-      </b>
-
-      <small>
-        Coach Account
-      </small>
-      `
-
-      :
-
-      `
-      <b>
-        ${esc(user.profile.name)}
-      </b>
-
-      <small>
-        Player Account
-      </small>
-      `;
+    <small>
+      ${
+        user.role === 'coach'
+          ? 'Coach Account'
+          : 'Player Account'
+      }
+    </small>
+    `;
 
 
   document
-    .getElementById(
-      'nav'
-    )
+    .getElementById('nav')
     .innerHTML =
 
     user.role === 'coach'
@@ -1044,7 +970,6 @@ function dashboard() {
     renderPlayer();
 
   }
-
 }
 
 
@@ -1120,9 +1045,7 @@ function renderCoach() {
 
 
   document
-    .getElementById(
-      'dashboard'
-    )
+    .getElementById('dashboard')
     .innerHTML =
 
     `
@@ -1137,6 +1060,7 @@ function renderCoach() {
     <p class="sub">
       See your players, match reports and what needs attention.
     </p>
+
 
     <div class="cards">
 
@@ -1312,9 +1236,7 @@ function renderPlayers() {
 
 
   document
-    .getElementById(
-      'dashboard'
-    )
+    .getElementById('dashboard')
     .innerHTML =
 
     `
@@ -1329,6 +1251,7 @@ function renderPlayers() {
     <p class="sub">
       Only players connected to your account appear here.
     </p>
+
 
     <div class="card">
 
@@ -1430,9 +1353,7 @@ function renderRequests() {
 
 
   document
-    .getElementById(
-      'dashboard'
-    )
+    .getElementById('dashboard')
     .innerHTML =
 
     `
@@ -1535,7 +1456,6 @@ function renderRequests() {
 
     </div>
     `;
-
 }
 
 
@@ -1748,9 +1668,7 @@ function renderPlayer() {
 
 
   document
-    .getElementById(
-      'dashboard'
-    )
+    .getElementById('dashboard')
     .innerHTML =
 
     `
@@ -1813,13 +1731,11 @@ function renderPlayer() {
           style="font-size:20px">
 
           ${
-            p.coachStatus ===
-            'connected'
+            p.coachStatus === 'connected'
 
               ? 'Connected ✓'
 
-              : p.coachStatus ===
-                'pending'
+              : p.coachStatus === 'pending'
 
               ? 'Pending'
 
@@ -1870,7 +1786,6 @@ function renderPlayer() {
 
     </div>
     `;
-
 }
 
 
@@ -1881,9 +1796,7 @@ function renderPlayer() {
 function renderPlayerMatch() {
 
   document
-    .getElementById(
-      'dashboard'
-    )
+    .getElementById('dashboard')
     .innerHTML =
 
     `
@@ -2002,7 +1915,6 @@ function renderPlayerMatch() {
 
     </div>
     `;
-
 }
 
 
@@ -2111,6 +2023,8 @@ function renderPlayerConnection() {
     playerUser.role !== 'player'
   ) {
 
+    logout();
+
     return;
   }
 
@@ -2119,10 +2033,98 @@ function renderPlayerConnection() {
     playerUser.profile;
 
 
+  /* CONNECTED */
+
+  if (
+    p.coachStatus ===
+    'connected'
+  ) {
+
+    document
+      .getElementById('dashboard')
+      .innerHTML =
+
+      `
+      <div class="eyebrow">
+        MY COACH
+      </div>
+
+      <h1>
+        Coach connection
+      </h1>
+
+      <div class="card">
+
+        <h3>
+          Connected to your coach ✓
+        </h3>
+
+        <p class="muted">
+
+          Your match reports are shared
+          with your coach.
+
+        </p>
+
+        <div class="pill green">
+          Connected
+        </div>
+
+      </div>
+      `;
+
+    return;
+  }
+
+
+  /* PENDING */
+
+  if (
+    p.coachStatus ===
+    'pending'
+  ) {
+
+    document
+      .getElementById('dashboard')
+      .innerHTML =
+
+      `
+      <div class="eyebrow">
+        MY COACH
+      </div>
+
+      <h1>
+        Coach connection
+      </h1>
+
+      <div class="card">
+
+        <h3>
+          Connection pending
+        </h3>
+
+        <p class="muted">
+
+          Your request has been sent.
+          Your coach needs to accept it.
+
+        </p>
+
+        <span class="pill">
+          Waiting for approval
+        </span>
+
+      </div>
+      `;
+
+    return;
+  }
+
+
+  /* NOT CONNECTED */
+
   document
-    .getElementById(
-      'dashboard'
-    )
+    .getElementById('dashboard')
     .innerHTML =
 
     `
@@ -2131,59 +2133,242 @@ function renderPlayerConnection() {
     </div>
 
     <h1>
-      Coach connection
+      Connect to your coach
     </h1>
+
+    <p class="sub">
+      You can connect to your coach at any time.
+      Ask your coach for their 6-character connection code.
+    </p>
 
 
     <div class="card">
 
       <h3>
-
-        ${
-          p.coachStatus ===
-          'connected'
-
-            ? 'Connected to your coach ✓'
-
-            : p.coachStatus ===
-              'pending'
-
-            ? 'Connection pending'
-
-            : 'No coach connected'
-        }
-
+        Enter your coach's code
       </h3>
 
+      <label>
 
-      <p class="muted">
+        Coach connection code
 
-        ${
-          p.coachStatus ===
-          'connected'
+        <input
+          id="playerCoachCode"
+          maxlength="6"
+          placeholder="Example: YHK476"
+          style="text-transform:uppercase"
+          autocomplete="off">
 
-            ?
+      </label>
 
-            'Your match reviews are shared with your coach.'
 
-            :
-
-          p.coachStatus ===
-          'pending'
-
-            ?
-
-            'Your connection request is waiting for your coach to approve it.'
-
-            :
-
-            'Ask your coach for their connection code.'
-        }
-
+      <p
+        id="connectionMessage"
+        class="auth-message">
       </p>
+
+
+      <button
+        class="btn primary"
+        onclick="connectToCoach()">
+
+        Connect to Coach
+
+      </button>
 
     </div>
     `;
+}
+
+
+/* =========================
+   CONNECT PLAYER TO COACH
+========================= */
+
+function connectToCoach() {
+
+  const d =
+    data();
+
+  const playerUser =
+    getCurrentUser();
+
+
+  if (
+    !playerUser ||
+    playerUser.role !== 'player'
+  ) {
+
+    return;
+  }
+
+
+  const input =
+    document
+      .getElementById(
+        'playerCoachCode'
+      );
+
+
+  const message =
+    document
+      .getElementById(
+        'connectionMessage'
+      );
+
+
+  if (!input) {
+    return;
+  }
+
+
+  const code =
+    input.value
+      .trim()
+      .toUpperCase();
+
+
+  if (!code) {
+
+    message.textContent =
+      'Please enter your coach connection code.';
+
+    return;
+  }
+
+
+  /* Make sure format is 3 letters + 3 numbers */
+
+  if (
+    !/^[A-Z]{3}[0-9]{3}$/.test(code)
+  ) {
+
+    message.textContent =
+      'Coach codes must be 3 letters followed by 3 numbers.';
+
+    return;
+  }
+
+
+  const coach =
+    findCoachByCode(
+      code,
+      d
+    );
+
+
+  if (!coach) {
+
+    message.textContent =
+      'Coach code not found. Check the code and try again.';
+
+    return;
+  }
+
+
+  /* Prevent connecting to yourself */
+
+  if (
+    coach.email ===
+    playerUser.email
+  ) {
+
+    message.textContent =
+      'You cannot connect to your own account.';
+
+    return;
+  }
+
+
+  /* Make sure request array exists */
+
+  if (
+    !Array.isArray(
+      coach.profile.requests
+    )
+  ) {
+
+    coach.profile.requests = [];
+
+  }
+
+
+  /* Check if already connected */
+
+  if (
+    playerUser.profile.coachStatus ===
+    'connected'
+  ) {
+
+    message.textContent =
+      'You are already connected to a coach.';
+
+    return;
+  }
+
+
+  /* Check duplicate request */
+
+  const alreadyRequested =
+    coach.profile.requests.some(
+      request =>
+        request.email ===
+        playerUser.email
+    );
+
+
+  if (alreadyRequested) {
+
+    playerUser.profile.coachStatus =
+      'pending';
+
+    playerUser.profile.connectedCoachEmail =
+      coach.email;
+
+    playerUser.profile.connectedCoachCode =
+      coach.coachCode;
+
+    save(d);
+
+    renderPlayerConnection();
+
+    return;
+  }
+
+
+  /* Create request */
+
+  coach.profile.requests.push({
+
+    name:
+      playerUser.profile.name,
+
+    level:
+      playerUser.profile.level ||
+      'Player',
+
+    email:
+      playerUser.email
+
+  });
+
+
+  /* Update player */
+
+  playerUser.profile.coachStatus =
+    'pending';
+
+  playerUser.profile.connectedCoachEmail =
+    coach.email;
+
+  playerUser.profile.connectedCoachCode =
+    coach.coachCode;
+
+
+  save(d);
+
+
+  renderPlayerConnection();
 
 }
 
@@ -2279,7 +2464,7 @@ function positiveOptions() {
 
 
 /* =========================
-   MATCH DISPLAY
+   MATCH ROW
 ========================= */
 
 function matchRow(match) {
@@ -2380,7 +2565,6 @@ function esc(value) {
     }[character])
 
   );
-
 }
 
 
