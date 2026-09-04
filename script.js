@@ -1,610 +1,1392 @@
-document.addEventListener("DOMContentLoaded", () => {
+const STORAGE_KEY = "tennispilot_coach_v2";
 
-  const panels = document.querySelectorAll(".panel");
-  const sideLinks = document.querySelectorAll(".side-link");
 
-  function showPanel(panelId) {
+const defaultData = {
 
-    panels.forEach(panel => {
-      panel.classList.remove("active");
-    });
+  players: [
 
-    sideLinks.forEach(link => {
-      link.classList.remove("active");
-    });
+    {
+      id: 1,
+      name: "Alex Morgan",
+      level: "Competitive",
+      focus: "Return Depth",
+      note: "Short returns have appeared repeatedly in recent matches.",
+      completion: 72,
+      attention: true,
+      goal: "70%+ deep returns"
+    },
 
-    const target = document.getElementById(panelId);
-    const button = document.querySelector(
-      `.side-link[data-panel="${panelId}"]`
-    );
+    {
+      id: 2,
+      name: "Jordan Lee",
+      level: "Advanced",
+      focus: "Serve +1",
+      note: "Serve is improving. Keep building the first-ball pattern.",
+      completion: 84,
+      attention: false,
+      goal: "Win more first-ball points"
+    },
 
-    if (target) {
-      target.classList.add("active");
+    {
+      id: 3,
+      name: "Chris Wilson",
+      level: "Junior",
+      focus: "Movement",
+      note: "Needs better recovery after wide balls.",
+      completion: 61,
+      attention: true,
+      goal: "Recover to neutral faster"
     }
 
-    if (button) {
-      button.classList.add("active");
+  ],
+
+
+  matches: [
+
+    {
+      player: "Alex Morgan",
+      result: "Win",
+      score: "6-4, 7-5",
+      positive: "Serve +1",
+      problem: "Return",
+      notes: "Short returns created pressure."
+    },
+
+    {
+      player: "Jordan Lee",
+      result: "Loss",
+      score: "4-6, 6-7",
+      positive: "Forehand",
+      problem: "Decision Making",
+      notes: "Too many low-percentage attacks."
+    },
+
+    {
+      player: "Chris Wilson",
+      result: "Win",
+      score: "6-3, 6-4",
+      positive: "Backhand",
+      problem: "Movement",
+      notes: "Late recovery on wide balls."
     }
 
-    const titles = {
-      overview: "Good afternoon, Alex.",
-      assessment: "Assess your game.",
-      training: "Train with purpose.",
-      matches: "Learn from your matches.",
-      progress: "Track your development.",
-      coach: "Coach View."
-    };
+  ],
 
-    const subtitles = {
-      overview: "Here's what you should focus on this week.",
-      assessment: "Rate your current strengths and weaknesses.",
-      training: "Complete the sessions connected to your current priority.",
-      matches: "Turn match performance into useful information.",
-      progress: "See how your development is trending.",
-      coach: "Review the player's current development plan."
-    };
 
-    const title = document.getElementById("pageTitle");
-    const subtitle = document.getElementById("pageSubtitle");
+  sessions: [
 
-    if (title) {
-      title.textContent = titles[panelId] || "TennisPilot";
+    {
+      player: "Alex Morgan",
+      name: "Return Depth Fundamentals",
+      duration: "20 min",
+      intensity: "Medium",
+      done: true
+    },
+
+    {
+      player: "Jordan Lee",
+      name: "Serve +1 Pattern",
+      duration: "30 min",
+      intensity: "High",
+      done: true
+    },
+
+    {
+      player: "Chris Wilson",
+      name: "Recovery Movement Drill",
+      duration: "20 min",
+      intensity: "Medium",
+      done: false
+    },
+
+    {
+      player: "Alex Morgan",
+      name: "Return Under Pressure",
+      duration: "25 min",
+      intensity: "High",
+      done: false
     }
 
-    if (subtitle) {
-      subtitle.textContent = subtitles[panelId] || "";
-    }
+  ]
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-  }
+};
 
 
-  sideLinks.forEach(link => {
-
-    link.addEventListener("click", () => {
-
-      const panelId = link.dataset.panel;
-
-      if (panelId) {
-        showPanel(panelId);
-      }
-
-    });
-
-  });
+let data = loadData();
 
 
-  document.querySelectorAll("[data-panel-target]").forEach(button => {
 
-    button.addEventListener("click", () => {
+function loadData() {
 
-      const panelId = button.dataset.panelTarget;
+  try {
 
-      if (panelId) {
-        showPanel(panelId);
-      }
-
-    });
-
-  });
-
-
-  /* -------------------------
-     ADD SESSION MODAL
-  ------------------------- */
-
-  const sessionModal = document.getElementById("sessionModal");
-
-  const addSessionButtons = [
-    document.getElementById("addSessionBtn"),
-    document.getElementById("addSessionBtn2")
-  ].filter(Boolean);
-
-  const closeSessionModal =
-    document.getElementById("closeSessionModal");
-
-  const cancelSession =
-    document.getElementById("cancelSession");
-
-  const sessionForm =
-    document.getElementById("sessionForm");
-
-
-  function openSessionModal() {
-
-    if (sessionModal) {
-      sessionModal.classList.add("open");
-
-      const nameInput =
-        document.getElementById("sessionName");
-
-      if (nameInput) {
-        setTimeout(() => nameInput.focus(), 100);
-      }
-    }
+    return JSON.parse(
+      localStorage.getItem(STORAGE_KEY)
+    ) || structuredClone(defaultData);
 
   }
 
+  catch (error) {
 
-  function closeModal() {
-
-    if (sessionModal) {
-      sessionModal.classList.remove("open");
-    }
+    return structuredClone(defaultData);
 
   }
 
+}
 
-  addSessionButtons.forEach(button => {
 
-    button.addEventListener("click", openSessionModal);
 
-  });
+function saveData() {
 
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(data)
+  );
 
-  if (closeSessionModal) {
-    closeSessionModal.addEventListener("click", closeModal);
-  }
+}
 
 
-  if (cancelSession) {
-    cancelSession.addEventListener("click", closeModal);
-  }
 
+function initials(name) {
 
-  if (sessionModal) {
+  return name
+    .split(" ")
+    .map(x => x[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
-    sessionModal.addEventListener("click", event => {
+}
 
-      if (event.target === sessionModal) {
-        closeModal();
-      }
 
-    });
 
-  }
+function escapeHTML(value) {
 
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 
-  document.addEventListener("keydown", event => {
+}
 
-    if (
-      event.key === "Escape" &&
-      sessionModal &&
-      sessionModal.classList.contains("open")
-    ) {
-      closeModal();
-    }
 
-  });
 
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
 
-  if (sessionForm) {
 
-    sessionForm.addEventListener("submit", event => {
+    const panels =
+      document.querySelectorAll(".panel");
 
-      event.preventDefault();
 
-      const name =
-        document.getElementById("sessionName").value.trim();
+    const links =
+      document.querySelectorAll(".side-link");
 
-      const date =
-        document.getElementById("sessionDate").value;
 
-      const duration =
-        document.getElementById("sessionDuration").value;
+    const title =
+      document.getElementById("pageTitle");
 
-      const focus =
-        document.getElementById("sessionFocus").value;
 
-      const intensity =
-        document.getElementById("sessionIntensity").value;
+    const subtitle =
+      document.getElementById("pageSubtitle");
 
-      const objective =
-        document.getElementById("sessionObjective").value.trim();
 
-      if (!name || !date) {
-        return;
-      }
 
+    function showPanel(id) {
 
-      const sessionList =
-        document.getElementById("sessionList");
+      panels.forEach(panel => {
 
-      if (!sessionList) {
-        closeModal();
-        return;
-      }
-
-
-      const dateObject = new Date(date + "T12:00:00");
-
-      const dayNames = [
-        "SUN",
-        "MON",
-        "TUE",
-        "WED",
-        "THU",
-        "FRI",
-        "SAT"
-      ];
-
-      const day =
-        dayNames[dateObject.getDay()];
-
-      const dayNumber =
-        String(dateObject.getDate()).padStart(2, "0");
-
-
-      const sessionRow =
-        document.createElement("div");
-
-      sessionRow.className = "session-row";
-
-
-      sessionRow.innerHTML = `
-        <div class="session-date">
-          <strong>${day}</strong>
-          <span>${dayNumber}</span>
-        </div>
-
-        <div class="session-info">
-          <strong>${escapeHTML(name)}</strong>
-          <span>${escapeHTML(duration)} · ${escapeHTML(intensity)} · ${escapeHTML(focus)}</span>
-        </div>
-
-        <span class="session-status upcoming">
-          Upcoming
-        </span>
-      `;
-
-
-      sessionList.appendChild(sessionRow);
-
-
-      sessionForm.reset();
-
-      closeModal();
-
-
-      const trainingPanel =
-        document.getElementById("training");
-
-      if (trainingPanel) {
-
-        const trainingList =
-          trainingPanel.querySelector(".training-list");
-
-        if (trainingList) {
-
-          const trainingItem =
-            document.createElement("label");
-
-          trainingItem.className = "training-item";
-
-          trainingItem.innerHTML = `
-            <input type="checkbox" class="training-check">
-
-            <div>
-              <strong>${escapeHTML(name)}</strong>
-              <span>${escapeHTML(duration)} · ${escapeHTML(focus)} · ${escapeHTML(intensity)}</span>
-            </div>
-
-            <em>${escapeHTML(day)}</em>
-          `;
-
-          trainingList.appendChild(trainingItem);
-
-          setupTrainingCheckbox(
-            trainingItem.querySelector(".training-check")
-          );
-
-        }
-
-      }
-
-    });
-
-  }
-
-
-  function escapeHTML(value) {
-
-    return value
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-
-  }
-
-
-  /* -------------------------
-     TRAINING CHECKBOXES
-  ------------------------- */
-
-  const trainingChecks =
-    document.querySelectorAll(".training-check");
-
-
-  function setupTrainingCheckbox(checkbox) {
-
-    if (!checkbox) {
-      return;
-    }
-
-    checkbox.addEventListener("change", updateTrainingProgress);
-
-  }
-
-
-  trainingChecks.forEach(setupTrainingCheckbox);
-
-
-  function updateTrainingProgress() {
-
-    const checks =
-      document.querySelectorAll(".training-check");
-
-    if (!checks.length) {
-      return;
-    }
-
-    const completed =
-      [...checks].filter(check => check.checked).length;
-
-    const percentage =
-      Math.round((completed / checks.length) * 100);
-
-
-    const trainingPercent =
-      document.getElementById("trainingPercent");
-
-    const progressNumber =
-      document.getElementById("progressNumber");
-
-
-    if (trainingPercent) {
-      trainingPercent.textContent =
-        `${percentage}%`;
-    }
-
-    if (progressNumber) {
-      progressNumber.textContent =
-        `${percentage}%`;
-    }
-
-
-    const progressRing =
-      document.querySelector(".progress-ring");
-
-    if (progressRing) {
-
-      progressRing.style.background =
-        `conic-gradient(#2563eb 0 ${percentage}%, #e9edf3 ${percentage}% 100%)`;
-
-    }
-
-  }
-
-
-  /* -------------------------
-     ASSESSMENT
-  ------------------------- */
-
-  const sliders =
-    document.querySelectorAll(".assessment-card input[type='range']");
-
-
-  sliders.forEach(slider => {
-
-    const output =
-      slider.parentElement.querySelector("span");
-
-    slider.addEventListener("input", () => {
-
-      if (output) {
-        output.textContent =
-          `${slider.value} / 10`;
-      }
-
-    });
-
-  });
-
-
-  const saveAssessment =
-    document.getElementById("saveAssessment");
-
-
-  if (saveAssessment) {
-
-    saveAssessment.addEventListener("click", () => {
-
-      saveAssessment.textContent =
-        "Saved ✓";
-
-      setTimeout(() => {
-
-        saveAssessment.textContent =
-          "Save Assessment";
-
-      }, 1600);
-
-    });
-
-  }
-
-
-  /* -------------------------
-     MATCH
-  ------------------------- */
-
-  const addMatch =
-    document.getElementById("addMatch");
-
-
-  if (addMatch) {
-
-    addMatch.addEventListener("click", () => {
-
-      addMatch.textContent =
-        "Match Added ✓";
-
-      setTimeout(() => {
-
-        addMatch.textContent =
-          "+ Add Match";
-
-      }, 1600);
-
-    });
-
-  }
-
-
-  /* -------------------------
-     COACH NOTES
-  ------------------------- */
-
-  const saveCoachNotes =
-    document.getElementById("saveCoachNotes");
-
-
-  if (saveCoachNotes) {
-
-    saveCoachNotes.addEventListener("click", () => {
-
-      saveCoachNotes.textContent =
-        "Saved ✓";
-
-      setTimeout(() => {
-
-        saveCoachNotes.textContent =
-          "Save Notes";
-
-      }, 1600);
-
-    });
-
-  }
-
-
-  /* -------------------------
-     RESET DEMO
-  ------------------------- */
-
-  const resetDemo =
-    document.getElementById("resetDemo");
-
-
-  if (resetDemo) {
-
-    resetDemo.addEventListener("click", () => {
-
-      const confirmed =
-        confirm("Reset the TennisPilot demo to its original state?");
-
-      if (!confirmed) {
-        return;
-      }
-
-
-      /* Reset training */
-
-      document
-        .querySelectorAll(".training-check")
-        .forEach((checkbox, index) => {
-
-          checkbox.checked =
-            index < 2;
-
-        });
-
-
-      /* Reset assessment */
-
-      const defaultValues =
-        [8, 6, 9, 8, 8, 7];
-
-
-      sliders.forEach((slider, index) => {
-
-        slider.value =
-          defaultValues[index];
-
-        const output =
-          slider.parentElement.querySelector("span");
-
-        if (output) {
-          output.textContent =
-            `${slider.value} / 10`;
-        }
+        panel.classList.remove("active");
 
       });
 
 
-      /* Reset coach notes */
+      links.forEach(link => {
 
-      const notes =
-        document.getElementById("coachNotes");
+        link.classList.remove("active");
 
-      if (notes) {
-        notes.value = "";
+      });
+
+
+      document
+        .getElementById(id)
+        ?.classList.add("active");
+
+
+      document
+        .querySelector(
+          `[data-panel="${id}"]`
+        )
+        ?.classList.add("active");
+
+
+
+      const titles = {
+
+        overview:
+          "Good afternoon, Coach.",
+
+        players:
+          "Your Players",
+
+        matches:
+          "Match Reviews",
+
+        training:
+          "Training Plans",
+
+        progress:
+          "Player Progress"
+
+      };
+
+
+
+      const subtitles = {
+
+        overview:
+          "Here's what needs your attention.",
+
+        players:
+          "Add your players and manage their development.",
+
+        matches:
+          "Turn competition into useful coaching information.",
+
+        training:
+          "Connect sessions to each player's development priorities.",
+
+        progress:
+          "Track development across your roster."
+
+      };
+
+
+
+      if (title) {
+
+        title.textContent =
+          titles[id] || "TennisPilot";
+
       }
 
 
-      /* Remove sessions created by user */
 
-      const sessionList =
-        document.getElementById("sessionList");
+      if (subtitle) {
 
-      if (sessionList) {
-
-        const rows =
-          sessionList.querySelectorAll(".session-row");
-
-        rows.forEach((row, index) => {
-
-          if (index > 2) {
-            row.remove();
-          }
-
-        });
+        subtitle.textContent =
+          subtitles[id] || "";
 
       }
 
 
-      /* Reset progress */
 
-      updateTrainingProgress();
+      render();
 
-
-      /* Return to overview */
-
-      showPanel("overview");
+    }
 
 
-      resetDemo.textContent =
-        "Reset ✓";
 
-      setTimeout(() => {
+    links.forEach(link => {
 
-        resetDemo.textContent =
-          "Reset Demo";
+      link.addEventListener(
+        "click",
+        () => {
 
-      }, 1500);
+          showPanel(
+            link.dataset.panel
+          );
+
+        }
+      );
 
     });
 
+
+
+    document
+      .querySelectorAll("[data-panel-target]")
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            showPanel(
+              button.dataset.panelTarget
+            );
+
+          }
+        );
+
+      });
+
+
+
+    function openModal(id) {
+
+      fillPlayerSelects();
+
+      document
+        .getElementById(id)
+        ?.classList.add("open");
+
+    }
+
+
+
+    function closeModal(id) {
+
+      document
+        .getElementById(id)
+        ?.classList.remove("open");
+
+    }
+
+
+
+    document
+      .querySelectorAll("[data-close]")
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            closeModal(
+              button.dataset.close
+            );
+
+          }
+        );
+
+      });
+
+
+
+    document
+      .querySelectorAll(".modal-overlay")
+      .forEach(modal => {
+
+        modal.addEventListener(
+          "click",
+          event => {
+
+            if (
+              event.target === modal
+            ) {
+
+              closeModal(modal.id);
+
+            }
+
+          }
+        );
+
+      });
+
+
+
+    document
+      .getElementById("addPlayerBtn")
+      ?.addEventListener(
+        "click",
+        () => openModal("playerModal")
+      );
+
+
+
+    document
+      .getElementById("addPlayerTop")
+      ?.addEventListener(
+        "click",
+        () => openModal("playerModal")
+      );
+
+
+
+    document
+      .getElementById("addMatchBtn")
+      ?.addEventListener(
+        "click",
+        () => openModal("matchModal")
+      );
+
+
+
+    document
+      .getElementById("addSessionBtn")
+      ?.addEventListener(
+        "click",
+        () => openModal("sessionModal")
+      );
+
+
+
+    /* ADD PLAYER */
+
+    document
+      .getElementById("playerForm")
+      ?.addEventListener(
+        "submit",
+        event => {
+
+          event.preventDefault();
+
+
+          const player = {
+
+            id: Date.now(),
+
+            name:
+              document
+                .getElementById("playerName")
+                .value
+                .trim(),
+
+            level:
+              document
+                .getElementById("playerLevel")
+                .value,
+
+            focus:
+              document
+                .getElementById("playerFocus")
+                .value,
+
+            note:
+              document
+                .getElementById("playerNote")
+                .value
+                .trim(),
+
+            completion: 0,
+
+            attention: true,
+
+            goal:
+              "Set a development goal"
+
+          };
+
+
+          if (!player.name) {
+
+            return;
+
+          }
+
+
+          data.players.push(player);
+
+
+          saveData();
+
+
+          event.target.reset();
+
+
+          closeModal("playerModal");
+
+
+          showPanel("players");
+
+        }
+      );
+
+
+
+    /* ADD MATCH */
+
+    document
+      .getElementById("matchForm")
+      ?.addEventListener(
+        "submit",
+        event => {
+
+          event.preventDefault();
+
+
+          const player =
+            document.getElementById(
+              "matchPlayer"
+            ).value;
+
+
+          const result =
+            document.getElementById(
+              "matchResult"
+            ).value;
+
+
+          const score =
+            document.getElementById(
+              "matchScore"
+            ).value;
+
+
+          const positive =
+            document.getElementById(
+              "matchPositive"
+            ).value;
+
+
+          const problem =
+            document.getElementById(
+              "matchProblem"
+            ).value;
+
+
+          const notes =
+            document.getElementById(
+              "matchNotes"
+            ).value;
+
+
+
+          data.matches.unshift({
+
+            player,
+
+            result,
+
+            score,
+
+            positive,
+
+            problem,
+
+            notes
+
+          });
+
+
+
+          const selectedPlayer =
+            data.players.find(
+              p => p.name === player
+            );
+
+
+          if (selectedPlayer) {
+
+            selectedPlayer.focus =
+              problem;
+
+            selectedPlayer.attention =
+              true;
+
+          }
+
+
+
+          saveData();
+
+
+          event.target.reset();
+
+
+          closeModal("matchModal");
+
+
+          showPanel("matches");
+
+        }
+      );
+
+
+
+    /* ADD SESSION */
+
+    document
+      .getElementById("sessionForm")
+      ?.addEventListener(
+        "submit",
+        event => {
+
+          event.preventDefault();
+
+
+          data.sessions.push({
+
+            player:
+              document
+                .getElementById("sessionPlayer")
+                .value,
+
+            name:
+              document
+                .getElementById("sessionName")
+                .value
+                .trim(),
+
+            duration:
+              document
+                .getElementById("sessionDuration")
+                .value,
+
+            intensity:
+              document
+                .getElementById("sessionIntensity")
+                .value,
+
+            done: false
+
+          });
+
+
+
+          saveData();
+
+
+          event.target.reset();
+
+
+          closeModal("sessionModal");
+
+
+          showPanel("training");
+
+        }
+      );
+
+
+
+    /* RESET */
+
+    document
+      .getElementById("resetDemo")
+      ?.addEventListener(
+        "click",
+        () => {
+
+          if (
+            confirm(
+              "Reset all demo data and remove your added players?"
+            )
+          ) {
+
+            data =
+              structuredClone(
+                defaultData
+              );
+
+
+            saveData();
+
+
+            showPanel("overview");
+
+          }
+
+        }
+      );
+
+
+
+    function fillPlayerSelects() {
+
+      [
+        "matchPlayer",
+        "sessionPlayer"
+      ]
+
+      .forEach(id => {
+
+        const select =
+          document.getElementById(id);
+
+
+        if (!select) {
+
+          return;
+
+        }
+
+
+        const oldValue =
+          select.value;
+
+
+        select.innerHTML =
+          data.players
+            .map(
+              player =>
+                `<option>${escapeHTML(
+                  player.name
+                )}</option>`
+            )
+            .join("");
+
+
+        if (
+          data.players.some(
+            player =>
+              player.name === oldValue
+          )
+        ) {
+
+          select.value =
+            oldValue;
+
+        }
+
+      });
+
+    }
+
+
+
+    function render() {
+
+      fillPlayerSelects();
+
+
+      const playerCount =
+        document.getElementById(
+          "playerCount"
+        );
+
+
+      const attentionCount =
+        document.getElementById(
+          "attentionCount"
+        );
+
+
+      const completion =
+        data.players.length
+
+          ? Math.round(
+              data.players.reduce(
+                (total, player) =>
+                  total + player.completion,
+                0
+              ) / data.players.length
+            )
+
+          : 0;
+
+
+
+      if (playerCount) {
+
+        playerCount.textContent =
+          data.players.length;
+
+      }
+
+
+
+      if (attentionCount) {
+
+        attentionCount.textContent =
+          data.players.filter(
+            player =>
+              player.attention
+          ).length;
+
+      }
+
+
+
+      const overall =
+        document.getElementById(
+          "overallCompletion"
+        );
+
+
+      if (overall) {
+
+        overall.textContent =
+          completion + "%";
+
+      }
+
+
+
+      const sessions =
+        document.getElementById(
+          "sessionCount"
+        );
+
+
+      if (sessions) {
+
+        sessions.textContent =
+          data.sessions.length;
+
+      }
+
+
+
+      const goals =
+        document.getElementById(
+          "goalCount"
+        );
+
+
+      if (goals) {
+
+        goals.textContent =
+          data.players.length + 2;
+
+      }
+
+
+
+      renderAttention();
+
+      renderPlayers();
+
+      renderMatches();
+
+      renderSessions();
+
+      renderProgress();
+
+    }
+
+
+
+    function renderAttention() {
+
+      const element =
+        document.getElementById(
+          "attentionList"
+        );
+
+
+      if (!element) {
+
+        return;
+
+      }
+
+
+
+      const players =
+        data.players.filter(
+          player =>
+            player.attention
+        );
+
+
+
+      if (!players.length) {
+
+        element.innerHTML =
+          `<p style="color:#748095;font-size:13px">
+            No players need attention.
+          </p>`;
+
+        return;
+
+      }
+
+
+
+      element.innerHTML =
+        players
+
+          .map(
+            player => `
+
+              <div class="attention-item">
+
+                <div>
+
+                  <strong>
+                    ${escapeHTML(
+                      player.name
+                    )}
+                  </strong>
+
+                  <span>
+                    ${escapeHTML(
+                      player.focus
+                    )}
+                    ·
+                    ${player.completion}%
+                    training completion
+                  </span>
+
+                </div>
+
+                <span class="alert-pill">
+                  ATTENTION
+                </span>
+
+              </div>
+
+            `
+          )
+
+          .join("");
+
+    }
+
+
+
+    function playerCard(player) {
+
+      return `
+
+        <div class="player-card">
+
+          <div class="player-top">
+
+            <div class="player-avatar">
+
+              ${initials(
+                player.name
+              )}
+
+            </div>
+
+            <div>
+
+              <h3>
+                ${escapeHTML(
+                  player.name
+                )}
+              </h3>
+
+              <span class="level">
+
+                ${escapeHTML(
+                  player.level
+                )}
+
+              </span>
+
+            </div>
+
+          </div>
+
+
+          <div class="focus-box">
+
+            CURRENT FOCUS
+
+            <b>
+              ${escapeHTML(
+                player.focus
+              )}
+            </b>
+
+          </div>
+
+
+          <div class="team-row">
+
+            <span>
+              Training completion
+            </span>
+
+            <b>
+              ${player.completion}%
+            </b>
+
+          </div>
+
+
+          <div class="bar">
+
+            <i
+              style="width:${player.completion}%"
+            ></i>
+
+          </div>
+
+
+          <div class="focus-box">
+
+            <span>
+              GOAL
+            </span>
+
+            <b>
+              ${escapeHTML(
+                player.goal
+              )}
+            </b>
+
+          </div>
+
+        </div>
+
+      `;
+
+    }
+
+
+
+    function renderPlayers() {
+
+      const overview =
+        document.getElementById(
+          "overviewPlayers"
+        );
+
+
+      const playerGrid =
+        document.getElementById(
+          "playerGrid"
+        );
+
+
+      if (overview) {
+
+        overview.innerHTML =
+          data.players
+            .map(playerCard)
+            .join("");
+
+      }
+
+
+      if (playerGrid) {
+
+        playerGrid.innerHTML =
+          data.players
+            .map(playerCard)
+            .join("");
+
+      }
+
+    }
+
+
+
+    function renderMatches() {
+
+      const element =
+        document.getElementById(
+          "matchList"
+        );
+
+
+      if (!element) {
+
+        return;
+
+      }
+
+
+
+      if (!data.matches.length) {
+
+        element.innerHTML =
+          `<div style="padding:25px;color:#748095">
+            No matches yet.
+          </div>`;
+
+        return;
+
+      }
+
+
+
+      element.innerHTML =
+        data.matches
+
+          .map(
+            match => `
+
+              <div class="match-item">
+
+                <div class="match-player">
+
+                  <strong>
+                    ${escapeHTML(
+                      match.player
+                    )}
+                  </strong>
+
+                  <span>
+                    ${escapeHTML(
+                      match.score
+                    )}
+                  </span>
+
+                </div>
+
+
+                <div>
+
+                  <span class="${
+                    match.result === "Win"
+                      ? "result-win"
+                      : "result-loss"
+                  }">
+
+                    ${escapeHTML(
+                      match.result
+                    )}
+
+                  </span>
+
+                </div>
+
+
+                <div>
+
+                  <span>
+                    MAIN PROBLEM
+                  </span>
+
+                  <strong>
+                    ${escapeHTML(
+                      match.problem
+                    )}
+                  </strong>
+
+                </div>
+
+
+                <div>
+
+                  <span>
+                    POSITIVE
+                  </span>
+
+                  <strong>
+                    ${escapeHTML(
+                      match.positive
+                    )}
+                  </strong>
+
+                </div>
+
+              </div>
+
+            `
+          )
+
+          .join("");
+
+    }
+
+
+
+    function renderSessions() {
+
+      const element =
+        document.getElementById(
+          "trainingList"
+        );
+
+
+      if (!element) {
+
+        return;
+
+      }
+
+
+
+      element.innerHTML =
+        data.sessions
+
+          .map(
+            (session, index) => `
+
+              <div class="training-row">
+
+                <div>
+
+                  <strong>
+                    ${escapeHTML(
+                      session.player
+                    )}
+                  </strong>
+
+                  <span>
+                    ${escapeHTML(
+                      session.name
+                    )}
+                  </span>
+
+                </div>
+
+
+                <div>
+
+                  <span>
+                    ${escapeHTML(
+                      session.duration
+                    )}
+                  </span>
+
+                </div>
+
+
+                <div>
+
+                  <span>
+                    ${escapeHTML(
+                      session.intensity
+                    )}
+                  </span>
+
+                </div>
+
+
+                <label>
+
+                  <input
+                    type="checkbox"
+                    class="session-check"
+                    data-index="${index}"
+                    ${
+                      session.done
+                        ? "checked"
+                        : ""
+                    }
+                  >
+
+                  ${
+                    session.done
+                      ? "Completed"
+                      : "Upcoming"
+                  }
+
+                </label>
+
+              </div>
+
+            `
+          )
+
+          .join("");
+
+
+
+      document
+        .querySelectorAll(
+          ".session-check"
+        )
+        .forEach(checkbox => {
+
+          checkbox.addEventListener(
+            "change",
+            () => {
+
+              const index =
+                Number(
+                  checkbox.dataset.index
+                );
+
+
+              data.sessions[index].done =
+                checkbox.checked;
+
+
+              saveData();
+
+
+              render();
+
+            }
+          );
+
+        });
+
+    }
+
+
+
+    function renderProgress() {
+
+      const element =
+        document.getElementById(
+          "progressList"
+        );
+
+
+      if (!element) {
+
+        return;
+
+      }
+
+
+
+      element.innerHTML =
+        data.players
+
+          .map(
+            player => `
+
+              <div class="progress-card">
+
+                <div class="progress-head">
+
+                  <div>
+
+                    <strong>
+                      ${escapeHTML(
+                        player.name
+                      )}
+                    </strong>
+
+                    <small>
+                      ${escapeHTML(
+                        player.focus
+                      )}
+                    </small>
+
+                  </div>
+
+
+                  <span class="progress-number">
+
+                    ${player.completion}%
+
+                  </span>
+
+                </div>
+
+
+                <div class="bar">
+
+                  <i
+                    style="width:${player.completion}%"
+                  ></i>
+
+                </div>
+
+
+                <div class="focus-box">
+
+                  <span>
+                    NEXT GOAL
+                  </span>
+
+                  <b>
+                    ${escapeHTML(
+                      player.goal
+                    )}
+                  </b>
+
+                </div>
+
+              </div>
+
+            `
+          )
+
+          .join("");
+
+    }
+
+
+
+    render();
+
   }
-
-
-  /* Initial state */
-
-  updateTrainingProgress();
-
-});
+);
