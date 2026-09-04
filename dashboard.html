@@ -1,0 +1,2038 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
+
+<title>
+TennisPilot — Player Demo
+</title>
+
+<script>
+window.va = window.va || function () {
+(window.vaq = window.vaq || []).push(arguments);
+};
+</script>
+
+<script defer
+src="/_vercel/insights/script.js">
+</script>
+
+
+<style>
+
+:root{
+--navy:#07111f;
+--blue:#2563eb;
+--cyan:#06b6d4;
+--sky:#eff6ff;
+--bg:#f5f7fb;
+--text:#0f172a;
+--muted:#64748b;
+--line:#e2e8f0
+}
+
+*{
+box-sizing:border-box
+}
+
+body{
+margin:0;
+font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;
+background:var(--bg);
+color:var(--text)
+}
+
+a{
+text-decoration:none;
+color:inherit
+}
+
+.container{
+width:min(1160px,92%);
+margin:auto
+}
+
+
+.nav{
+
+height:72px;
+
+background:rgba(7,17,31,.97);
+
+color:#fff;
+
+display:flex;
+
+align-items:center;
+
+justify-content:space-between;
+
+padding:0 4%;
+
+position:sticky;
+
+top:0;
+
+z-index:20
+
+}
+
+
+.brand{
+
+font-weight:900;
+
+font-size:23px;
+
+letter-spacing:-1px
+
+}
+
+
+.brand span{
+
+color:#60a5fa
+
+}
+
+
+.navlinks{
+
+display:flex;
+
+gap:7px
+
+}
+
+
+.navlinks a{
+
+padding:10px 13px;
+
+border-radius:10px;
+
+color:#cbd5e1;
+
+font-weight:700;
+
+font-size:14px
+
+}
+
+
+.navlinks a:hover,
+
+.navlinks a.active{
+
+background:#ffffff14;
+
+color:#fff
+
+}
+
+
+.dashboard-head{
+
+padding:32px 0 18px;
+
+display:flex;
+
+justify-content:space-between;
+
+align-items:end;
+
+gap:20px
+
+}
+
+
+.dashboard-head h1{
+
+font-size:42px;
+
+letter-spacing:-2px;
+
+margin:8px 0
+
+}
+
+
+.muted{
+
+color:var(--muted);
+
+line-height:1.55
+
+}
+
+
+.pill{
+
+display:inline-block;
+
+padding:6px 9px;
+
+border-radius:999px;
+
+background:#dbeafe;
+
+color:#1d4ed8;
+
+font-size:12px;
+
+font-weight:900
+
+}
+
+
+.btn{
+
+border:0;
+
+border-radius:12px;
+
+padding:13px 18px;
+
+font-weight:900;
+
+cursor:pointer;
+
+display:inline-block
+
+}
+
+
+.btn.blue{
+
+background:var(--blue);
+
+color:#fff
+
+}
+
+
+.btn.dark{
+
+background:#172033;
+
+color:#fff
+
+}
+
+
+.stats{
+
+display:grid;
+
+grid-template-columns:repeat(4,1fr);
+
+gap:12px
+
+}
+
+
+.stat{
+
+padding:17px;
+
+background:#fff;
+
+border:1px solid var(--line);
+
+border-radius:14px
+
+}
+
+
+.stat small{
+
+color:var(--muted);
+
+font-weight:700
+
+}
+
+
+.stat b{
+
+display:block;
+
+font-size:28px;
+
+margin-bottom:4px
+
+}
+
+
+.tabs{
+
+display:flex;
+
+gap:8px;
+
+flex-wrap:wrap;
+
+margin:22px 0
+
+}
+
+
+.tab{
+
+background:#fff;
+
+border:1px solid var(--line);
+
+padding:10px 14px;
+
+border-radius:11px;
+
+font-weight:900;
+
+cursor:pointer
+
+}
+
+
+.tab.active{
+
+background:var(--blue);
+
+color:#fff;
+
+border-color:var(--blue)
+
+}
+
+
+.view{
+
+display:none
+
+}
+
+
+.view.active{
+
+display:block
+
+}
+
+
+.grid{
+
+display:grid;
+
+grid-template-columns:repeat(12,1fr);
+
+gap:18px
+
+}
+
+
+.card{
+
+background:#fff;
+
+border:1px solid var(--line);
+
+border-radius:20px;
+
+padding:24px;
+
+box-shadow:0 10px 35px #0f172a09
+
+}
+
+
+.span8{
+
+grid-column:span 8
+
+}
+
+
+.span6{
+
+grid-column:span 6
+
+}
+
+
+.span4{
+
+grid-column:span 4
+
+}
+
+
+.callout{
+
+padding:18px;
+
+border-radius:15px;
+
+background:linear-gradient(
+135deg,
+#eff6ff,
+#ecfeff
+);
+
+border:1px solid #bfdbfe
+
+}
+
+
+.list{
+
+display:grid;
+
+gap:10px
+
+}
+
+
+.item{
+
+display:flex;
+
+gap:11px;
+
+padding:13px;
+
+border:1px solid var(--line);
+
+border-radius:12px;
+
+background:#fff
+
+}
+
+
+.dot{
+
+width:9px;
+
+height:9px;
+
+background:var(--blue);
+
+border-radius:50%;
+
+margin-top:6px;
+
+flex:none
+
+}
+
+
+.check{
+
+width:19px;
+
+height:19px;
+
+accent-color:var(--blue)
+
+}
+
+
+label{
+
+display:block;
+
+font-size:13px;
+
+font-weight:900;
+
+margin:13px 0 6px
+
+}
+
+
+input,
+
+select,
+
+textarea{
+
+width:100%;
+
+padding:11px 12px;
+
+border:1px solid #cbd5e1;
+
+border-radius:10px;
+
+font:inherit;
+
+background:#fff
+
+}
+
+
+textarea{
+
+min-height:100px;
+
+resize:vertical
+
+}
+
+
+.rating{
+
+display:grid;
+
+grid-template-columns:145px 1fr 28px;
+
+gap:10px;
+
+align-items:center;
+
+padding:10px 0;
+
+border-bottom:1px solid var(--line)
+
+}
+
+
+.rating-buttons{
+
+display:flex;
+
+gap:5px
+
+}
+
+
+.rating-buttons button{
+
+width:34px;
+
+padding:7px;
+
+background:#fff;
+
+border:1px solid #cbd5e1;
+
+border-radius:8px;
+
+font-weight:800;
+
+cursor:pointer
+
+}
+
+
+.rating-buttons button.selected{
+
+background:var(--blue);
+
+color:#fff;
+
+border-color:var(--blue)
+
+}
+
+
+.week{
+
+display:grid;
+
+grid-template-columns:90px 1fr auto;
+
+align-items:center;
+
+padding:13px 0;
+
+border-bottom:1px solid var(--line)
+
+}
+
+
+.notice{
+
+display:none;
+
+margin-top:12px;
+
+padding:11px;
+
+border-radius:10px;
+
+background:#ecfdf5;
+
+color:#166534;
+
+font-weight:800
+
+}
+
+
+.barwrap{
+
+height:155px;
+
+display:flex;
+
+align-items:end;
+
+gap:10px;
+
+padding:15px 5px
+
+}
+
+
+.bar{
+
+width:34px;
+
+border-radius:8px 8px 2px 2px;
+
+background:linear-gradient(
+#22d3ee,
+#2563eb
+)
+
+}
+
+
+footer{
+
+text-align:center;
+
+color:#94a3b8;
+
+padding:40px 0 55px;
+
+font-size:13px
+
+}
+
+
+@media(max-width:800px){
+
+.navlinks{
+
+display:none
+
+}
+
+.span8,
+
+.span6,
+
+.span4{
+
+grid-column:span 12
+
+}
+
+.stats{
+
+grid-template-columns:repeat(2,1fr)
+
+}
+
+.dashboard-head{
+
+display:block
+
+}
+
+.dashboard-head h1{
+
+font-size:34px
+
+}
+
+.rating{
+
+grid-template-columns:1fr
+
+}
+
+.week{
+
+grid-template-columns:75px 1fr auto
+
+}
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<nav class="nav">
+
+<a class="brand"
+href="index.html">
+
+Tennis<span>Pilot</span>
+
+</a>
+
+
+<div class="navlinks">
+
+<a href="index.html">
+Home
+</a>
+
+<a href="about.html">
+How It Works
+</a>
+
+<a class="active"
+href="dashboard.html">
+Player Demo
+</a>
+
+</div>
+
+</nav>
+
+
+<main class="container">
+
+
+<div class="dashboard-head">
+
+<div>
+
+<span class="pill">
+DEMO PLAYER
+</span>
+
+<h1>
+Alex's Tennis Dashboard
+</h1>
+
+<p class="muted">
+A realistic example of how a player could use
+TennisPilot between coaching sessions.
+</p>
+
+</div>
+
+
+<button
+class="btn dark"
+onclick="resetDemo()">
+
+Reset demo
+
+</button>
+
+</div>
+
+
+<div class="stats">
+
+
+<div class="stat">
+
+<small>
+MAIN GOAL
+</small>
+
+<b id="goalOut">
+Match consistency
+</b>
+
+</div>
+
+
+<div class="stat">
+
+<small>
+PRIORITY
+</small>
+
+<b id="priorityOut">
+Return
+</b>
+
+</div>
+
+
+<div class="stat">
+
+<small>
+MATCHES
+</small>
+
+<b id="matchesOut">
+6
+</b>
+
+</div>
+
+
+<div class="stat">
+
+<small>
+WIN RATE
+</small>
+
+<b id="rateOut">
+67%
+</b>
+
+</div>
+
+
+</div>
+
+
+<div class="tabs">
+
+<button class="tab active"
+data-view="overview">
+Overview
+</button>
+
+<button class="tab"
+data-view="assessment">
+Assessment
+</button>
+
+<button class="tab"
+data-view="training">
+Training Plan
+</button>
+
+<button class="tab"
+data-view="match">
+Match Review
+</button>
+
+<button class="tab"
+data-view="progress">
+Progress
+</button>
+
+</div>
+
+
+<!-- OVERVIEW -->
+
+<section id="overview"
+class="view active">
+
+<div class="grid">
+
+
+<div class="card span8">
+
+<h2>
+Coach Focus
+</h2>
+
+<p class="muted">
+
+The player should confirm priorities with their coach.
+TennisPilot organizes the information; it does not
+replace coaching judgment.
+
+</p>
+
+
+<div class="callout">
+
+<b>
+Current pattern:
+</b>
+
+Return has appeared as the biggest issue in several
+recent match reviews.
+
+<br><br>
+
+<span class="muted">
+
+Suggested next conversation:
+
+“What return position and target should I test
+against different server types?”
+
+</span>
+
+</div>
+
+</div>
+
+
+<div class="card span4">
+
+<h2>
+This Week
+</h2>
+
+<div class="list">
+
+
+<label class="item">
+
+<input class="check"
+type="checkbox"
+checked>
+
+<span>
+
+<b>
+Return technical work
+</b>
+
+<br>
+
+<span class="muted">
+Coach priority
+</span>
+
+</span>
+
+</label>
+
+
+<label class="item">
+
+<input class="check"
+type="checkbox">
+
+<span>
+
+<b>
+Return point play
+</b>
+
+<br>
+
+<span class="muted">
+Test under pressure
+</span>
+
+</span>
+
+</label>
+
+
+<label class="item">
+
+<input class="check"
+type="checkbox">
+
+<span>
+
+<b>
+Match review
+</b>
+
+<br>
+
+<span class="muted">
+Capture one pattern
+</span>
+
+</span>
+
+</label>
+
+
+</div>
+
+</div>
+
+
+<div class="card span6">
+
+<h2>
+Recent Match Pattern
+</h2>
+
+<p class="muted">
+The goal isn't to obsess over one result.
+Look for repeated signals.
+</p>
+
+<div class="list"
+id="patternList">
+</div>
+
+</div>
+
+
+<div class="card span6">
+
+<h2>
+Coach Questions
+</h2>
+
+<div class="list">
+
+
+<div class="item">
+
+<div class="dot"></div>
+
+<div>
+Should I stand farther back against this
+opponent's serve?
+</div>
+
+</div>
+
+
+<div class="item">
+
+<div class="dot"></div>
+
+<div>
+What return target should I use when I'm
+under pressure?
+</div>
+
+</div>
+
+
+<div class="item">
+
+<div class="dot"></div>
+
+<div>
+Which return drill best transfers to points?
+</div>
+
+</div>
+
+
+</div>
+
+</div>
+
+
+</div>
+
+</section>
+
+
+<!-- ASSESSMENT -->
+
+<section id="assessment"
+class="view">
+
+<div class="card">
+
+<h2>
+Player Assessment
+</h2>
+
+<p class="muted">
+
+Rate each area from 1–5.
+These are player self-ratings and should be
+discussed with a coach.
+
+</p>
+
+
+<div id="ratings">
+</div>
+
+
+<div class="grid">
+
+
+<div class="span6">
+
+<label>
+Main goal
+</label>
+
+<input
+id="goal"
+value="Become more consistent in matches">
+
+</div>
+
+
+<div class="span6">
+
+<label>
+Biggest challenge
+</label>
+
+<input
+id="struggle"
+value="Returning strong first serves">
+
+</div>
+
+
+</div>
+
+
+<label>
+Notes for coach
+</label>
+
+<textarea
+id="assessmentNotes">
+I feel comfortable from the baseline, but my level drops when opponents serve big and I feel rushed on returns.
+</textarea>
+
+
+<button
+class="btn blue"
+onclick="saveAssessment()">
+
+Save assessment
+
+</button>
+
+
+<div id="assessmentMsg"
+class="notice">
+
+Assessment saved ✓
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- TRAINING -->
+
+<section id="training"
+class="view">
+
+<div class="grid">
+
+
+<div class="card span6">
+
+<h2>
+Weekly Priority
+</h2>
+
+
+<label>
+Focus
+</label>
+
+<input
+id="focus"
+value="Return of serve">
+
+
+<label>
+Target
+</label>
+
+<input
+id="target"
+value="100 quality return reps">
+
+
+<label>
+Coach instruction
+</label>
+
+<textarea
+id="instruction">
+Start neutral, choose a clear target, and prioritize depth over pace.
+</textarea>
+
+
+<button
+class="btn blue"
+onclick="saveTraining()">
+
+Save plan
+
+</button>
+
+
+<div id="trainingMsg"
+class="notice">
+
+Training plan saved ✓
+
+</div>
+
+</div>
+
+
+<div class="card span6">
+
+<h2>
+Sessions
+</h2>
+
+<p class="muted">
+Keep the tracking simple.
+</p>
+
+
+<div id="weeks">
+</div>
+
+
+<h3 id="completion">
+60% complete
+</h3>
+
+</div>
+
+
+</div>
+
+</section>
+
+
+<!-- MATCH -->
+
+<section id="match"
+class="view">
+
+<div class="card">
+
+<h2>
+Match Review
+</h2>
+
+<p class="muted">
+Record the useful stuff while it is still fresh.
+</p>
+
+
+<div class="grid">
+
+
+<div class="span4">
+
+<label>
+Result
+</label>
+
+<select id="result">
+
+<option>
+Win
+</option>
+
+<option>
+Loss
+</option>
+
+</select>
+
+</div>
+
+
+<div class="span4">
+
+<label>
+Score
+</label>
+
+<input
+id="score"
+placeholder="6-4, 3-6, 10-7">
+
+</div>
+
+
+<div class="span4">
+
+<label>
+Surface
+</label>
+
+<select id="surface">
+
+<option>
+Hard
+</option>
+
+<option>
+Clay
+</option>
+
+<option>
+Indoor
+</option>
+
+</select>
+
+</div>
+
+
+</div>
+
+
+<div class="grid">
+
+
+<div class="span6">
+
+<label>
+Biggest problem
+</label>
+
+<select id="problem">
+
+<option>
+Return
+</option>
+
+<option>
+Serve
+</option>
+
+<option>
+Forehand
+</option>
+
+<option>
+Backhand
+</option>
+
+<option>
+Movement
+</option>
+
+<option>
+Consistency
+</option>
+
+<option>
+Decision Making
+</option>
+
+<option>
+Mental Game
+</option>
+
+</select>
+
+</div>
+
+
+<div class="span6">
+
+<label>
+What went well?
+</label>
+
+<input
+id="good"
+placeholder="e.g. Forehand stayed aggressive">
+
+</div>
+
+</div>
+
+
+<label>
+What happened?
+</label>
+
+<textarea
+id="notes"
+placeholder="Describe the key pattern you noticed...">
+</textarea>
+
+
+<label>
+What should I ask my coach?
+</label>
+
+<textarea
+id="question"
+placeholder="e.g. How should I adjust my return position?">
+</textarea>
+
+
+<button
+class="btn blue"
+onclick="saveMatch()">
+
+Save match review
+
+</button>
+
+
+<div id="matchMsg"
+class="notice">
+
+Match review saved ✓
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- PROGRESS -->
+
+<section id="progress"
+class="view">
+
+<div class="grid">
+
+
+<div class="card span8">
+
+<h2>
+Progress Overview
+</h2>
+
+<p class="muted">
+Example data from the demo player.
+</p>
+
+
+<div class="barwrap"
+id="chart">
+</div>
+
+
+<div class="stats">
+
+
+<div class="stat">
+
+<small>
+MATCHES
+</small>
+
+<b id="total">
+6
+</b>
+
+</div>
+
+
+<div class="stat">
+
+<small>
+WINS
+</small>
+
+<b id="wins">
+4
+</b>
+
+</div>
+
+
+<div class="stat">
+
+<small>
+WIN RATE
+</small>
+
+<b id="rate">
+67%
+</b>
+
+</div>
+
+
+<div class="stat">
+
+<small>
+TOP ISSUE
+</small>
+
+<b id="topIssue">
+Return
+</b>
+
+</div>
+
+
+</div>
+
+</div>
+
+
+<div class="card span4">
+
+<h2>
+Recurring Problems
+</h2>
+
+<div id="patterns"
+class="list">
+</div>
+
+</div>
+
+
+</div>
+
+</section>
+
+
+</main>
+
+
+<footer>
+
+TennisPilot • Demo mode • No login required
+
+</footer>
+
+
+<script>
+
+const areas=[
+"Serve",
+"Return",
+"Forehand",
+"Backhand",
+"Movement",
+"Consistency",
+"Decision Making",
+"Mental Game"
+];
+
+
+const defaultData={
+
+ratings:{
+"Serve":4,
+"Return":2,
+"Forehand":4,
+"Backhand":3,
+"Movement":4,
+"Consistency":3,
+"Decision Making":3,
+"Mental Game":4
+},
+
+goal:
+"Become more consistent in matches",
+
+struggle:
+"Returning strong first serves",
+
+notes:
+"I feel comfortable from the baseline, but my level drops when opponents serve big and I feel rushed on returns.",
+
+focus:
+"Return of serve",
+
+target:
+"100 quality return reps",
+
+instruction:
+"Start neutral, choose a clear target, and prioritize depth over pace.",
+
+training:
+[true,true,false,true,false],
+
+matches:[
+{result:"Win",problem:"Return"},
+{result:"Loss",problem:"Return"},
+{result:"Win",problem:"Consistency"},
+{result:"Win",problem:"Return"},
+{result:"Loss",problem:"Decision Making"},
+{result:"Win",problem:"Return"}
+]
+
+};
+
+
+let d=
+JSON.parse(
+localStorage.getItem("tpDemo")||"null"
+)||defaultData;
+
+
+const $=
+id=>document.getElementById(id);
+
+
+function save(){
+
+localStorage.setItem(
+"tpDemo",
+JSON.stringify(d)
+);
+
+}
+
+
+function show(id){
+
+document
+.querySelectorAll(".view")
+.forEach(x=>
+x.classList.toggle(
+"active",
+x.id===id
+)
+);
+
+
+document
+.querySelectorAll(".tab")
+.forEach(x=>
+x.classList.toggle(
+"active",
+x.dataset.view===id
+)
+);
+
+
+update();
+
+}
+
+
+document
+.querySelectorAll(".tab")
+.forEach(x=>
+x.onclick=()=>
+show(x.dataset.view)
+);
+
+
+function renderRatings(){
+
+let box=$("ratings");
+
+box.innerHTML="";
+
+
+areas.forEach(a=>{
+
+let r=document.createElement("div");
+
+r.className="rating";
+
+
+r.innerHTML=
+"<b>"+a+"</b>";
+
+
+let bs=
+document.createElement("div");
+
+bs.className=
+"rating-buttons";
+
+
+for(let i=1;i<=5;i++){
+
+let b=
+document.createElement("button");
+
+b.textContent=i;
+
+
+if(d.ratings[a]===i){
+
+b.className=
+"selected";
+
+}
+
+
+b.onclick=()=>{
+
+d.ratings[a]=i;
+
+save();
+
+renderRatings();
+
+update();
+
+};
+
+
+bs.append(b);
+
+}
+
+
+r.append(bs);
+
+
+let v=
+document.createElement("b");
+
+v.textContent=
+d.ratings[a]||"—";
+
+
+r.append(v);
+
+
+box.append(r);
+
+});
+
+
+$("goal").value=d.goal;
+
+$("struggle").value=d.struggle;
+
+$("assessmentNotes").value=d.notes;
+
+}
+
+
+function saveAssessment(){
+
+d.goal=
+$("goal").value;
+
+d.struggle=
+$("struggle").value;
+
+d.notes=
+$("assessmentNotes").value;
+
+save();
+
+msg("assessmentMsg");
+
+update();
+
+}
+
+
+function renderWeeks(){
+
+let box=$("weeks");
+
+box.innerHTML="";
+
+
+[
+"Monday",
+"Tuesday",
+"Wednesday",
+"Thursday",
+"Friday"
+].forEach((day,i)=>{
+
+let r=
+document.createElement("div");
+
+r.className="week";
+
+
+r.innerHTML=
+"<b>"+day+
+"</b><span>"+
+[
+"Technical work",
+"Return reps",
+"Point play",
+"Match prep",
+"Review + adjust"
+][i]+
+"</span>";
+
+
+let c=
+document.createElement("input");
+
+c.type="checkbox";
+
+c.className="check";
+
+c.checked=
+d.training[i];
+
+
+c.onchange=()=>{
+
+d.training[i]=c.checked;
+
+save();
+
+updateCompletion();
+
+};
+
+
+r.append(c);
+
+box.append(r);
+
+});
+
+
+updateCompletion();
+
+}
+
+
+function updateCompletion(){
+
+let n=
+d.training.filter(Boolean).length;
+
+
+$("completion").textContent=
+Math.round(n/5*100)+
+"% complete";
+
+}
+
+
+function saveTraining(){
+
+d.focus=
+$("focus").value;
+
+d.target=
+$("target").value;
+
+d.instruction=
+$("instruction").value;
+
+save();
+
+msg("trainingMsg");
+
+}
+
+
+function saveMatch(){
+
+d.matches.push({
+
+result:
+$("result").value,
+
+problem:
+$("problem").value
+
+});
+
+
+save();
+
+
+[
+"score",
+"good",
+"notes",
+"question"
+].forEach(x=>
+$(x).value=""
+);
+
+
+msg("matchMsg");
+
+update();
+
+}
+
+
+function msg(id){
+
+$(id).style.display=
+"block";
+
+
+setTimeout(
+()=>
+$(id).style.display=
+"none",
+1800
+);
+
+}
+
+
+function update(){
+
+let low=
+areas.reduce(
+(best,a)=>
+d.ratings[a]<
+(d.ratings[best]||6)
+?a
+:best,
+areas[0]
+);
+
+
+let wins=
+d.matches.filter(
+x=>x.result==="Win"
+).length;
+
+
+$("goalOut").textContent=
+d.goal||"—";
+
+
+$("priorityOut").textContent=
+low;
+
+
+$("matchesOut").textContent=
+d.matches.length;
+
+
+$("rateOut").textContent=
+d.matches.length
+?
+Math.round(
+wins/d.matches.length*100
+)+"%"
+:"0%";
+
+
+$("total").textContent=
+d.matches.length;
+
+
+$("wins").textContent=
+wins;
+
+
+$("rate").textContent=
+d.matches.length
+?
+Math.round(
+wins/d.matches.length*100
+)+"%"
+:"0%";
+
+
+$("topIssue").textContent=
+low;
+
+
+let c={};
+
+
+d.matches.forEach(x=>
+c[x.problem]=
+(c[x.problem]||0)+1
+);
+
+
+let entries=
+Object.entries(c)
+.sort(
+(a,b)=>b[1]-a[1]
+);
+
+
+$("patterns").innerHTML=
+entries
+.map(x=>
+"<div class='item'>"+
+"<div class='dot'></div>"+
+"<div>"+
+"<b>"+x[0]+"</b>"+
+"<br>"+
+"<span class='muted'>"+
+x[1]+
+" match"+
+(x[1]>1?"es":"")+
+"</span>"+
+"</div>"+
+"</div>"
+)
+.join("");
+
+
+$("patternList").innerHTML=
+entries
+.slice(0,3)
+.map(x=>
+"<div class='item'>"+
+"<div class='dot'></div>"+
+"<div>"+
+"<b>"+x[0]+"</b>"+
+"<br>"+
+"<span class='muted'>"+
+"Recurring issue"+
+"</span>"+
+"</div>"+
+"</div>"
+)
+.join("");
+
+
+$("chart").innerHTML=
+d.matches
+.slice(-7)
+.map(x=>
+"<div class='bar' "+
+"style='height:"+
+(x.result==="Win"
+?"100%"
+:"45%")+
+"' title='"+
+x.result+
+"'></div>"
+)
+.join("");
+
+
+$("focus").value=
+d.focus;
+
+$("target").value=
+d.target;
+
+$("instruction").value=
+d.instruction;
+
+
+updateCompletion();
+
+}
+
+
+function resetDemo(){
+
+localStorage.removeItem(
+"tpDemo"
+);
+
+location.reload();
+
+}
+
+
+renderRatings();
+
+renderWeeks();
+
+update();
+
+</script>
+
+</body>
+</html>
