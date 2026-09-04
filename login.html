@@ -5,135 +5,203 @@
 
 <meta charset="UTF-8">
 
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1.0">
 
-<title>Login — TennisPilot</title>
+<title>
+  Login — TennisPilot
+</title>
 
-<link rel="stylesheet" href="style.css">
+<link
+  rel="stylesheet"
+  href="style.css">
 
 </head>
 
+
 <body class="auth-page">
+
 
 <div class="auth-box">
 
-<a class="brand center" href="index.html">
 
-<span class="logo">TP</span>
+<a
+  class="brand center"
+  href="index.html">
 
-<span>TennisPilot</span>
+  <span class="logo">
+    TP
+  </span>
+
+  <span>
+    TennisPilot
+  </span>
 
 </a>
+
 
 <div class="tabs">
 
-<button class="tab active" data-mode="login">
-Log In
-</button>
+  <button
+    class="tab active"
+    data-mode="login">
 
-<button class="tab" data-mode="signup">
-Sign Up
-</button>
+    Log In
+
+  </button>
+
+
+  <button
+    class="tab"
+    data-mode="signup">
+
+    Sign Up
+
+  </button>
 
 </div>
+
 
 <div class="role-row">
 
-<button class="role active" data-role="coach">
-Coach
-</button>
+  <button
+    class="role active"
+    data-role="coach">
 
-<button class="role" data-role="player">
-Player
-</button>
+    Coach
+
+  </button>
+
+
+  <button
+    class="role"
+    data-role="player">
+
+    Player
+
+  </button>
 
 </div>
+
 
 <form id="authForm">
 
+
 <label id="nameLabel">
 
-Full name
+  Full name
 
-<input
-id="name"
-autocomplete="name"
->
+  <input
+    id="name"
+    autocomplete="name"
+  >
 
 </label>
+
 
 <label>
 
-Email
+  Email
 
-<input
-id="email"
-type="email"
-autocomplete="email"
-required
->
+  <input
+    id="email"
+    type="email"
+    autocomplete="email"
+    required
+  >
 
 </label>
+
 
 <label>
 
-Password
+  Password
 
-<input
-id="password"
-type="password"
-autocomplete="current-password"
-required
->
-
-</label>
-
-<label id="confirmWrap" class="hidden">
-
-Confirm password
-
-<input
-id="confirm"
-type="password"
-autocomplete="new-password"
->
+  <input
+    id="password"
+    type="password"
+    autocomplete="current-password"
+    required
+  >
 
 </label>
 
-<label id="codeWrap" class="hidden">
 
-Coach connection code
+<label
+  id="confirmWrap"
+  class="hidden">
 
-<input
-id="coachCode"
-placeholder="ABC123"
-maxlength="6"
-style="text-transform:uppercase"
->
+  Confirm password
+
+  <input
+    id="confirm"
+    type="password"
+    autocomplete="new-password"
+  >
 
 </label>
 
-<p id="passwordHint" class="hint hidden">
 
-8+ characters, one uppercase letter,
-one number, and one special symbol.
+<label
+  id="codeWrap"
+  class="hidden">
+
+  Coach connection code
+
+  <input
+    id="coachCode"
+    placeholder="ABC123"
+    maxlength="6"
+    autocomplete="off"
+    autocapitalize="characters"
+    spellcheck="false"
+    style="text-transform:uppercase"
+  >
+
+</label>
+
+
+<p
+  id="passwordHint"
+  class="hint hidden">
+
+  8+ characters, one uppercase letter,
+  one number, and one special symbol.
 
 </p>
 
-<button class="btn full" id="submitBtn">
-Log In
+
+<button
+  class="btn full"
+  id="submitBtn">
+
+  Log In
+
 </button>
 
-<p id="authMessage" class="message"></p>
+
+<p
+  id="authMessage"
+  class="message">
+
+</p>
+
 
 </form>
 
-<a class="back" href="index.html">
-← Back to home
+
+<a
+  class="back"
+  href="index.html">
+
+  ← Back to home
+
 </a>
 
+
 </div>
+
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -141,6 +209,6 @@ Log In
 
 <script src="script.js"></script>
 
-</body>
 
+</body>
 </html>
