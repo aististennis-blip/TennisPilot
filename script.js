@@ -1,576 +1,610 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  /* =========================
-     DASHBOARD NAVIGATION
-  ========================= */
+  const panels = document.querySelectorAll(".panel");
+  const sideLinks = document.querySelectorAll(".side-link");
 
-  const sideButtons =
-    document.querySelectorAll(".side-link");
+  function showPanel(panelId) {
 
-  sideButtons.forEach(button => {
-
-    button.addEventListener("click", () => {
-
-      showPanel(
-        button.dataset.panel,
-        button
-      );
-
+    panels.forEach(panel => {
+      panel.classList.remove("active");
     });
 
-  });
-
-
-  /* =========================
-     BUTTONS THAT OPEN PANELS
-  ========================= */
-
-  document.querySelectorAll("[data-go]").forEach(button => {
-
-    button.addEventListener("click", () => {
-
-      const target =
-        document.querySelector(
-          `.side-link[data-panel="${button.dataset.go}"]`
-        );
-
-      showPanel(
-        button.dataset.go,
-        target
-      );
-
+    sideLinks.forEach(link => {
+      link.classList.remove("active");
     });
 
-  });
-
-
-  /* =========================
-     ASSESSMENT
-  ========================= */
-
-  setupAssessment();
-
-
-  /* =========================
-     TRAINING
-  ========================= */
-
-  setupTraining();
-
-
-  /* =========================
-     RESET
-  ========================= */
-
-  const resetButton =
-    document.getElementById("resetBtn");
-
-  if (resetButton) {
-
-    resetButton.addEventListener(
-      "click",
-      resetDemo
+    const target = document.getElementById(panelId);
+    const button = document.querySelector(
+      `.side-link[data-panel="${panelId}"]`
     );
+
+    if (target) {
+      target.classList.add("active");
+    }
+
+    if (button) {
+      button.classList.add("active");
+    }
+
+    const titles = {
+      overview: "Good afternoon, Alex.",
+      assessment: "Assess your game.",
+      training: "Train with purpose.",
+      matches: "Learn from your matches.",
+      progress: "Track your development.",
+      coach: "Coach View."
+    };
+
+    const subtitles = {
+      overview: "Here's what you should focus on this week.",
+      assessment: "Rate your current strengths and weaknesses.",
+      training: "Complete the sessions connected to your current priority.",
+      matches: "Turn match performance into useful information.",
+      progress: "See how your development is trending.",
+      coach: "Review the player's current development plan."
+    };
+
+    const title = document.getElementById("pageTitle");
+    const subtitle = document.getElementById("pageSubtitle");
+
+    if (title) {
+      title.textContent = titles[panelId] || "TennisPilot";
+    }
+
+    if (subtitle) {
+      subtitle.textContent = subtitles[panelId] || "";
+    }
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  }
+
+
+  sideLinks.forEach(link => {
+
+    link.addEventListener("click", () => {
+
+      const panelId = link.dataset.panel;
+
+      if (panelId) {
+        showPanel(panelId);
+      }
+
+    });
+
+  });
+
+
+  document.querySelectorAll("[data-panel-target]").forEach(button => {
+
+    button.addEventListener("click", () => {
+
+      const panelId = button.dataset.panelTarget;
+
+      if (panelId) {
+        showPanel(panelId);
+      }
+
+    });
+
+  });
+
+
+  /* -------------------------
+     ADD SESSION MODAL
+  ------------------------- */
+
+  const sessionModal = document.getElementById("sessionModal");
+
+  const addSessionButtons = [
+    document.getElementById("addSessionBtn"),
+    document.getElementById("addSessionBtn2")
+  ].filter(Boolean);
+
+  const closeSessionModal =
+    document.getElementById("closeSessionModal");
+
+  const cancelSession =
+    document.getElementById("cancelSession");
+
+  const sessionForm =
+    document.getElementById("sessionForm");
+
+
+  function openSessionModal() {
+
+    if (sessionModal) {
+      sessionModal.classList.add("open");
+
+      const nameInput =
+        document.getElementById("sessionName");
+
+      if (nameInput) {
+        setTimeout(() => nameInput.focus(), 100);
+      }
+    }
 
   }
 
 
-  /* =========================
-     SAVE ASSESSMENT
-  ========================= */
+  function closeModal() {
 
-  const saveButton =
+    if (sessionModal) {
+      sessionModal.classList.remove("open");
+    }
+
+  }
+
+
+  addSessionButtons.forEach(button => {
+
+    button.addEventListener("click", openSessionModal);
+
+  });
+
+
+  if (closeSessionModal) {
+    closeSessionModal.addEventListener("click", closeModal);
+  }
+
+
+  if (cancelSession) {
+    cancelSession.addEventListener("click", closeModal);
+  }
+
+
+  if (sessionModal) {
+
+    sessionModal.addEventListener("click", event => {
+
+      if (event.target === sessionModal) {
+        closeModal();
+      }
+
+    });
+
+  }
+
+
+  document.addEventListener("keydown", event => {
+
+    if (
+      event.key === "Escape" &&
+      sessionModal &&
+      sessionModal.classList.contains("open")
+    ) {
+      closeModal();
+    }
+
+  });
+
+
+  if (sessionForm) {
+
+    sessionForm.addEventListener("submit", event => {
+
+      event.preventDefault();
+
+      const name =
+        document.getElementById("sessionName").value.trim();
+
+      const date =
+        document.getElementById("sessionDate").value;
+
+      const duration =
+        document.getElementById("sessionDuration").value;
+
+      const focus =
+        document.getElementById("sessionFocus").value;
+
+      const intensity =
+        document.getElementById("sessionIntensity").value;
+
+      const objective =
+        document.getElementById("sessionObjective").value.trim();
+
+      if (!name || !date) {
+        return;
+      }
+
+
+      const sessionList =
+        document.getElementById("sessionList");
+
+      if (!sessionList) {
+        closeModal();
+        return;
+      }
+
+
+      const dateObject = new Date(date + "T12:00:00");
+
+      const dayNames = [
+        "SUN",
+        "MON",
+        "TUE",
+        "WED",
+        "THU",
+        "FRI",
+        "SAT"
+      ];
+
+      const day =
+        dayNames[dateObject.getDay()];
+
+      const dayNumber =
+        String(dateObject.getDate()).padStart(2, "0");
+
+
+      const sessionRow =
+        document.createElement("div");
+
+      sessionRow.className = "session-row";
+
+
+      sessionRow.innerHTML = `
+        <div class="session-date">
+          <strong>${day}</strong>
+          <span>${dayNumber}</span>
+        </div>
+
+        <div class="session-info">
+          <strong>${escapeHTML(name)}</strong>
+          <span>${escapeHTML(duration)} · ${escapeHTML(intensity)} · ${escapeHTML(focus)}</span>
+        </div>
+
+        <span class="session-status upcoming">
+          Upcoming
+        </span>
+      `;
+
+
+      sessionList.appendChild(sessionRow);
+
+
+      sessionForm.reset();
+
+      closeModal();
+
+
+      const trainingPanel =
+        document.getElementById("training");
+
+      if (trainingPanel) {
+
+        const trainingList =
+          trainingPanel.querySelector(".training-list");
+
+        if (trainingList) {
+
+          const trainingItem =
+            document.createElement("label");
+
+          trainingItem.className = "training-item";
+
+          trainingItem.innerHTML = `
+            <input type="checkbox" class="training-check">
+
+            <div>
+              <strong>${escapeHTML(name)}</strong>
+              <span>${escapeHTML(duration)} · ${escapeHTML(focus)} · ${escapeHTML(intensity)}</span>
+            </div>
+
+            <em>${escapeHTML(day)}</em>
+          `;
+
+          trainingList.appendChild(trainingItem);
+
+          setupTrainingCheckbox(
+            trainingItem.querySelector(".training-check")
+          );
+
+        }
+
+      }
+
+    });
+
+  }
+
+
+  function escapeHTML(value) {
+
+    return value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+
+  }
+
+
+  /* -------------------------
+     TRAINING CHECKBOXES
+  ------------------------- */
+
+  const trainingChecks =
+    document.querySelectorAll(".training-check");
+
+
+  function setupTrainingCheckbox(checkbox) {
+
+    if (!checkbox) {
+      return;
+    }
+
+    checkbox.addEventListener("change", updateTrainingProgress);
+
+  }
+
+
+  trainingChecks.forEach(setupTrainingCheckbox);
+
+
+  function updateTrainingProgress() {
+
+    const checks =
+      document.querySelectorAll(".training-check");
+
+    if (!checks.length) {
+      return;
+    }
+
+    const completed =
+      [...checks].filter(check => check.checked).length;
+
+    const percentage =
+      Math.round((completed / checks.length) * 100);
+
+
+    const trainingPercent =
+      document.getElementById("trainingPercent");
+
+    const progressNumber =
+      document.getElementById("progressNumber");
+
+
+    if (trainingPercent) {
+      trainingPercent.textContent =
+        `${percentage}%`;
+    }
+
+    if (progressNumber) {
+      progressNumber.textContent =
+        `${percentage}%`;
+    }
+
+
+    const progressRing =
+      document.querySelector(".progress-ring");
+
+    if (progressRing) {
+
+      progressRing.style.background =
+        `conic-gradient(#2563eb 0 ${percentage}%, #e9edf3 ${percentage}% 100%)`;
+
+    }
+
+  }
+
+
+  /* -------------------------
+     ASSESSMENT
+  ------------------------- */
+
+  const sliders =
+    document.querySelectorAll(".assessment-card input[type='range']");
+
+
+  sliders.forEach(slider => {
+
+    const output =
+      slider.parentElement.querySelector("span");
+
+    slider.addEventListener("input", () => {
+
+      if (output) {
+        output.textContent =
+          `${slider.value} / 10`;
+      }
+
+    });
+
+  });
+
+
+  const saveAssessment =
     document.getElementById("saveAssessment");
 
-  if (saveButton) {
 
-    saveButton.addEventListener(
-      "click",
-      () => {
-        alert(
-          "Assessment saved in demo mode."
-        );
-      }
-    );
+  if (saveAssessment) {
 
-  }
+    saveAssessment.addEventListener("click", () => {
 
-});
+      saveAssessment.textContent =
+        "Saved ✓";
 
+      setTimeout(() => {
 
+        saveAssessment.textContent =
+          "Save Assessment";
 
-/* =========================
-   SHOW PANEL
-========================= */
-
-function showPanel(id, button) {
-
-  document
-    .querySelectorAll(".panel")
-    .forEach(panel => {
-
-      panel.classList.remove("active");
+      }, 1600);
 
     });
 
-
-  const target =
-    document.getElementById(id);
-
-  if (target) {
-
-    target.classList.add("active");
-
   }
 
 
-  document
-    .querySelectorAll(".side-link")
-    .forEach(btn => {
+  /* -------------------------
+     MATCH
+  ------------------------- */
 
-      btn.classList.remove("active");
+  const addMatch =
+    document.getElementById("addMatch");
+
+
+  if (addMatch) {
+
+    addMatch.addEventListener("click", () => {
+
+      addMatch.textContent =
+        "Match Added ✓";
+
+      setTimeout(() => {
+
+        addMatch.textContent =
+          "+ Add Match";
+
+      }, 1600);
 
     });
 
+  }
 
-  if (button) {
 
-    button.classList.add("active");
+  /* -------------------------
+     COACH NOTES
+  ------------------------- */
+
+  const saveCoachNotes =
+    document.getElementById("saveCoachNotes");
+
+
+  if (saveCoachNotes) {
+
+    saveCoachNotes.addEventListener("click", () => {
+
+      saveCoachNotes.textContent =
+        "Saved ✓";
+
+      setTimeout(() => {
+
+        saveCoachNotes.textContent =
+          "Save Notes";
+
+      }, 1600);
+
+    });
 
   }
 
 
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
+  /* -------------------------
+     RESET DEMO
+  ------------------------- */
 
-}
-
-
-
-/* =========================
-   ASSESSMENT DATA
-========================= */
-
-const skills = [
-
-  ["Forehand", 8],
-
-  ["Backhand", 7],
-
-  ["Serve", 8],
-
-  ["Return", 6],
-
-  ["Footwork", 7],
-
-  ["Tactics", 8]
-
-];
+  const resetDemo =
+    document.getElementById("resetDemo");
 
 
+  if (resetDemo) {
 
-/* =========================
-   SETUP ASSESSMENT
-========================= */
+    resetDemo.addEventListener("click", () => {
 
-function setupAssessment() {
+      const confirmed =
+        confirm("Reset the TennisPilot demo to its original state?");
 
-  const firstBox =
-    document.getElementById("skillsA");
-
-  const secondBox =
-    document.getElementById("skillsB");
-
-
-  if (!firstBox || !secondBox) {
-
-    return;
-
-  }
-
-
-  const groups = [
-
-    {
-      box: firstBox,
-      skills: skills.slice(0, 3)
-    },
-
-    {
-      box: secondBox,
-      skills: skills.slice(3, 6)
-    }
-
-  ];
-
-
-  groups.forEach(group => {
-
-    group.skills.forEach(
-      ([name, value]) => {
-
-        const key =
-          name
-            .toLowerCase()
-            .replace(" ", "");
-
-
-        const wrapper =
-          document.createElement("div");
-
-        wrapper.className = "skill";
-
-
-        wrapper.innerHTML = `
-
-          <div class="skill-head">
-
-            <b>
-              ${name}
-            </b>
-
-            <span id="${key}Value">
-              ${value}/10
-            </span>
-
-          </div>
-
-
-          <div class="rating">
-
-            ${Array.from(
-              { length: 10 },
-              (_, index) => {
-
-                const number =
-                  index + 1;
-
-                return `
-
-                  <button
-                    class="${
-                      number === value
-                        ? "selected"
-                        : ""
-                    }"
-
-                    data-skill="${key}"
-
-                    data-value="${number}"
-                  >
-
-                    ${number}
-
-                  </button>
-
-                `;
-
-              }
-            ).join("")}
-
-          </div>
-
-        `;
-
-
-        group.box.appendChild(
-          wrapper
-        );
-
+      if (!confirmed) {
+        return;
       }
-    );
-
-  });
 
 
-  document
-    .querySelectorAll(".rating button")
-    .forEach(button => {
+      /* Reset training */
 
-      button.addEventListener(
-        "click",
-        () => {
+      document
+        .querySelectorAll(".training-check")
+        .forEach((checkbox, index) => {
 
-          const skill =
-            button.dataset.skill;
+          checkbox.checked =
+            index < 2;
 
-          const value =
-            Number(
-              button.dataset.value
-            );
+        });
 
 
-          document
-            .querySelectorAll(
-              `[data-skill="${skill}"]`
-            )
-            .forEach(item => {
+      /* Reset assessment */
 
-              item.classList.remove(
-                "selected"
-              );
-
-            });
+      const defaultValues =
+        [8, 6, 9, 8, 8, 7];
 
 
-          button.classList.add(
-            "selected"
-          );
+      sliders.forEach((slider, index) => {
+
+        slider.value =
+          defaultValues[index];
+
+        const output =
+          slider.parentElement.querySelector("span");
+
+        if (output) {
+          output.textContent =
+            `${slider.value} / 10`;
+        }
+
+      });
 
 
-          const valueElement =
-            document.getElementById(
-              skill + "Value"
-            );
+      /* Reset coach notes */
+
+      const notes =
+        document.getElementById("coachNotes");
+
+      if (notes) {
+        notes.value = "";
+      }
 
 
-          if (valueElement) {
+      /* Remove sessions created by user */
 
-            valueElement.textContent =
-              value + "/10";
+      const sessionList =
+        document.getElementById("sessionList");
 
+      if (sessionList) {
+
+        const rows =
+          sessionList.querySelectorAll(".session-row");
+
+        rows.forEach((row, index) => {
+
+          if (index > 2) {
+            row.remove();
           }
 
-        }
-      );
+        });
+
+      }
+
+
+      /* Reset progress */
+
+      updateTrainingProgress();
+
+
+      /* Return to overview */
+
+      showPanel("overview");
+
+
+      resetDemo.textContent =
+        "Reset ✓";
+
+      setTimeout(() => {
+
+        resetDemo.textContent =
+          "Reset Demo";
+
+      }, 1500);
 
     });
-
-}
-
-
-
-/* =========================
-   TRAINING DATA
-========================= */
-
-function setupTraining() {
-
-  const grid =
-    document.getElementById(
-      "trainingGrid"
-    );
-
-
-  if (!grid) {
-
-    return;
 
   }
 
 
-  const sessions = [
+  /* Initial state */
 
-    [
-      "Second Serve Return",
-      "Crosscourt return with a target two feet inside the baseline."
-    ],
+  updateTrainingProgress();
 
-    [
-      "Return + 1",
-      "Return crosscourt, recover, then attack the next short ball."
-    ],
-
-    [
-      "20-Point Challenge",
-      "Score one point for every return landing in the target zone."
-    ],
-
-    [
-      "Wide Serve Returns",
-      "Recover quickly after wide returns and protect the open court."
-    ],
-
-    [
-      "Pressure Games",
-      "Start games at 30–30 and play around return quality."
-    ],
-
-    [
-      "Match Simulation",
-      "Track return depth during competitive games and review afterward."
-    ]
-
-  ];
-
-
-  grid.innerHTML =
-    sessions.map(
-      (session, index) => {
-
-        return `
-
-          <div class="training-item">
-
-            <h3>
-              ${session[0]}
-            </h3>
-
-            <p>
-              ${session[1]}
-            </p>
-
-            <label>
-
-              <input
-                type="checkbox"
-                class="trainingCheck"
-                data-index="${index}"
-              >
-
-              Completed
-
-            </label>
-
-          </div>
-
-        `;
-
-      }
-    ).join("");
-
-
-  const saved =
-    JSON.parse(
-      localStorage.getItem(
-        "tpTraining"
-      ) || "[]"
-    );
-
-
-  document
-    .querySelectorAll(".trainingCheck")
-    .forEach(check => {
-
-      const index =
-        Number(
-          check.dataset.index
-        );
-
-
-      check.checked =
-        Boolean(saved[index]);
-
-
-      check.addEventListener(
-        "change",
-        saveTraining
-      );
-
-    });
-
-}
-
-
-
-/* =========================
-   SAVE TRAINING
-========================= */
-
-function saveTraining() {
-
-  const values =
-    Array.from(
-      document.querySelectorAll(
-        ".trainingCheck"
-      )
-    ).map(
-      checkbox =>
-        checkbox.checked
-    );
-
-
-  localStorage.setItem(
-    "tpTraining",
-    JSON.stringify(values)
-  );
-
-}
-
-
-
-/* =========================
-   RESET EVERYTHING
-========================= */
-
-function resetDemo() {
-
-  localStorage.removeItem(
-    "tpTraining"
-  );
-
-
-  document
-    .querySelectorAll(
-      ".trainingCheck"
-    )
-    .forEach(check => {
-
-      check.checked = false;
-
-    });
-
-
-  skills.forEach(
-    ([name, value]) => {
-
-      const key =
-        name
-          .toLowerCase()
-          .replace(" ", "");
-
-
-      const buttons =
-        document.querySelectorAll(
-          `[data-skill="${key}"]`
-        );
-
-
-      buttons.forEach(
-        (button, index) => {
-
-          button.classList.toggle(
-            "selected",
-            index === value - 1
-          );
-
-        }
-      );
-
-
-      const valueElement =
-        document.getElementById(
-          key + "Value"
-        );
-
-
-      if (valueElement) {
-
-        valueElement.textContent =
-          value + "/10";
-
-      }
-
-    }
-  );
-
-
-  const overviewButton =
-    document.querySelector(
-      '.side-link[data-panel="overview"]'
-    );
-
-
-  showPanel(
-    "overview",
-    overviewButton
-  );
-
-
-  alert(
-    "Demo reset successfully."
-  );
-
-}
+});
