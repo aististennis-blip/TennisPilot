@@ -1,12 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>TennisPilot</title>
-
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -14,8 +11,7 @@
 
 <header class="topbar">
 
-    <a class="brand" href="index.html">
-
+    <a href="index.html" class="brand">
         <span class="logo">
             TP<span>•</span>
         </span>
@@ -24,38 +20,45 @@
             TennisPilot
             <small>Train smarter. Coach better.</small>
         </span>
-
     </a>
 
-    <a class="btn primary" href="login.html">
-        Get Started
-    </a>
+    <div class="top-actions">
+        <a href="login.html" class="btn ghost-dark">
+            Log In
+        </a>
+
+        <a href="login.html?mode=signup" class="btn primary">
+            Get Started
+        </a>
+    </div>
 
 </header>
 
 
-<main class="hero">
+<main>
+
+<section class="hero">
 
     <div class="eyebrow">
-        COACHING, CONNECTED
+        CONNECTED TENNIS DEVELOPMENT
     </div>
 
     <h1>
-        Turn every match into a better training plan.
+        Turn every match into the next training decision.
     </h1>
 
     <p>
-        TennisPilot connects coaches and players so match feedback,
-        training plans and long-term progress stay in one place.
+        TennisPilot connects players and coaches so match reports,
+        training priorities and long-term development stay together.
     </p>
 
     <div class="actions">
 
-        <a class="btn primary" href="login.html">
+        <a href="login.html?mode=signup" class="btn primary">
             Create Account
         </a>
 
-        <a class="btn ghost" href="about.html">
+        <a href="about.html" class="btn ghost">
             How It Works
         </a>
 
@@ -64,42 +67,50 @@
 
     <div class="feature-grid">
 
-        <div class="feature">
+        <article class="feature">
+            <div class="feature-icon">🎾</div>
 
-            <b>🎾 Player Match Reports</b>
-
-            <p>
-                Players report their opponent, score,
-                biggest weakness and biggest positive after matches.
-            </p>
-
-        </div>
-
-
-        <div class="feature">
-
-            <b>👨‍🏫 Coach Dashboard</b>
+            <h3>
+                Player Match Reports
+            </h3>
 
             <p>
-                Coaches can see match reports and recurring
-                patterns without needing to attend every match.
+                Players submit their opponent, result, score,
+                positives, weaknesses and notes after competing.
             </p>
+        </article>
 
-        </div>
 
+        <article class="feature">
+            <div class="feature-icon">🔗</div>
 
-        <div class="feature">
-
-            <b>📈 Long-Term History</b>
+            <h3>
+                Private Connections
+            </h3>
 
             <p>
-                Keep a player's complete match history organized
-                by season and year.
+                Each coach receives a unique connection code.
+                Players request access and coaches approve them.
             </p>
+        </article>
 
-        </div>
+
+        <article class="feature">
+            <div class="feature-icon">📈</div>
+
+            <h3>
+                Long-Term History
+            </h3>
+
+            <p>
+                Match history stays organized by year so players
+                and coaches can follow development over time.
+            </p>
+        </article>
 
     </div>
+
+</section>
 
 </main>
 
