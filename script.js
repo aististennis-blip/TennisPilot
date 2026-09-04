@@ -1,1966 +1,3493 @@
 const sb = window.tennisPilotSupabase;
 
-const SESSION_DAYS = 30;
-
-let currentProfile = null;
+let mode = "login";
+let role = "coach";
 let currentUser = null;
-let currentPlayers = [];
-let currentMatches = [];
-let currentTraining = [];
-let currentGoals = [];
-let currentCoachRequests = [];
+let profile = null;
 
-const $ = (id) => document.getElementById(id);
+const $ = id => document.getElementById(id);
 
-function escapeHTML(value = "") {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
+const esc = s =>
+  String(s ?? "").replace(
+    /[&<>"']/g,
+    c => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[c])
+  );
 
-function showMessage(message, type = "info") {
-  const existing = document.querySelector(".tp-toast");
-  if (existing) existing.remove();
+const msg = (text, bad = false) => {
+  const e = $("authMessage");
 
-  const toast = document.createElement("div");
-  toast.className = `tp-toast ${type}`;
-  toast.textContent = message;
-  document.body.appendChild(toast);
-
-  setTimeout(() => toast.remove(), 3500);
-}
-
-function setSessionTimestamp() {
-  localStorage.setItem("tpSessionTimestamp", String(Date.now()));
-}
-
-function sessionIsFresh() {
-  const timestamp = Number(localStorage.getItem("tpSessionTimestamp") || 0);
-  if (!timestamp) return false;
-
-  return Date.now() - timestamp < SESSION_DAYS * 24 * 60 * 60 * 1000;
-}
-
-async function requireUser() {
-  const {
-    data: { session },
-  } = await sb.auth.getSession();
-
-  if (!session) {
-    window.location.href = "login.html";
-    return null;
+  if (e) {
+    e.textContent = text;
+    e.className = "message " + (bad ? "danger" : "success");
   }
+};
 
-  currentUser = session.user;
-  setSessionTimestamp();
 
-  const { data: profile, error } = await sb
-    .from("profiles")
-    .select("*")
-    .eq("id", session.user.id)
-    .single();
-
-  if (error) {
-    console.error(error);
-    showMessage(error.message, "error");
-    return null;
-  }
-
-  currentProfile = profile;
-  return profile;
-}
+/* =========================
+   AUTH
+========================= */
 
 function setupAuth() {
-  const loginForm = $("loginForm");
-  const signupForm = $("signupForm");
 
-  const loginTab = $("loginTab");
-  const signupTab = $("signupTab");
+  const tabs = document.querySelectorAll(".tab");
+  const roles = document.querySelectorAll(".role");
 
-  const loginRoleCoach = $("loginRoleCoach");
-  const loginRolePlayer = $("loginRolePlayer");
+  if (!tabs.length) return;
 
-  const signupRoleCoach = $("signupRoleCoach");
-  const signupRolePlayer = $("signupRolePlayer");
 
-  const signupCoachCode = $("coachCode");
+  /* LOGIN / SIGN UP */
 
-  if (signupCoachCode) {
-    signupCoachCode.addEventListener("input", () => {
-      signupCoachCode.value = signupCoachCode.value
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .slice(0, 6)
-        .toUpperCase();
-    });
-  }
+  tabs.forEach(button => {
 
-  function showLogin() {
-    loginForm?.classList.remove("hidden");
-    signupForm?.classList.add("hidden");
+    button.addEventListener("click", function (e) {
 
-    loginTab?.classList.add("active");
-    signupTab?.classList.remove("active");
-  }
+      e.preventDefault();
 
-  function showSignup() {
-    signupForm?.classList.remove("hidden");
-    loginForm?.classList.add("hidden");
+      mode = this.dataset.mode;
 
-    signupTab?.classList.add("active");
-    loginTab?.classList.remove("active");
-  }
+      tabs.forEach(tab => {
+        tab.classList.toggle(
+          "active",
+          tab.dataset.mode === mode
+        );
+      });
 
-  loginTab?.addEventListener("click", showLogin);
-  signupTab?.addEventListener("click", showSignup);
+      updateAuth();
 
-  loginRoleCoach?.addEventListener("change", () => {
-    if (loginRolePlayer) loginRolePlayer.checked = false;
-  });
-
-  loginRolePlayer?.addEventListener("change", () => {
-    if (loginRoleCoach) loginRoleCoach.checked = false;
-  });
-
-  signupRoleCoach?.addEventListener("change", () => {
-    if (signupRolePlayer) signupRolePlayer.checked = false;
-    $("codeWrap")?.classList.add("hidden");
-  });
-
-  signupRolePlayer?.addEventListener("change", () => {
-    if (signupRoleCoach) signupRoleCoach.checked = false;
-    $("codeWrap")?.classList.remove("hidden");
-  });
-
-  loginForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const email = $("loginEmail")?.value.trim();
-    const password = $("loginPassword")?.value;
-
-    if (!email || !password) {
-      showMessage("Enter your email and password.", "error");
-      return;
-    }
-
-    const { data, error } = await sb.auth.signInWithPassword({
-      email,
-      password,
     });
 
-    if (error) {
-      showMessage(error.message, "error");
-      return;
-    }
-
-    if (!data.session) {
-      showMessage("Login succeeded, but no session was created.", "error");
-      return;
-    }
-
-    setSessionTimestamp();
-    window.location.href = "dashboard.html";
   });
 
-  signupForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
 
-    const fullName = $("signupName")?.value.trim();
-    const email = $("signupEmail")?.value.trim();
-    const password = $("signupPassword")?.value;
-    const confirmPassword = $("signupConfirmPassword")?.value;
+  /* COACH / PLAYER */
 
-    const role = signupRolePlayer?.checked ? "player" : "coach";
-    const coachCode = $("coachCode")?.value.trim().toUpperCase();
+  roles.forEach(button => {
 
-    if (!fullName || !email || !password || !confirmPassword) {
-      showMessage("Please fill out all required fields.", "error");
+    button.addEventListener("click", function (e) {
+
+      e.preventDefault();
+
+      role = this.dataset.role;
+
+      roles.forEach(r => {
+        r.classList.toggle(
+          "active",
+          r.dataset.role === role
+        );
+      });
+
+      updateAuth();
+
+    });
+
+  });
+
+
+  const form = $("authForm");
+
+  if (form) {
+    form.addEventListener("submit", handleAuth);
+  }
+
+
+  /* COACH CODE */
+
+  const codeInput = $("coachCode");
+
+  if (codeInput) {
+
+    codeInput.addEventListener("input", () => {
+
+      codeInput.value =
+        codeInput.value
+          .replace(/[^a-zA-Z0-9]/g, "")
+          .slice(0, 6)
+          .toUpperCase();
+
+    });
+
+  }
+
+
+  updateAuth();
+
+}
+
+
+/* =========================
+   UPDATE AUTH FORM
+========================= */
+
+function updateAuth() {
+
+  const nameLabel = $("nameLabel");
+  const nameInput = $("name");
+
+  const confirmWrap = $("confirmWrap");
+  const confirmInput = $("confirm");
+
+  const passwordHint = $("passwordHint");
+
+  const codeWrap = $("codeWrap");
+
+  const submitBtn = $("submitBtn");
+
+
+  if (!nameLabel || !nameInput) return;
+
+
+  const isLogin = mode === "login";
+  const isSignup = mode === "signup";
+  const isPlayer = role === "player";
+
+
+  /* FULL NAME */
+
+  nameLabel.classList.toggle(
+    "hidden",
+    isLogin
+  );
+
+  nameInput.required = isSignup;
+
+
+  /* CONFIRM PASSWORD */
+
+  if (confirmWrap) {
+
+    confirmWrap.classList.toggle(
+      "hidden",
+      isLogin
+    );
+
+  }
+
+  if (confirmInput) {
+    confirmInput.required = isSignup;
+  }
+
+
+  /* PASSWORD HINT */
+
+  if (passwordHint) {
+
+    passwordHint.classList.toggle(
+      "hidden",
+      isLogin
+    );
+
+  }
+
+
+  /* COACH CODE */
+
+  if (codeWrap) {
+
+    codeWrap.classList.toggle(
+      "hidden",
+      !(isSignup && isPlayer)
+    );
+
+  }
+
+
+  /* BUTTON */
+
+  if (submitBtn) {
+
+    submitBtn.textContent =
+      isLogin
+        ? "Log In"
+        : "Create Account";
+
+  }
+
+}
+
+
+/* =========================
+   PASSWORD
+========================= */
+
+function validPassword(password) {
+
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[0-9]/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+
+}
+
+
+/* =========================
+   AUTH SUBMIT
+========================= */
+
+async function handleAuth(e) {
+
+  e.preventDefault();
+
+  msg("");
+
+  const email = $("email").value.trim();
+  const password = $("password").value;
+
+
+  try {
+
+    /* LOGIN */
+
+    if (mode === "login") {
+
+      const { error } =
+        await sb.auth.signInWithPassword({
+          email,
+          password
+        });
+
+      if (error) throw error;
+
+      location.href = "dashboard.html";
+
       return;
     }
 
-    if (password !== confirmPassword) {
-      showMessage("Passwords do not match.", "error");
-      return;
+
+    /* SIGN UP */
+
+    if (!validPassword(password)) {
+
+      throw Error(
+        "Password needs 8+ characters, an uppercase letter, a number and a special symbol."
+      );
+
     }
+
+
+    if (password !== $("confirm").value) {
+
+      throw Error(
+        "Passwords do not match."
+      );
+
+    }
+
+
+    const fullName =
+      $("name").value.trim();
+
+
+    if (!fullName) {
+
+      throw Error(
+        "Enter your full name."
+      );
+
+    }
+
+
+    const { data, error } =
+      await sb.auth.signUp({
+
+        email,
+        password,
+
+        options: {
+          data: {
+            full_name: fullName,
+            role
+          }
+        }
+
+      });
+
+
+    if (error) throw error;
+
+    if (!data.user) {
+
+      throw Error(
+        "Account could not be created."
+      );
+
+    }
+
+
+    /* FIND COACH */
+
+    let coachId = null;
 
     if (
-      password.length < 8 ||
-      !/[A-Z]/.test(password) ||
-      !/[0-9]/.test(password) ||
-      !/[^A-Za-z0-9]/.test(password)
+      role === "player" &&
+      $("coachCode").value.trim()
     ) {
-      showMessage(
-        "Password must be at least 8 characters and include an uppercase letter, number, and special character.",
-        "error"
+
+      const { data: coachData, error: coachError } =
+        await sb.rpc(
+          "find_coach_by_code",
+          {
+            code_input:
+              $("coachCode")
+                .value
+                .trim()
+                .toUpperCase()
+          }
+        );
+
+
+      if (coachError) {
+        throw coachError;
+      }
+
+
+      if (
+        !coachData ||
+        !coachData.length
+      ) {
+
+        throw Error(
+          "Coach code not found."
+        );
+
+      }
+
+
+      coachId = coachData[0].id;
+
+    }
+
+
+    /*
+      Profile is created automatically
+      by the Supabase auth trigger.
+    */
+
+
+    /* CONNECTION REQUEST */
+
+    if (
+      role === "player" &&
+      coachId
+    ) {
+
+      const { error: requestError } =
+        await sb
+          .from("connection_requests")
+          .insert({
+
+            player_id: data.user.id,
+
+            coach_id: coachId,
+
+            status: "pending"
+
+          });
+
+
+      if (requestError) {
+        throw requestError;
+      }
+
+    }
+
+
+    if (data.session) {
+
+      location.href =
+        "dashboard.html";
+
+    } else {
+
+      msg(
+        "Account created. Check your email to confirm your account, then log in."
       );
-      return;
+
     }
 
-    if (role === "player" && coachCode && coachCode.length !== 6) {
-      showMessage("Coach code must be 6 characters.", "error");
-      return;
-    }
+  }
 
-    let coach = null;
+  catch (err) {
 
-    if (role === "player" && coachCode) {
-      const { data: coaches, error: coachError } = await sb.rpc(
-        "find_coach_by_code",
+    msg(
+      err.message ||
+      "Something went wrong.",
+      true
+    );
+
+  }
+
+}
+
+
+/* =========================
+   LOAD PROFILE
+========================= */
+
+async function loadProfile() {
+
+  const {
+    data: { user }
+  } = await sb.auth.getUser();
+
+
+  if (!user) {
+
+    location.href =
+      "login.html";
+
+    return false;
+
+  }
+
+
+  currentUser = user;
+
+
+  const {
+    data,
+    error
+  } =
+    await sb
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Profile could not be loaded."
+    );
+
+    return false;
+
+  }
+
+
+  profile = data;
+
+  return true;
+
+}
+
+
+/* =========================
+   DASHBOARD SHELL
+========================= */
+
+function shell() {
+
+  $("profileBox").innerHTML =
+
+    `<strong>${esc(profile.full_name)}</strong>
+     <small>${esc(profile.role)}</small>` +
+
+    (
+      profile.role === "coach"
+
+        ? `<small>
+             Code:
+             <b>${esc(profile.coach_code || "")}</b>
+           </small>`
+
+        : ""
+    );
+
+
+  $("sideNav").innerHTML =
+
+    profile.role === "coach"
+
+      ? `
+        <button
+          class="nav-item active"
+          data-page="overview">
+          Overview
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="players">
+          Players
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="requests">
+          Requests
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="matches">
+          Match Reviews
+        </button>
+      `
+
+      : `
+        <button
+          class="nav-item active"
+          data-page="overview">
+          My Dashboard
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="logmatch">
+          Log Match
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="coach">
+          My Coach
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="bio">
+          My Bio
+        </button>
+
+        <button
+          class="nav-item"
+          data-page="training">
+          Training
+        </button>
+      `;
+
+
+  document
+    .querySelectorAll(".nav-item")
+    .forEach(button => {
+
+      button.onclick = () =>
+        render(button.dataset.page);
+
+    });
+
+
+  $("logoutBtn").onclick =
+    async () => {
+
+      await sb.auth.signOut();
+
+      location.href =
+        "index.html";
+
+    };
+
+}
+
+
+/* =========================
+   PLAYERS
+========================= */
+
+async function connectedPlayers() {
+
+  const {
+    data,
+    error
+  } =
+    await sb
+      .from("profiles")
+      .select("*")
+      .eq(
+        "connected_coach_id",
+        currentUser.id
+      )
+      .eq("role", "player");
+
+
+  if (error) throw error;
+
+  return data || [];
+
+}
+
+
+/* =========================
+   MATCHES
+========================= */
+
+async function playerMatches(
+  id = currentUser.id
+) {
+
+  const {
+    data,
+    error
+  } =
+    await sb
+      .from("matches")
+      .select("*")
+      .eq("player_id", id)
+      .order(
+        "match_date",
         {
-          code_input: coachCode,
+          ascending: false
         }
       );
 
-      if (coachError) {
-        showMessage(coachError.message, "error");
-        return;
-      }
 
-      coach = coaches?.[0] || null;
+  if (error) throw error;
 
-      if (!coach) {
-        showMessage("Coach code not found.", "error");
-        return;
-      }
-    }
+  return data || [];
 
-    const { data, error } = await sb.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          role,
-        },
-      },
+}
+
+
+/* =========================
+   PROFILE PHOTO
+========================= */
+
+async function signedProfilePhoto(path) {
+
+  if (!path) return "";
+
+  const {
+    data,
+    error
+  } =
+    await sb
+      .storage
+      .from("profile-pictures")
+      .createSignedUrl(
+        path,
+        3600
+      );
+
+
+  if (error) return "";
+
+  return data?.signedUrl || "";
+
+}
+
+
+function photoHTML(
+  url,
+  name = "Player",
+  className = "avatar"
+) {
+
+  return url
+
+    ? `
+      <img
+        class="${className}"
+        src="${esc(url)}"
+        alt="${esc(name)} profile picture">
+      `
+
+    : `
+      <div
+        class="${className} avatar-placeholder">
+        ${esc(
+          (name || "P")
+            .trim()
+            .charAt(0)
+            .toUpperCase()
+        )}
+      </div>
+      `;
+
+}
+
+
+/* =========================
+   RENDER
+========================= */
+
+async function render(
+  page = "overview"
+) {
+
+  document
+    .querySelectorAll(".nav-item")
+    .forEach(button => {
+
+      button.classList.toggle(
+        "active",
+        button.dataset.page === page
+      );
+
     });
 
-    if (error) {
-      showMessage(error.message, "error");
-      return;
+
+  const app = $("app");
+
+  app.innerHTML =
+    "<div class='empty'>Loading…</div>";
+
+
+  try {
+
+    if (
+      profile.role === "coach"
+    ) {
+
+      await renderCoach(page);
+
+    } else {
+
+      await renderPlayer(page);
+
     }
 
-    if (!data.user) {
-      showMessage("Account could not be created.", "error");
-      return;
-    }
-
-    /*
-      The profile is created automatically by the Supabase auth trigger.
-      Do NOT insert into profiles here.
-    */
-
-    if (role === "player" && coach) {
-      if (!data.session) {
-        showMessage(
-          "Account created. Please log in before connecting to your coach.",
-          "info"
-        );
-        return;
-      }
-
-      const { error: requestError } = await sb
-        .from("connection_requests")
-        .insert({
-          player_id: data.user.id,
-          coach_id: coach.id,
-          status: "pending",
-        });
-
-      if (requestError) {
-        showMessage(requestError.message, "error");
-        return;
-      }
-    }
-
-    if (!data.session) {
-      showMessage(
-        "Account created. Check your email to finish signing in.",
-        "success"
-      );
-      showLogin();
-      return;
-    }
-
-    setSessionTimestamp();
-    window.location.href = "dashboard.html";
-  });
-}
-
-async function logout() {
-  await sb.auth.signOut();
-  localStorage.removeItem("tpSessionTimestamp");
-  window.location.href = "login.html";
-}
-
-function setupGlobalLogout() {
-  $("logoutBtn")?.addEventListener("click", logout);
-}
-
-function setupProfileBox(profile) {
-  const box = $("profileBox");
-  if (!box) return;
-
-  const initials = profile.full_name
-    ? profile.full_name
-        .split(" ")
-        .map((x) => x[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
-    : "TP";
-
-  const photo = profile.profile_photo_url
-    ? `<img src="${escapeHTML(profile.profile_photo_url)}" alt="Profile photo">`
-    : `<span>${escapeHTML(initials)}</span>`;
-
-  box.innerHTML = `
-    <div class="profile-avatar">
-      ${photo}
-    </div>
-    <div class="profile-info">
-      <strong>${escapeHTML(profile.full_name)}</strong>
-      <span>${escapeHTML(profile.role)}</span>
-    </div>
-  `;
-}
-
-function closeModal() {
-  $("modalRoot").innerHTML = "";
-}
-
-function openModal(content) {
-  $("modalRoot").innerHTML = `
-    <div class="modal-overlay" id="modalOverlay">
-      <div class="modal-card">
-        ${content}
-      </div>
-    </div>
-  `;
-
-  $("modalOverlay")?.addEventListener("click", (event) => {
-    if (event.target.id === "modalOverlay") closeModal();
-  });
-}
-
-function modalTop(title) {
-  return `
-    <div class="modal-top">
-      <button
-        type="button"
-        class="button secondary modal-back-btn"
-        onclick="closeModal()"
-      >
-        ← Back
-      </button>
-      <h2>${escapeHTML(title)}</h2>
-    </div>
-  `;
-}
-
-async function loadCoachData() {
-  const coachId = currentUser.id;
-
-  const { data: players, error: playerError } = await sb
-    .from("profiles")
-    .select("*")
-    .eq("connected_coach_id", coachId)
-    .eq("role", "player")
-    .order("full_name");
-
-  if (playerError) {
-    console.error(playerError);
-    showMessage(playerError.message, "error");
-    return;
   }
 
-  currentPlayers = players || [];
+  catch (e) {
 
-  const { data: requests, error: requestError } = await sb
-    .from("connection_requests")
-    .select("*")
-    .eq("coach_id", coachId)
-    .eq("status", "pending")
-    .order("created_at", { ascending: false });
+    app.innerHTML =
+      `<div class="card">
+        <b>Error:</b>
+        ${esc(e.message)}
+      </div>`;
 
-  if (requestError) {
-    console.error(requestError);
   }
 
-  currentCoachRequests = requests || [];
-
-  const playerIds = currentPlayers.map((p) => p.id);
-
-  if (!playerIds.length) {
-    currentMatches = [];
-    currentTraining = [];
-    currentGoals = [];
-    return;
-  }
-
-  const [matchesResult, trainingResult, goalsResult] = await Promise.all([
-    sb
-      .from("matches")
-      .select("*")
-      .in("player_id", playerIds)
-      .order("match_date", { ascending: false }),
-
-    sb
-      .from("training_sessions")
-      .select("*")
-      .in("player_id", playerIds)
-      .order("session_date", { ascending: false }),
-
-    sb
-      .from("goals")
-      .select("*")
-      .in("player_id", playerIds)
-      .order("created_at", { ascending: false }),
-  ]);
-
-  if (matchesResult.error) {
-    console.error(matchesResult.error);
-    showMessage(matchesResult.error.message, "error");
-  }
-
-  if (trainingResult.error) {
-    console.error(trainingResult.error);
-  }
-
-  if (goalsResult.error) {
-    console.error(goalsResult.error);
-  }
-
-  currentMatches = matchesResult.data || [];
-  currentTraining = trainingResult.data || [];
-  currentGoals = goalsResult.data || [];
 }
 
-async function loadPlayerData() {
-  const playerId = currentUser.id;
 
-  const [matchesResult, trainingResult, goalsResult] = await Promise.all([
-    sb
-      .from("matches")
-      .select("*")
-      .eq("player_id", playerId)
-      .order("match_date", { ascending: false }),
+/* =========================
+   COACH DASHBOARD
+========================= */
 
-    sb
-      .from("training_sessions")
-      .select("*")
-      .eq("player_id", playerId)
-      .order("session_date", { ascending: false }),
+async function renderCoach(page) {
 
-    sb
-      .from("goals")
-      .select("*")
-      .eq("player_id", playerId)
-      .order("created_at", { ascending: false }),
-  ]);
+  const players =
+    await connectedPlayers();
 
-  if (matchesResult.error) {
-    console.error(matchesResult.error);
-    showMessage(matchesResult.error.message, "error");
-  }
 
-  if (trainingResult.error) {
-    console.error(trainingResult.error);
-  }
+  if (page === "overview") {
 
-  if (goalsResult.error) {
-    console.error(goalsResult.error);
-  }
+    $("app").innerHTML = `
 
-  currentMatches = matchesResult.data || [];
-  currentTraining = trainingResult.data || [];
-  currentGoals = goalsResult.data || [];
-}
+      <div class="dash-head">
 
-function coachPlayerName(playerId) {
-  return (
-    currentPlayers.find((player) => player.id === playerId)?.full_name ||
-    "Unknown player"
-  );
-}
-
-function formatDate(date) {
-  if (!date) return "—";
-
-  return new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function renderCoachDashboard() {
-  const main = $("dashboard");
-  if (!main) return;
-
-  const matchCount = currentMatches.length;
-
-  main.innerHTML = `
-    <section class="hero-section">
-      <div>
-        <p class="eyebrow">COACH DASHBOARD</p>
-        <h1>Coach your players smarter.</h1>
-        <p class="hero-copy">
-          Manage your players, review matches, and keep their development organized in one place.
-        </p>
-      </div>
-
-      <button class="button primary" onclick="openAddPlayerModal()">
-        + Add Player
-      </button>
-    </section>
-
-    <section class="stats-grid">
-      <div class="stat-card">
-        <span>Players</span>
-        <strong>${currentPlayers.length}</strong>
-      </div>
-
-      <div class="stat-card">
-        <span>Matches Reviewed</span>
-        <strong>${matchCount}</strong>
-      </div>
-
-      <div class="stat-card">
-        <span>Pending Requests</span>
-        <strong>${currentCoachRequests.length}</strong>
-      </div>
-    </section>
-
-    <section class="content-card">
-      <div class="section-header">
         <div>
-          <p class="eyebrow">YOUR PLAYERS</p>
-          <h2>Player Overview</h2>
+          <span class="eyebrow">
+            COACH DASHBOARD
+          </span>
+
+          <h1>
+            Overview
+          </h1>
         </div>
+
+        <button
+          class="btn"
+          onclick="render('players')">
+
+          View players
+
+        </button>
+
       </div>
+
+
+      <div class="grid">
+
+        <div class="card">
+
+          <span class="muted">
+            Players
+          </span>
+
+          <div class="stat">
+            ${players.length}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <span class="muted">
+            Connection code
+          </span>
+
+          <div class="stat">
+            ${esc(
+              profile.coach_code || "—"
+            )}
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <span class="muted">
+            System
+          </span>
+
+          <div class="stat">
+            Live
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="card"
+        style="margin-top:18px">
+
+        <h3>
+          Players
+        </h3>
+
+        ${
+          players.length
+
+            ? players
+                .map(
+                  p => `
+                    <div class="list-item">
+
+                      <b>
+                        ${esc(p.full_name)}
+                      </b>
+
+                      <span
+                        class="pill"
+                        style="float:right">
+
+                        Connected
+
+                      </span>
+
+                    </div>
+                  `
+                )
+                .join("")
+
+            : `
+              <div class="empty">
+                No players connected yet.
+              </div>
+            `
+        }
+
+      </div>
+
+    `;
+
+  }
+
+
+  else if (page === "players") {
+
+    $("app").innerHTML = `
+
+      <div class="dash-head">
+
+        <div>
+
+          <span class="eyebrow">
+            YOUR PLAYERS
+          </span>
+
+          <h1>
+            Players
+          </h1>
+
+        </div>
+
+      </div>
+
 
       ${
-        currentPlayers.length
-          ? `<div class="player-grid">
-              ${currentPlayers.map(renderCoachPlayerCard).join("")}
-            </div>`
+        players.length
+
+          ? `
+            <div class="grid">
+
+              ${
+                players
+                  .map(
+                    p => `
+
+                      <div class="card">
+
+                        <h3>
+                          ${esc(p.full_name)}
+                        </h3>
+
+                        <p class="muted">
+                          Player account
+                        </p>
+
+                        <button
+                          class="btn small"
+                          onclick="viewPlayer('${p.id}')">
+
+                          Open player
+
+                        </button>
+
+                      </div>
+
+                    `
+                  )
+                  .join("")
+              }
+
+            </div>
+          `
+
           : `
-            <div class="empty-state">
-              <h3>No players yet</h3>
-              <p>Add a player or wait for a player connection request.</p>
-              <button class="button primary" onclick="openAddPlayerModal()">
-                + Add Player
-              </button>
+            <div class="empty">
+              No players yet.
+              Give a player your connection code.
             </div>
           `
       }
-    </section>
 
-    ${
-      currentCoachRequests.length
-        ? `
-      <section class="content-card">
-        <div class="section-header">
-          <div>
-            <p class="eyebrow">CONNECTIONS</p>
-            <h2>Pending Requests</h2>
+    `;
+
+  }
+
+
+  else if (page === "requests") {
+
+    await renderRequests();
+
+  }
+
+
+  else if (page === "matches") {
+
+    await renderCoachMatches(players);
+
+  }
+
+}
+
+
+/* =========================
+   REQUESTS
+========================= */
+
+async function renderRequests() {
+
+  const {
+    data,
+    error
+  } =
+    await sb
+      .from("connection_requests")
+      .select("*")
+      .eq(
+        "coach_id",
+        currentUser.id
+      )
+      .eq(
+        "status",
+        "pending"
+      )
+      .order(
+        "created_at",
+        {
+          ascending: false
+        }
+      );
+
+
+  if (error) throw error;
+
+
+  let html = `
+
+    <div class="dash-head">
+
+      <div>
+
+        <span class="eyebrow">
+          CONNECTIONS
+        </span>
+
+        <h1>
+          Requests
+        </h1>
+
+      </div>
+
+    </div>
+
+  `;
+
+
+  if (!data.length) {
+
+    html += `
+      <div class="empty">
+        No pending requests.
+      </div>
+    `;
+
+  }
+
+  else {
+
+    for (const r of data) {
+
+      const {
+        data: p
+      } =
+        await sb
+          .from("profiles")
+          .select("full_name")
+          .eq(
+            "id",
+            r.player_id
+          )
+          .single();
+
+
+      html += `
+
+        <div
+          class="card"
+          style="margin:10px 0">
+
+          <b>
+            ${esc(
+              p?.full_name || "Player"
+            )}
+          </b>
+
+
+          <div class="modal-actions">
+
+            <button
+              class="btn small"
+              onclick="acceptReq('${r.id}')">
+
+              Accept
+
+            </button>
+
+
+            <button
+              class="btn small ghost"
+              onclick="declineReq('${r.id}')">
+
+              Decline
+
+            </button>
+
           </div>
+
         </div>
 
-        <div class="request-list">
-          ${currentCoachRequests.map(renderRequest).join("")}
-        </div>
-      </section>
-    `
-        : ""
+      `;
+
     }
-  `;
-}
 
-function renderCoachPlayerCard(player) {
-  const playerMatches = currentMatches.filter(
-    (match) => match.player_id === player.id
-  );
-
-  const photo = player.profile_photo_url
-    ? `<img src="${escapeHTML(player.profile_photo_url)}" alt="${escapeHTML(
-        player.full_name
-      )}">`
-    : `<span>${escapeHTML(
-        player.full_name
-          .split(" ")
-          .map((x) => x[0])
-          .slice(0, 2)
-          .join("")
-          .toUpperCase()
-      )}</span>`;
-
-  return `
-    <div class="player-card">
-      <div class="player-card-top">
-        <div class="large-avatar">
-          ${photo}
-        </div>
-
-        <div>
-          <h3>${escapeHTML(player.full_name)}</h3>
-          <p>${escapeHTML(player.level || "Player")}</p>
-        </div>
-      </div>
-
-      <div class="bio-summary">
-        ${
-          player.age
-            ? `<span>${escapeHTML(String(player.age))} years</span>`
-            : ""
-        }
-
-        ${
-          player.dominant_hand
-            ? `<span>${escapeHTML(player.dominant_hand)}-handed</span>`
-            : ""
-        }
-
-        ${
-          player.years_playing
-            ? `<span>${escapeHTML(
-                String(player.years_playing)
-              )} yrs tennis</span>`
-            : ""
-        }
-      </div>
-
-      <div class="player-card-stats">
-        <div>
-          <strong>${playerMatches.length}</strong>
-          <span>Matches</span>
-        </div>
-
-        <div>
-          <strong>${escapeHTML(player.current_focus || "—")}</strong>
-          <span>Focus</span>
-        </div>
-      </div>
-
-      <button
-        class="button secondary full-width"
-        onclick="openCoachPlayer('${player.id}')"
-      >
-        View Player
-      </button>
-    </div>
-  `;
-}
-
-function renderRequest(request) {
-  return `
-    <div class="request-row">
-      <div>
-        <strong>Player connection request</strong>
-        <span>${formatDate(request.created_at?.slice(0, 10))}</span>
-      </div>
-
-      <div class="request-actions">
-        <button
-          class="button primary"
-          onclick="acceptRequest('${request.id}', '${request.player_id}')"
-        >
-          Accept
-        </button>
-
-        <button
-          class="button secondary"
-          onclick="declineRequest('${request.id}')"
-        >
-          Decline
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-async function acceptRequest(requestId, playerId) {
-  const { error } = await sb
-    .from("connection_requests")
-    .update({ status: "accepted" })
-    .eq("id", requestId)
-    .eq("coach_id", currentUser.id);
-
-  if (error) {
-    showMessage(error.message, "error");
-    return;
   }
 
-  const { error: playerError } = await sb
-    .from("profiles")
-    .update({
-      connected_coach_id: currentUser.id,
-    })
-    .eq("id", playerId)
-    .eq("role", "player");
 
-  if (playerError) {
-    showMessage(playerError.message, "error");
-    return;
-  }
+  $("app").innerHTML = html;
 
-  showMessage("Player connected.", "success");
-
-  await loadCoachData();
-  renderCoachDashboard();
 }
 
-async function declineRequest(requestId) {
-  const { error } = await sb
-    .from("connection_requests")
-    .update({ status: "declined" })
-    .eq("id", requestId)
-    .eq("coach_id", currentUser.id);
 
-  if (error) {
-    showMessage(error.message, "error");
-    return;
-  }
+async function acceptReq(id) {
 
-  showMessage("Request declined.", "success");
-
-  await loadCoachData();
-  renderCoachDashboard();
-}
-
-function openAddPlayerModal() {
-  openModal(`
-    ${modalTop("Add Player")}
-
-    <form id="addPlayerForm" class="form-grid">
-      <label>
-        Player Name
-        <input id="newPlayerName" required>
-      </label>
-
-      <label>
-        Level
-        <select id="newPlayerLevel">
-          <option>Beginner</option>
-          <option>Recreational</option>
-          <option selected>Competitive</option>
-          <option>Tournament</option>
-        </select>
-      </label>
-
-      <label>
-        Development Focus
-        <select id="newPlayerFocus">
-          <option>None</option>
-          <option>Serve</option>
-          <option>Return</option>
-          <option>Forehand</option>
-          <option>Backhand</option>
-          <option>Movement</option>
-          <option>Mental Game</option>
-          <option>Match Strategy</option>
-        </select>
-      </label>
-
-      <label>
-        Coach Note
-        <textarea id="newPlayerNote"></textarea>
-      </label>
-
-      <button class="button primary" type="submit">
-        Add Player
-      </button>
-    </form>
-  `);
-
-  $("addPlayerForm")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    showMessage(
-      "Players should normally join through their connection code.",
-      "info"
+  const {
+    error
+  } =
+    await sb.rpc(
+      "accept_connection_request",
+      {
+        request_uuid: id
+      }
     );
-    closeModal();
-  });
-}
 
-function openCoachPlayer(playerId) {
-  const player = currentPlayers.find((p) => p.id === playerId);
 
-  if (!player) {
-    showMessage("Player not found.", "error");
-    return;
+  if (error) {
+
+    alert(error.message);
+
   }
 
-  const matches = currentMatches
-    .filter((match) => match.player_id === playerId)
-    .sort((a, b) => new Date(b.match_date) - new Date(a.match_date));
+  else {
 
-  const playerTraining = currentTraining.filter(
-    (session) => session.player_id === playerId
-  );
+    render("requests");
 
-  const photo = player.profile_photo_url
-    ? `<img src="${escapeHTML(player.profile_photo_url)}" alt="${escapeHTML(
-        player.full_name
-      )}">`
-    : `<span>${escapeHTML(
-        player.full_name
-          .split(" ")
-          .map((x) => x[0])
-          .slice(0, 2)
-          .join("")
-          .toUpperCase()
-      )}</span>`;
+  }
 
-  openModal(`
-    ${modalTop("Player Profile")}
-
-    <div class="player-profile-header">
-      <div class="profile-photo-large">
-        ${photo}
-      </div>
-
-      <div>
-        <h2>${escapeHTML(player.full_name)}</h2>
-        <p>${escapeHTML(player.level || "Player")}</p>
-      </div>
-    </div>
-
-    <div class="bio-grid">
-      ${bioItem("Age", player.age ? `${player.age}` : "Not added")}
-      ${bioItem(
-        "Dominant Hand",
-        player.dominant_hand || "Not added"
-      )}
-      ${bioItem(
-        "Years Playing",
-        player.years_playing ? `${player.years_playing}` : "Not added"
-      )}
-      ${bioItem("Level", player.level || "Not added")}
-      ${bioItem(
-        "Playing Style",
-        player.playing_style || "Not added"
-      )}
-      ${bioItem(
-        "Height",
-        player.height ? player.height : "Not added"
-      )}
-    </div>
-
-    ${
-      player.short_bio
-        ? `
-      <div class="bio-note">
-        <strong>About</strong>
-        <p>${escapeHTML(player.short_bio)}</p>
-      </div>
-    `
-        : ""
-    }
-
-    <div class="focus-box">
-      <span>Current Focus</span>
-      <strong>${escapeHTML(player.current_focus || "None")}</strong>
-    </div>
-
-    <div class="player-profile-stats">
-      <div>
-        <strong>${matches.length}</strong>
-        <span>Matches</span>
-      </div>
-
-      <div>
-        <strong>${playerTraining.length}</strong>
-        <span>Training Sessions</span>
-      </div>
-    </div>
-
-    <h3>Recent Matches</h3>
-
-    ${
-      matches.length
-        ? `<div class="match-list">
-            ${matches.slice(0, 10).map(renderCoachMatch).join("")}
-          </div>`
-        : `<div class="empty-state small"><p>No matches yet.</p></div>`
-    }
-  `);
 }
 
-function bioItem(label, value) {
-  return `
-    <div class="bio-item">
-      <span>${escapeHTML(label)}</span>
-      <strong>${escapeHTML(value)}</strong>
-    </div>
-  `;
+
+async function declineReq(id) {
+
+  const {
+    error
+  } =
+    await sb.rpc(
+      "decline_connection_request",
+      {
+        request_uuid: id
+      }
+    );
+
+
+  if (error) {
+
+    alert(error.message);
+
+  }
+
+  else {
+
+    render("requests");
+
+  }
+
 }
 
-function renderCoachMatch(match) {
-  return `
-    <div class="match-row">
-      <div>
-        <strong>${escapeHTML(match.opponent)}</strong>
-        <span>${formatDate(match.match_date)}</span>
-      </div>
+
+/* =========================
+   COACH MATCHES
+========================= */
+
+async function renderCoachMatches(
+  players
+) {
+
+  const ids =
+    players.map(
+      p => p.id
+    );
+
+
+  let data = [];
+
+
+  if (ids.length) {
+
+    const {
+      data: matches,
+      error
+    } =
+      await sb
+        .from("matches")
+        .select("*")
+        .in(
+          "player_id",
+          ids
+        )
+        .order(
+          "match_date",
+          {
+            ascending: false
+          }
+        );
+
+
+    if (error) throw error;
+
+    data = matches || [];
+
+  }
+
+
+  $("app").innerHTML = `
+
+    <div class="dash-head">
 
       <div>
-        <strong class="${match.result === "win" ? "win-text" : "loss-text"}">
-          ${match.result === "win" ? "WIN" : "LOSS"}
-        </strong>
-        <span>${escapeHTML(match.score || "—")}</span>
+
+        <span class="eyebrow">
+          MATCH HISTORY
+        </span>
+
+        <h1>
+          Match Reviews
+        </h1>
+
       </div>
+
     </div>
-  `;
-}
 
-function renderCoachMatchReviews() {
-  const main = $("dashboard");
-  if (!main) return;
-
-  main.innerHTML = `
-    <section class="page-heading">
-      <p class="eyebrow">MATCH REVIEWS</p>
-      <h1>Match History</h1>
-      <p>Review the matches reported by your connected players.</p>
-    </section>
 
     ${
-      currentMatches.length
-        ? renderYearlyMatches(currentMatches)
+      data.length
+
+        ? data
+            .map(m => {
+
+              const p =
+                players.find(
+                  x =>
+                    x.id ===
+                    m.player_id
+                );
+
+
+              return `
+
+                <div class="match">
+
+                  <b>
+                    ${esc(
+                      p?.full_name ||
+                      "Player"
+                    )}
+                  </b>
+
+                  ·
+
+                  ${esc(m.result)}
+
+
+                  <h3>
+                    vs ${esc(m.opponent)}
+                  </h3>
+
+
+                  <div class="muted">
+
+                    ${esc(m.match_date)}
+                    ·
+                    ${esc(
+                      m.score ||
+                      "No score"
+                    )}
+
+                  </div>
+
+
+                  <p>
+
+                    <b>
+                      Problem:
+                    </b>
+
+                    ${esc(
+                      m.biggest_problem ||
+                      "None"
+                    )}
+
+                  </p>
+
+
+                  <p>
+
+                    <b>
+                      Positive:
+                    </b>
+
+                    ${esc(
+                      m.biggest_positive ||
+                      "None"
+                    )}
+
+                  </p>
+
+
+                  <p>
+                    ${esc(
+                      m.notes || ""
+                    )}
+                  </p>
+
+                </div>
+
+              `;
+
+            })
+            .join("")
+
         : `
-          <div class="content-card empty-state">
-            <h3>No matches yet</h3>
-            <p>Your connected players' match reports will appear here.</p>
+          <div class="empty">
+            No match reviews yet.
           </div>
         `
     }
+
   `;
+
 }
 
-function renderYearlyMatches(matches) {
-  const grouped = {};
 
-  [...matches]
-    .sort((a, b) => new Date(b.match_date) - new Date(a.match_date))
-    .forEach((match) => {
-      const year = new Date(`${match.match_date}T12:00:00`).getFullYear();
+/* =========================
+   VIEW PLAYER
+========================= */
 
-      if (!grouped[year]) grouped[year] = [];
-      grouped[year].push(match);
-    });
+async function viewPlayer(id) {
 
-  return Object.keys(grouped)
-    .sort((a, b) => Number(b) - Number(a))
-    .map(
-      (year) => `
-      <section class="content-card year-section">
-        <div class="section-header">
-          <h2>${escapeHTML(year)}</h2>
-          <span>${grouped[year].length} matches</span>
-        </div>
+  const players =
+    await connectedPlayers();
 
-        <div class="match-history">
-          ${grouped[year]
-            .map(
-              (match) => `
-              <div class="history-match">
-                <div class="history-date">
-                  ${formatDate(match.match_date)}
-                </div>
 
-                <div class="history-main">
-                  <strong>${escapeHTML(
-                    coachPlayerName(match.player_id)
-                  )}</strong>
-                  <span>vs ${escapeHTML(match.opponent)}</span>
-                </div>
+  const p =
+    players.find(
+      x => x.id === id
+    );
 
-                <div class="history-result">
-                  <strong class="${
-                    match.result === "win" ? "win-text" : "loss-text"
-                  }">
-                    ${match.result === "win" ? "W" : "L"}
-                  </strong>
-                  <span>${escapeHTML(match.score || "—")}</span>
-                </div>
 
-                <div class="history-detail">
-                  <span>
-                    Problem:
-                    ${escapeHTML(match.biggest_problem || "None")}
-                  </span>
+  if (!p) return;
 
-                  <span>
-                    Positive:
-                    ${escapeHTML(match.biggest_positive || "None")}
-                  </span>
-                </div>
-              </div>
-            `
-            )
-            .join("")}
-        </div>
-      </section>
-    `
-    )
-    .join("");
-}
 
-function renderPlayerDashboard() {
-  const main = $("dashboard");
-  if (!main) return;
+  const matches =
+    await playerMatches(id);
 
-  const wins = currentMatches.filter((m) => m.result === "win").length;
-  const losses = currentMatches.filter((m) => m.result === "loss").length;
 
-  const completedTraining = currentTraining.filter(
-    (session) => session.completed
-  ).length;
+  const photo =
+    await signedProfilePhoto(
+      p.profile_picture_path
+    );
 
-  main.innerHTML = `
-    <section class="hero-section">
+
+  $("app").innerHTML = `
+
+    <div class="dash-head">
+
       <div>
-        <p class="eyebrow">PLAYER DASHBOARD</p>
-        <h1>Welcome back, ${escapeHTML(currentProfile.full_name.split(" ")[0])}.</h1>
-        <p class="hero-copy">
-          Keep your matches, training, goals, and development in one place.
-        </p>
+
+        <span class="eyebrow">
+          PLAYER
+        </span>
+
+        <h1>
+          ${esc(p.full_name)}
+        </h1>
+
       </div>
 
-      <button class="button primary" onclick="openLogMatchModal()">
-        + Log Match
-      </button>
-    </section>
 
-    <section class="content-card profile-card">
-      <div class="profile-card-left">
-        <div class="profile-photo-large clickable-photo" onclick="openBioModal()">
+      <button
+        class="btn ghost"
+        onclick="render('players')">
+
+        ← Players
+
+      </button>
+
+    </div>
+
+
+    <div class="profile-hero card">
+
+      ${photoHTML(
+        photo,
+        p.full_name,
+        "avatar profile-avatar"
+      )}
+
+
+      <div>
+
+        <h2>
+          ${esc(p.full_name)}
+        </h2>
+
+
+        <p class="muted">
+
+          ${esc(p.age || "")}
+
           ${
-            currentProfile.profile_photo_url
-              ? `<img src="${escapeHTML(
-                  currentProfile.profile_photo_url
-                )}" alt="Profile photo">`
-              : `<span>+</span>`
+            p.age
+              ? " years old · "
+              : ""
+          }
+
+          ${esc(
+            p.dominant_hand || ""
+          )}
+
+          ${
+            p.dominant_hand
+              ? "-handed · "
+              : ""
+          }
+
+          ${
+            p.years_playing != null
+              ? esc(
+                  p.years_playing
+                ) +
+                " years playing · "
+              : ""
+          }
+
+          ${esc(
+            p.playing_level ||
+            "Player"
+          )}
+
+        </p>
+
+
+        ${
+          p.bio
+            ? `<p>${esc(p.bio)}</p>`
+            : ""
+        }
+
+      </div>
+
+    </div>
+
+
+    <div
+      class="card"
+      style="margin-top:18px">
+
+      <h3>
+        Player Bio
+      </h3>
+
+
+      <div class="bio-grid">
+
+        <div>
+          <span class="muted">
+            Age
+          </span>
+
+          <b>
+            ${esc(
+              p.age ||
+              "Not added"
+            )}
+          </b>
+        </div>
+
+
+        <div>
+          <span class="muted">
+            Dominant hand
+          </span>
+
+          <b>
+            ${esc(
+              p.dominant_hand ||
+              "Not added"
+            )}
+          </b>
+        </div>
+
+
+        <div>
+          <span class="muted">
+            Years playing
+          </span>
+
+          <b>
+            ${esc(
+              p.years_playing ??
+              "Not added"
+            )}
+          </b>
+        </div>
+
+
+        <div>
+          <span class="muted">
+            Level
+          </span>
+
+          <b>
+            ${esc(
+              p.playing_level ||
+              "Not added"
+            )}
+          </b>
+        </div>
+
+
+        <div>
+          <span class="muted">
+            Playing style
+          </span>
+
+          <b>
+            ${esc(
+              p.playing_style ||
+              "Not added"
+            )}
+          </b>
+        </div>
+
+
+        <div>
+          <span class="muted">
+            Height
+          </span>
+
+          <b>
+            ${esc(
+              p.height ||
+              "Not added"
+            )}
+          </b>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="grid">
+
+      <div class="card">
+
+        <span class="muted">
+          Matches reviewed
+        </span>
+
+        <div class="stat">
+          ${matches.length}
+        </div>
+
+      </div>
+
+
+      <div class="card">
+
+        <span class="muted">
+          Wins
+        </span>
+
+        <div class="stat">
+          ${
+            matches.filter(
+              m =>
+                m.result ===
+                "win"
+            ).length
           }
         </div>
 
-        <div>
-          <p class="eyebrow">MY PROFILE</p>
-          <h2>${escapeHTML(currentProfile.full_name)}</h2>
-          <p>${escapeHTML(currentProfile.level || "Player")}</p>
+      </div>
 
-          <div class="bio-summary">
-            ${
-              currentProfile.age
-                ? `<span>${escapeHTML(
-                    String(currentProfile.age)
-                  )} years</span>`
-                : ""
-            }
 
-            ${
-              currentProfile.dominant_hand
-                ? `<span>${escapeHTML(
-                    currentProfile.dominant_hand
-                  )}-handed</span>`
-                : ""
-            }
+      <div class="card">
 
-            ${
-              currentProfile.years_playing
-                ? `<span>${escapeHTML(
-                    String(currentProfile.years_playing)
-                  )} yrs tennis</span>`
-                : ""
-            }
-          </div>
+        <span class="muted">
+          Losses
+        </span>
+
+        <div class="stat">
+          ${
+            matches.filter(
+              m =>
+                m.result ===
+                "loss"
+            ).length
+          }
         </div>
+
       </div>
 
-      <button class="button secondary" onclick="openBioModal()">
-        Edit Bio
-      </button>
-    </section>
+    </div>
 
-    <section class="stats-grid">
-      <div class="stat-card">
-        <span>Matches</span>
-        <strong>${currentMatches.length}</strong>
-      </div>
 
-      <div class="stat-card">
-        <span>Wins</span>
-        <strong>${wins}</strong>
-      </div>
+    <div
+      class="card"
+      style="margin-top:18px">
 
-      <div class="stat-card">
-        <span>Losses</span>
-        <strong>${losses}</strong>
-      </div>
+      <h3>
+        Match history
+      </h3>
 
-      <div class="stat-card">
-        <span>Training Completed</span>
-        <strong>${completedTraining}</strong>
-      </div>
-    </section>
-
-    <section class="content-card">
-      <div class="section-header">
-        <div>
-          <p class="eyebrow">CURRENT DEVELOPMENT</p>
-          <h2>${escapeHTML(currentProfile.current_focus || "None")}</h2>
-        </div>
-      </div>
 
       ${
-        currentProfile.short_bio
-          ? `<p>${escapeHTML(currentProfile.short_bio)}</p>`
-          : `<p>Add a short bio so your coach can quickly understand your game.</p>`
-      }
-    </section>
+        matches.length
 
-    <section class="content-card">
-      <div class="section-header">
-        <div>
-          <p class="eyebrow">RECENT MATCHES</p>
-          <h2>Match History</h2>
-        </div>
+          ? matches
+              .map(
+                m => `
 
-        <button class="button secondary" onclick="openLogMatchModal()">
-          + Log Match
-        </button>
-      </div>
+                  <div class="match">
 
-      ${
-        currentMatches.length
-          ? renderPlayerRecentMatches()
+                    <b>
+                      ${esc(
+                        m.match_date
+                      )}
+                      —
+                      ${esc(
+                        m.result
+                      )}
+                    </b>
+
+                    vs
+                    ${esc(
+                      m.opponent
+                    )}
+
+
+                    <br>
+
+                    <span class="muted">
+
+                      ${esc(
+                        m.score || ""
+                      )}
+
+                    </span>
+
+
+                    <p>
+                      Problem:
+                      ${esc(
+                        m.biggest_problem ||
+                        "None"
+                      )}
+                    </p>
+
+
+                    <p>
+                      Positive:
+                      ${esc(
+                        m.biggest_positive ||
+                        "None"
+                      )}
+                    </p>
+
+                  </div>
+
+                `
+              )
+              .join("")
+
           : `
-            <div class="empty-state">
-              <h3>No matches yet</h3>
-              <p>Log your first match to start building your history.</p>
-            </div>
+            <p class="muted">
+              No matches yet.
+            </p>
           `
       }
-    </section>
+
+    </div>
+
   `;
+
 }
 
-function renderPlayerRecentMatches() {
-  const grouped = {};
 
-  currentMatches.forEach((match) => {
-    const year = new Date(`${match.match_date}T12:00:00`).getFullYear();
+/* =========================
+   PLAYER DASHBOARD
+========================= */
 
-    if (!grouped[year]) grouped[year] = [];
-    grouped[year].push(match);
-  });
+async function renderPlayer(page) {
 
-  return Object.keys(grouped)
-    .sort((a, b) => Number(b) - Number(a))
-    .map(
-      (year) => `
-      <div class="year-block">
-        <h3>${escapeHTML(year)}</h3>
+  if (page === "overview") {
 
-        ${grouped[year]
-          .map(
-            (match) => `
-            <div class="history-match">
-              <div class="history-date">
-                ${formatDate(match.match_date)}
-              </div>
+    const matches =
+      await playerMatches();
 
-              <div class="history-main">
-                <strong>vs ${escapeHTML(match.opponent)}</strong>
-                <span>${escapeHTML(match.score || "—")}</span>
-              </div>
 
-              <div class="history-result">
-                <strong class="${
-                  match.result === "win" ? "win-text" : "loss-text"
-                }">
-                  ${match.result === "win" ? "W" : "L"}
-                </strong>
-              </div>
-            </div>
-          `
-          )
-          .join("")}
+    $("app").innerHTML = `
+
+      <div class="dash-head">
+
+        <div>
+
+          <span class="eyebrow">
+            PLAYER DASHBOARD
+          </span>
+
+          <h1>
+            Welcome,
+            ${esc(
+              profile.full_name
+                .split(" ")[0]
+            )}
+          </h1>
+
+        </div>
+
+
+        <button
+          class="btn"
+          onclick="openMatch()">
+
+          + Log Match
+
+        </button>
+
       </div>
-    `
-    )
-    .join("");
-}
 
-async function openLogMatchModal() {
-  openModal(`
-    ${modalTop("Log Match")}
 
-    <form id="matchForm" class="form-grid">
-      <label>
-        Opponent
-        <input id="matchOpponent" placeholder="Opponent name" required>
-      </label>
+      <div class="grid">
 
-      <label>
-        Date
-        <input id="matchDate" type="date" value="${
-          new Date().toISOString().split("T")[0]
-        }" required>
-      </label>
+        <div class="card">
 
-      <label>
-        Result
-        <select id="matchResult" required>
-          <option value="win">Win</option>
-          <option value="loss">Loss</option>
-        </select>
-      </label>
+          <span class="muted">
+            Matches
+          </span>
 
-      <label>
-        Score
-        <input id="matchScore" placeholder="6-2 7-5">
-      </label>
+          <div class="stat">
+            ${matches.length}
+          </div>
 
-      <label>
-        Biggest Problem
-        <select id="matchProblem">
-          <option>None</option>
-          <option>Serve</option>
-          <option>Return</option>
-          <option>Forehand</option>
-          <option>Backhand</option>
-          <option>Movement</option>
-          <option>Mental Game</option>
-          <option>Match Strategy</option>
-        </select>
-      </label>
+        </div>
 
-      <label>
-        Biggest Positive
-        <select id="matchPositive">
-          <option>None</option>
-          <option>Serve</option>
-          <option>Return</option>
-          <option>Forehand</option>
-          <option>Backhand</option>
-          <option>Movement</option>
-          <option>Mental Game</option>
-          <option>Match Strategy</option>
-        </select>
-      </label>
 
-      <label>
-        Notes
-        <textarea id="matchNotes" placeholder="Anything important from the match?"></textarea>
-      </label>
+        <div class="card">
 
-      <button class="button primary" type="submit">
-        Save Match
-      </button>
-    </form>
-  `);
+          <span class="muted">
+            Wins
+          </span>
 
-  $("matchForm")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
+          <div class="stat">
 
-    const match = {
-      player_id: currentUser.id,
-      opponent: $("matchOpponent").value.trim(),
-      match_date: $("matchDate").value,
-      result: $("matchResult").value,
-      score: $("matchScore").value.trim() || null,
-      biggest_problem: $("matchProblem").value,
-      biggest_positive: $("matchPositive").value,
-      notes: $("matchNotes").value.trim() || null,
-    };
+            ${
+              matches.filter(
+                m =>
+                  m.result ===
+                  "win"
+              ).length
+            }
 
-    const { error } = await sb.from("matches").insert(match);
+          </div>
 
-    if (error) {
-      console.error(error);
-      showMessage(error.message, "error");
-      return;
+        </div>
+
+
+        <div class="card">
+
+          <span class="muted">
+            Losses
+          </span>
+
+          <div class="stat">
+
+            ${
+              matches.filter(
+                m =>
+                  m.result ===
+                  "loss"
+              ).length
+            }
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="card"
+        style="margin-top:18px">
+
+        <h3>
+          Recent matches
+        </h3>
+
+
+        ${
+          matches
+            .slice(0, 5)
+            .map(
+              m => `
+
+                <div class="list-item">
+
+                  <b>
+
+                    ${esc(
+                      m.result
+                    ).toUpperCase()}
+
+                    vs
+
+                    ${esc(
+                      m.opponent
+                    )}
+
+                  </b>
+
+
+                  <span
+                    class="muted"
+                    style="float:right">
+
+                    ${esc(
+                      m.match_date
+                    )}
+
+                  </span>
+
+                </div>
+
+              `
+            )
+            .join("")
+
+          ||
+
+          "<p class='muted'>Log your first match.</p>"
+        }
+
+      </div>
+
+    `;
+
+  }
+
+
+  else if (
+    page === "logmatch"
+  ) {
+
+    openMatch();
+
+  }
+
+
+  else if (
+    page === "coach"
+  ) {
+
+    let coach = null;
+
+
+    if (
+      profile.connected_coach_id
+    ) {
+
+      coach =
+        (
+          await sb
+            .from("profiles")
+            .select(
+              "full_name,coach_code"
+            )
+            .eq(
+              "id",
+              profile.connected_coach_id
+            )
+            .single()
+        ).data;
+
     }
 
-    closeModal();
-    showMessage("Match saved.", "success");
 
-    await loadPlayerData();
-    renderPlayerDashboard();
-  });
-}
+    $("app").innerHTML = coach
 
-function openBioModal() {
-  const p = currentProfile;
+      ? `
 
-  openModal(`
-    ${modalTop("My Bio")}
+        <div class="dash-head">
 
-    <form id="bioForm" class="form-grid">
-      <div class="photo-upload-section">
-        <div class="profile-photo-large bio-photo-preview" id="bioPhotoPreview">
-          ${
-            p.profile_photo_url
-              ? `<img src="${escapeHTML(
-                  p.profile_photo_url
-                )}" alt="Profile photo">`
-              : `<span>+</span>`
-          }
+          <div>
+
+            <span class="eyebrow">
+              CONNECTION
+            </span>
+
+            <h1>
+              My Coach
+            </h1>
+
+          </div>
+
         </div>
 
-        <div class="photo-buttons">
-          <label class="button secondary photo-button">
-            🖼️ Choose from Gallery
+
+        <div class="card">
+
+          <h2>
+            ${esc(
+              coach.full_name
+            )}
+          </h2>
+
+          <p class="muted">
+            Your connected coach
+          </p>
+
+        </div>
+
+      `
+
+      : `
+
+        <div class="dash-head">
+
+          <div>
+
+            <span class="eyebrow">
+              CONNECTION
+            </span>
+
+            <h1>
+              My Coach
+            </h1>
+
+          </div>
+
+        </div>
+
+
+        <div class="card">
+
+          <h3>
+            No coach connected
+          </h3>
+
+          <p class="muted">
+            Ask your coach for their
+            3 letters + 3 numbers
+            connection code.
+          </p>
+
+
+          <button
+            class="btn"
+            onclick="openConnect()">
+
+            Connect to Coach
+
+          </button>
+
+        </div>
+
+      `;
+
+  }
+
+
+  else if (
+    page === "bio"
+  ) {
+
+    await renderBio();
+
+  }
+
+
+  else if (
+    page === "training"
+  ) {
+
+    const {
+      data,
+      error
+    } =
+      await sb
+        .from("training_sessions")
+        .select("*")
+        .eq(
+          "player_id",
+          currentUser.id
+        )
+        .order(
+          "session_date",
+          {
+            ascending: false
+          }
+        );
+
+
+    if (error) throw error;
+
+
+    $("app").innerHTML = `
+
+      <div class="dash-head">
+
+        <div>
+
+          <span class="eyebrow">
+            TRAINING
+          </span>
+
+          <h1>
+            My Training
+          </h1>
+
+        </div>
+
+
+        <button
+          class="btn"
+          onclick="openSession()">
+
+          + Add Session
+
+        </button>
+
+      </div>
+
+
+      ${
+        data?.length
+
+          ? data
+              .map(
+                s => `
+
+                  <div class="match">
+
+                    <b>
+                      ${esc(
+                        s.session_name
+                      )}
+                    </b>
+
+
+                    <span
+                      class="pill"
+                      style="float:right">
+
+                      ${
+                        s.completed
+                          ? "Completed"
+                          : "Planned"
+                      }
+
+                    </span>
+
+
+                    <p class="muted">
+
+                      ${esc(
+                        s.session_date
+                      )}
+
+                      ·
+
+                      ${esc(
+                        s.duration_minutes ||
+                        "—"
+                      )}
+
+                      min
+
+                      ·
+
+                      ${esc(
+                        s.focus ||
+                        "No focus"
+                      )}
+
+                    </p>
+
+
+                    <p>
+
+                      ${esc(
+                        s.notes ||
+                        ""
+                      )}
+
+                    </p>
+
+                  </div>
+
+                `
+              )
+              .join("")
+
+          : `
+            <div class="empty">
+              No training sessions yet.
+            </div>
+          `
+      }
+
+    `;
+
+  }
+
+}
+
+
+/* =========================
+   BIO
+========================= */
+
+async function renderBio() {
+
+  const photo =
+    await signedProfilePhoto(
+      profile.profile_picture_path
+    );
+
+
+  $("app").innerHTML = `
+
+    <div class="dash-head">
+
+      <div>
+
+        <span class="eyebrow">
+          PLAYER PROFILE
+        </span>
+
+        <h1>
+          My Bio
+        </h1>
+
+      </div>
+
+    </div>
+
+
+    <div class="card bio-profile-card">
+
+      <div class="bio-photo-wrap">
+
+        ${photoHTML(
+          photo,
+          profile.full_name,
+          "avatar profile-avatar"
+        )}
+
+
+        <div class="photo-actions">
+
+          <label
+            class="btn small ghost photo-btn">
+
+            Choose from Gallery
+
             <input
               id="galleryPhoto"
               type="file"
-              accept="image/*"
-              hidden
-            >
+              accept="image/*">
+
           </label>
 
-          <label class="button secondary photo-button">
-            📷 Take a Photo
+
+          <label
+            class="btn small photo-btn">
+
+            Take a Photo
+
             <input
               id="cameraPhoto"
               type="file"
               accept="image/*"
-              capture="user"
-              hidden
-            >
+              capture="environment">
+
           </label>
 
-          ${
-            p.profile_photo_url
-              ? `<button
-                  type="button"
-                  class="button danger"
-                  id="removePhotoBtn"
-                >
-                  Remove Photo
-                </button>`
-              : ""
-          }
         </div>
+
+
+        <button
+          id="removePhoto"
+          class="btn small ghost"
+          type="button"
+          ${
+            profile.profile_picture_path
+              ? ""
+              : "disabled"
+          }>
+
+          Remove Photo
+
+        </button>
+
       </div>
 
-      <label>
-        Age
-        <input
-          id="bioAge"
-          type="number"
-          min="1"
-          max="100"
-          value="${escapeHTML(p.age || "")}"
-        >
-      </label>
 
-      <label>
-        Dominant Hand
-        <select id="bioHand">
-          <option value="">Select</option>
-          <option value="Right" ${
-            p.dominant_hand === "Right" ? "selected" : ""
-          }>Right</option>
-          <option value="Left" ${
-            p.dominant_hand === "Left" ? "selected" : ""
-          }>Left</option>
-        </select>
-      </label>
+      <form
+        id="bioForm"
+        class="bio-form">
 
-      <label>
-        Years Playing Tennis
-        <input
-          id="bioYears"
-          type="number"
-          min="0"
-          max="100"
-          value="${escapeHTML(p.years_playing || "")}"
-        >
-      </label>
 
-      <label>
-        Playing Level
-        <select id="bioLevel">
-          <option value="">Select</option>
-          <option ${p.level === "Beginner" ? "selected" : ""}>Beginner</option>
-          <option ${
-            p.level === "Recreational" ? "selected" : ""
-          }>Recreational</option>
-          <option ${
-            p.level === "Competitive" ? "selected" : ""
-          }>Competitive</option>
-          <option ${
-            p.level === "Tournament" ? "selected" : ""
-          }>Tournament</option>
-        </select>
-      </label>
+        <label>
 
-      <label>
-        Playing Style
-        <select id="bioStyle">
-          <option value="">Select</option>
-          <option ${
-            p.playing_style === "Aggressive" ? "selected" : ""
-          }>Aggressive</option>
-          <option ${
-            p.playing_style === "Defensive" ? "selected" : ""
-          }>Defensive</option>
-          <option ${
-            p.playing_style === "All-court" ? "selected" : ""
-          }>All-court</option>
-          <option ${
-            p.playing_style === "Serve & volley" ? "selected" : ""
-          }>Serve & volley</option>
-          <option ${
-            p.playing_style === "Other" ? "selected" : ""
-          }>Other</option>
-        </select>
-      </label>
+          Age
 
-      <label>
-        Height
-        <input
-          id="bioHeight"
-          placeholder="e.g. 6'1"
-          value="${escapeHTML(p.height || "")}"
-        >
-      </label>
+          <input
+            id="bioAge"
+            type="number"
+            min="1"
+            max="100"
+            value="${esc(
+              profile.age ?? ""
+            )}"
+            placeholder="17">
 
-      <label>
-        Short Bio
-        <textarea
-          id="bioShort"
-          placeholder="Tell your coach a little about your game..."
-        >${escapeHTML(p.short_bio || "")}</textarea>
-      </label>
+        </label>
 
-      <button class="button primary" type="submit">
-        Save Bio
-      </button>
-    </form>
-  `);
 
-  let selectedPhotoFile = null;
-  let removePhoto = false;
+        <label>
 
-  function previewPhoto(file) {
+          Dominant Hand
+
+          <select id="bioHand">
+
+            <option value="">
+              Select
+            </option>
+
+            <option
+              ${
+                profile.dominant_hand ===
+                "Right"
+                  ? "selected"
+                  : ""
+              }>
+
+              Right
+
+            </option>
+
+            <option
+              ${
+                profile.dominant_hand ===
+                "Left"
+                  ? "selected"
+                  : ""
+              }>
+
+              Left
+
+            </option>
+
+          </select>
+
+        </label>
+
+
+        <label>
+
+          Years Playing Tennis
+
+          <input
+            id="bioYears"
+            type="number"
+            min="0"
+            max="100"
+            value="${esc(
+              profile.years_playing ?? ""
+            )}"
+            placeholder="10">
+
+        </label>
+
+
+        <label>
+
+          Playing Level
+
+          <select id="bioLevel">
+
+            <option value="">
+              Select
+            </option>
+
+            <option
+              ${
+                profile.playing_level ===
+                "Beginner"
+                  ? "selected"
+                  : ""
+              }>
+
+              Beginner
+
+            </option>
+
+            <option
+              ${
+                profile.playing_level ===
+                "Recreational"
+                  ? "selected"
+                  : ""
+              }>
+
+              Recreational
+
+            </option>
+
+            <option
+              ${
+                profile.playing_level ===
+                "Competitive"
+                  ? "selected"
+                  : ""
+              }>
+
+              Competitive
+
+            </option>
+
+            <option
+              ${
+                profile.playing_level ===
+                "Tournament"
+                  ? "selected"
+                  : ""
+              }>
+
+              Tournament
+
+            </option>
+
+          </select>
+
+        </label>
+
+
+        <label>
+
+          Playing Style
+
+          <select id="bioStyle">
+
+            <option value="">
+              Select
+            </option>
+
+            <option
+              ${
+                profile.playing_style ===
+                "Aggressive"
+                  ? "selected"
+                  : ""
+              }>
+
+              Aggressive
+
+            </option>
+
+            <option
+              ${
+                profile.playing_style ===
+                "Defensive"
+                  ? "selected"
+                  : ""
+              }>
+
+              Defensive
+
+            </option>
+
+            <option
+              ${
+                profile.playing_style ===
+                "All-court"
+                  ? "selected"
+                  : ""
+              }>
+
+              All-court
+
+            </option>
+
+            <option
+              ${
+                profile.playing_style ===
+                "Serve & volley"
+                  ? "selected"
+                  : ""
+              }>
+
+              Serve & volley
+
+            </option>
+
+            <option
+              ${
+                profile.playing_style ===
+                "Other"
+                  ? "selected"
+                  : ""
+              }>
+
+              Other
+
+            </option>
+
+          </select>
+
+        </label>
+
+
+        <label>
+
+          Height
+          <span class="muted">
+            (optional)
+          </span>
+
+          <input
+            id="bioHeight"
+            value="${esc(
+              profile.height ?? ""
+            )}"
+            placeholder="6'1">
+
+        </label>
+
+
+        <label
+          class="bio-wide">
+
+          Short Bio
+          <span class="muted">
+            (optional)
+          </span>
+
+          <textarea
+            id="bioText"
+            rows="4"
+            placeholder="Tell your coach a little about your game...">${esc(
+              profile.bio ?? ""
+            )}</textarea>
+
+        </label>
+
+
+        <div
+          class="modal-actions bio-wide">
+
+          <button class="btn">
+
+            Save Bio
+
+          </button>
+
+        </div>
+
+
+      </form>
+
+    </div>
+
+  `;
+
+
+  const upload = async file => {
+
     if (!file) return;
 
-    selectedPhotoFile = file;
-    removePhoto = false;
 
-    const reader = new FileReader();
+    if (
+      !file.type.startsWith(
+        "image/"
+      )
+    ) {
 
-    reader.onload = () => {
-      $("bioPhotoPreview").innerHTML = `
-        <img src="${reader.result}" alt="New profile photo">
-      `;
-    };
-
-    reader.readAsDataURL(file);
-  }
-
-  $("galleryPhoto")?.addEventListener("change", (event) => {
-    previewPhoto(event.target.files?.[0]);
-  });
-
-  $("cameraPhoto")?.addEventListener("change", (event) => {
-    previewPhoto(event.target.files?.[0]);
-  });
-
-  $("removePhotoBtn")?.addEventListener("click", () => {
-    selectedPhotoFile = null;
-    removePhoto = true;
-
-    $("bioPhotoPreview").innerHTML = `<span>+</span>`;
-  });
-
-  $("bioForm")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const updates = {
-      age: $("bioAge").value
-        ? Number($("bioAge").value)
-        : null,
-
-      dominant_hand: $("bioHand").value || null,
-
-      years_playing: $("bioYears").value
-        ? Number($("bioYears").value)
-        : null,
-
-      level: $("bioLevel").value || null,
-
-      playing_style: $("bioStyle").value || null,
-
-      height: $("bioHeight").value.trim() || null,
-
-      short_bio: $("bioShort").value.trim() || null,
-    };
-
-    if (selectedPhotoFile) {
-      const extension =
-        selectedPhotoFile.name.split(".").pop()?.toLowerCase() || "jpg";
-
-      const filePath = `${currentUser.id}/profile.${extension}`;
-
-      const { error: uploadError } = await sb.storage
-        .from("profile-photos")
-        .upload(filePath, selectedPhotoFile, {
-          upsert: true,
-          contentType: selectedPhotoFile.type,
-        });
-
-      if (uploadError) {
-        console.error(uploadError);
-        showMessage(uploadError.message, "error");
-        return;
-      }
-
-      const { data: publicUrlData } = sb.storage
-        .from("profile-photos")
-        .getPublicUrl(filePath);
-
-      updates.profile_photo_url = publicUrlData.publicUrl;
-    }
-
-    if (removePhoto) {
-      updates.profile_photo_url = null;
-
-      const { data: files } = await sb.storage
-        .from("profile-photos")
-        .list(currentUser.id);
-
-      if (files?.length) {
-        await sb.storage.from("profile-photos").remove(
-          files.map((file) => `${currentUser.id}/${file.name}`)
-        );
-      }
-    }
-
-    const { data, error } = await sb
-      .from("profiles")
-      .update(updates)
-      .eq("id", currentUser.id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error(error);
-      showMessage(error.message, "error");
-      return;
-    }
-
-    currentProfile = data;
-
-    closeModal();
-    showMessage("Bio updated.", "success");
-
-    setupProfileBox(currentProfile);
-    renderPlayerDashboard();
-  });
-}
-
-async function openConnectCoachModal() {
-  openModal(`
-    ${modalTop("Connect to Coach")}
-
-    <form id="connectCoachForm" class="form-grid">
-      <label>
-        Coach Connection Code
-        <input
-          id="connectCoachCode"
-          placeholder="ABC123"
-          maxlength="6"
-          autocomplete="off"
-          autocapitalize="characters"
-          spellcheck="false"
-          style="text-transform:uppercase"
-          required
-        >
-      </label>
-
-      <button class="button primary" type="submit">
-        Connect
-      </button>
-    </form>
-  `);
-
-  $("connectCoachCode")?.addEventListener("input", () => {
-    $("connectCoachCode").value = $("connectCoachCode").value
-      .replace(/[^a-zA-Z0-9]/g, "")
-      .slice(0, 6)
-      .toUpperCase();
-  });
-
-  $("connectCoachForm")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const code = $("connectCoachCode").value.trim().toUpperCase();
-
-    const { data: coaches, error } = await sb.rpc(
-      "find_coach_by_code",
-      {
-        code_input: code,
-      }
-    );
-
-    if (error) {
-      showMessage(error.message, "error");
-      return;
-    }
-
-    const coach = coaches?.[0];
-
-    if (!coach) {
-      showMessage("Coach code not found.", "error");
-      return;
-    }
-
-    const { error: requestError } = await sb
-      .from("connection_requests")
-      .insert({
-        player_id: currentUser.id,
-        coach_id: coach.id,
-        status: "pending",
-      });
-
-    if (requestError) {
-      if (requestError.code === "23505") {
-        showMessage("You already have a request with this coach.", "info");
-      } else {
-        showMessage(requestError.message, "error");
-      }
-      return;
-    }
-
-    closeModal();
-    showMessage("Connection request sent.", "success");
-
-    renderPlayerDashboard();
-  });
-}
-
-async function renderPlayerCoach() {
-  const main = $("dashboard");
-  if (!main) return;
-
-  if (!currentProfile.connected_coach_id) {
-    main.innerHTML = `
-      <section class="page-heading">
-        <p class="eyebrow">MY COACH</p>
-        <h1>Connect to a Coach</h1>
-        <p>Enter your coach's connection code to send a request.</p>
-      </section>
-
-      <div class="content-card connect-card">
-        <h2>No coach connected</h2>
-        <p>Ask your coach for their six-character connection code.</p>
-
-        <button class="button primary" onclick="openConnectCoachModal()">
-          Connect to Coach
-        </button>
-      </div>
-    `;
-
-    return;
-  }
-
-  const { data: coach, error } = await sb
-    .from("profiles")
-    .select("*")
-    .eq("id", currentProfile.connected_coach_id)
-    .single();
-
-  if (error) {
-    showMessage(error.message, "error");
-    return;
-  }
-
-  main.innerHTML = `
-    <section class="page-heading">
-      <p class="eyebrow">MY COACH</p>
-      <h1>Your Coach</h1>
-      <p>Your TennisPilot connection.</p>
-    </section>
-
-    <div class="content-card coach-profile-card">
-      <div class="large-avatar">
-        ${
-          coach.profile_photo_url
-            ? `<img src="${escapeHTML(
-                coach.profile_photo_url
-              )}" alt="Coach photo">`
-            : `<span>${escapeHTML(
-                coach.full_name
-                  .split(" ")
-                  .map((x) => x[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase()
-              )}</span>`
-        }
-      </div>
-
-      <div>
-        <p class="eyebrow">CONNECTED COACH</p>
-        <h2>${escapeHTML(coach.full_name)}</h2>
-        <p>Coach</p>
-      </div>
-    </div>
-  `;
-}
-
-function setupNavigation(profile) {
-  const nav = $("nav");
-  if (!nav) return;
-
-  if (profile.role === "coach") {
-    nav.innerHTML = `
-      <button class="nav-item active" data-page="overview">
-        Overview
-      </button>
-
-      <button class="nav-item" data-page="players">
-        Players
-      </button>
-
-      <button class="nav-item" data-page="matches">
-        Match Reviews
-      </button>
-
-      <button class="nav-item" data-page="training">
-        Training Plans
-      </button>
-
-      <button class="nav-item" data-page="progress">
-        Progress
-      </button>
-    `;
-  } else {
-    nav.innerHTML = `
-      <button class="nav-item active" data-page="overview">
-        My Dashboard
-      </button>
-
-      <button class="nav-item" data-page="logmatch">
-        Log Match
-      </button>
-
-      <button class="nav-item" data-page="coach">
-        My Coach
-      </button>
-    `;
-  }
-
-  nav.querySelectorAll(".nav-item").forEach((button) => {
-    button.addEventListener("click", async () => {
-      nav.querySelectorAll(".nav-item").forEach((item) =>
-        item.classList.remove("active")
+      return alert(
+        "Please choose an image."
       );
 
-      button.classList.add("active");
-
-      const page = button.dataset.page;
-
-      if (profile.role === "coach") {
-        if (page === "overview") renderCoachDashboard();
-        if (page === "players") renderCoachPlayers();
-        if (page === "matches") renderCoachMatchReviews();
-        if (page === "training") renderCoachTraining();
-        if (page === "progress") renderCoachProgress();
-      } else {
-        if (page === "overview") renderPlayerDashboard();
-        if (page === "logmatch") openLogMatchModal();
-        if (page === "coach") renderPlayerCoach();
-      }
-    });
-  });
-}
-
-function renderCoachPlayers() {
-  const main = $("dashboard");
-  if (!main) return;
-
-  main.innerHTML = `
-    <section class="page-heading">
-      <p class="eyebrow">PLAYERS</p>
-      <h1>Your Players</h1>
-      <p>Only players connected to your coach account appear here.</p>
-    </section>
-
-    ${
-      currentPlayers.length
-        ? `<div class="player-grid">
-            ${currentPlayers.map(renderCoachPlayerCard).join("")}
-          </div>`
-        : `
-          <div class="content-card empty-state">
-            <h3>No connected players</h3>
-            <p>Give your connection code to a player.</p>
-          </div>
-        `
     }
-  `;
+
+
+    if (
+      file.size >
+      5 * 1024 * 1024
+    ) {
+
+      return alert(
+        "Please choose an image smaller than 5 MB."
+      );
+
+    }
+
+
+    const ext =
+      (
+        file.name
+          .split(".")
+          .pop() ||
+        "jpg"
+      )
+        .toLowerCase()
+        .replace(
+          /[^a-z0-9]/g,
+          ""
+        ) ||
+      "jpg";
+
+
+    const path =
+      `${currentUser.id}/profile-${Date.now()}.${ext}`;
+
+
+    const {
+      error
+    } =
+      await sb
+        .storage
+        .from("profile-pictures")
+        .upload(
+          path,
+          file,
+          {
+            upsert: false,
+            contentType:
+              file.type
+          }
+        );
+
+
+    if (error)
+      return alert(
+        error.message
+      );
+
+
+    const {
+      error: updateError
+    } =
+      await sb
+        .from("profiles")
+        .update({
+          profile_picture_path:
+            path
+        })
+        .eq(
+          "id",
+          currentUser.id
+        );
+
+
+    if (updateError) {
+
+      await sb
+        .storage
+        .from("profile-pictures")
+        .remove([path]);
+
+      return alert(
+        updateError.message
+      );
+
+    }
+
+
+    profile.profile_picture_path =
+      path;
+
+
+    render("bio");
+
+  };
+
+
+  $("galleryPhoto").onchange =
+    e =>
+      upload(
+        e.target.files[0]
+      );
+
+
+  $("cameraPhoto").onchange =
+    e =>
+      upload(
+        e.target.files[0]
+      );
+
+
+  $("removePhoto").onclick =
+    async () => {
+
+      if (
+        !profile.profile_picture_path
+      )
+        return;
+
+
+      const old =
+        profile.profile_picture_path;
+
+
+      const {
+        error
+      } =
+        await sb
+          .storage
+          .from("profile-pictures")
+          .remove([old]);
+
+
+      if (error)
+        return alert(
+          error.message
+        );
+
+
+      const {
+        error: updateError
+      } =
+        await sb
+          .from("profiles")
+          .update({
+            profile_picture_path:
+              null
+          })
+          .eq(
+            "id",
+            currentUser.id
+          );
+
+
+      if (updateError)
+        return alert(
+          updateError.message
+        );
+
+
+      profile.profile_picture_path =
+        null;
+
+
+      render("bio");
+
+    };
+
+
+  $("bioForm").onsubmit =
+    async e => {
+
+      e.preventDefault();
+
+
+      const payload = {
+
+        age:
+          Number(
+            $("bioAge").value
+          ) || null,
+
+        dominant_hand:
+          $("bioHand").value ||
+          null,
+
+        years_playing:
+          Number(
+            $("bioYears").value
+          ) || 0,
+
+        playing_level:
+          $("bioLevel").value ||
+          null,
+
+        playing_style:
+          $("bioStyle").value ||
+          null,
+
+        height:
+          $("bioHeight").value.trim() ||
+          null,
+
+        bio:
+          $("bioText").value.trim() ||
+          null
+
+      };
+
+
+      const {
+        data,
+        error
+      } =
+        await sb
+          .from("profiles")
+          .update(payload)
+          .eq(
+            "id",
+            currentUser.id
+          )
+          .select("*")
+          .single();
+
+
+      if (error)
+        return alert(
+          error.message
+        );
+
+
+      profile = data;
+
+
+      alert(
+        "Bio saved."
+      );
+
+
+      render("bio");
+
+    };
+
 }
 
-function renderCoachTraining() {
-  const main = $("dashboard");
-  if (!main) return;
 
-  main.innerHTML = `
-    <section class="page-heading">
-      <p class="eyebrow">TRAINING PLANS</p>
-      <h1>Training</h1>
-      <p>Review training sessions from your connected players.</p>
-    </section>
+/* =========================
+   LOG MATCH
+========================= */
 
-    ${
-      currentTraining.length
-        ? `
-        <div class="content-card">
-          ${currentTraining
-            .map(
-              (session) => `
-              <div class="history-match">
-                <div class="history-date">
-                  ${formatDate(session.session_date)}
-                </div>
+function openMatch() {
 
-                <div class="history-main">
-                  <strong>${escapeHTML(
-                    coachPlayerName(session.player_id)
-                  )}</strong>
-                  <span>${escapeHTML(session.session_name)}</span>
-                </div>
+  $("modalRoot").innerHTML = `
 
-                <div>
-                  <strong>${session.completed ? "Completed" : "Planned"}</strong>
-                </div>
-              </div>
-            `
-            )
-            .join("")}
+    <div class="modal-back">
+
+      <div class="modal">
+
+
+        <div class="modal-top">
+
+          <button
+            type="button"
+            class="btn ghost modal-back-btn"
+            onclick="closeModal()">
+
+            ← Back
+
+          </button>
+
+
+          <h2>
+            Log Match
+          </h2>
+
         </div>
-      `
-        : `
-          <div class="content-card empty-state">
-            <h3>No training sessions yet</h3>
+
+
+        <form id="matchForm">
+
+
+          <label>
+
+            Opponent
+
+            <input
+              id="opponent"
+              required>
+
+          </label>
+
+
+          <label>
+
+            Date
+
+            <input
+              id="matchDate"
+              type="date"
+              value="${
+                new Date()
+                  .toISOString()
+                  .slice(0, 10)
+              }"
+              required>
+
+          </label>
+
+
+          <label>
+
+            Result
+
+            <select id="result">
+
+              <option value="win">
+                Win
+              </option>
+
+              <option value="loss">
+                Loss
+              </option>
+
+            </select>
+
+          </label>
+
+
+          <label>
+
+            Score
+
+            <input
+              id="score"
+              placeholder="6-4, 3-6, 10-8">
+
+          </label>
+
+
+          <label>
+
+            Biggest problem
+
+            <select id="problem">
+
+              <option>
+                None
+              </option>
+
+              <option>
+                Serve
+              </option>
+
+              <option>
+                Return
+              </option>
+
+              <option>
+                Forehand
+              </option>
+
+              <option>
+                Backhand
+              </option>
+
+              <option>
+                Movement
+              </option>
+
+              <option>
+                Mental game
+              </option>
+
+              <option>
+                Consistency
+              </option>
+
+              <option>
+                Other
+              </option>
+
+            </select>
+
+          </label>
+
+
+          <label>
+
+            Biggest positive
+
+            <select id="positive">
+
+              <option>
+                None
+              </option>
+
+              <option>
+                Serve
+              </option>
+
+              <option>
+                Return
+              </option>
+
+              <option>
+                Forehand
+              </option>
+
+              <option>
+                Backhand
+              </option>
+
+              <option>
+                Movement
+              </option>
+
+              <option>
+                Mental game
+              </option>
+
+              <option>
+                Consistency
+              </option>
+
+              <option>
+                Other
+              </option>
+
+            </select>
+
+          </label>
+
+
+          <label>
+
+            Notes
+
+            <textarea
+              id="notes"
+              rows="4"></textarea>
+
+          </label>
+
+
+          <div class="modal-actions">
+
+            <button
+              type="button"
+              class="btn ghost"
+              onclick="closeModal()">
+
+              Cancel
+
+            </button>
+
+
+            <button class="btn">
+
+              Save Match
+
+            </button>
+
           </div>
-        `
-    }
-  `;
-}
 
-function renderCoachProgress() {
-  const main = $("dashboard");
-  if (!main) return;
 
-  main.innerHTML = `
-    <section class="page-heading">
-      <p class="eyebrow">PROGRESS</p>
-      <h1>Player Progress</h1>
-      <p>See how your connected players are progressing.</p>
-    </section>
+        </form>
 
-    <div class="player-grid">
-      ${
-        currentPlayers.length
-          ? currentPlayers
-              .map((player) => {
-                const sessions = currentTraining.filter(
-                  (s) => s.player_id === player.id
-                );
 
-                const completed = sessions.filter(
-                  (s) => s.completed
-                ).length;
+      </div>
 
-                return `
-                  <div class="content-card">
-                    <h3>${escapeHTML(player.full_name)}</h3>
-
-                    <div class="progress-bar">
-                      <div style="width:${
-                        sessions.length
-                          ? Math.round(
-                              (completed / sessions.length) * 100
-                            )
-                          : 0
-                      }%"></div>
-                    </div>
-
-                    <p>
-                      ${completed} of ${sessions.length}
-                      training sessions completed
-                    </p>
-                  </div>
-                `;
-              })
-              .join("")
-          : `
-            <div class="content-card empty-state">
-              <h3>No players yet</h3>
-            </div>
-          `
-      }
     </div>
+
   `;
+
+
+  $("matchForm").onsubmit =
+    async e => {
+
+      e.preventDefault();
+
+
+      const {
+        error
+      } =
+        await sb
+          .from("matches")
+          .insert({
+
+            player_id:
+              currentUser.id,
+
+            opponent:
+              $("opponent")
+                .value
+                .trim(),
+
+            match_date:
+              $("matchDate")
+                .value,
+
+            result:
+              $("result")
+                .value,
+
+            score:
+              $("score")
+                .value
+                .trim(),
+
+            biggest_problem:
+              $("problem")
+                .value,
+
+            biggest_positive:
+              $("positive")
+                .value,
+
+            notes:
+              $("notes")
+                .value
+                .trim()
+
+          });
+
+
+      if (error) {
+
+        alert(
+          error.message
+        );
+
+      }
+
+      else {
+
+        closeModal();
+
+        render("overview");
+
+      }
+
+    };
+
 }
 
-async function startDashboard() {
-  if (!sb) {
-    console.error("Supabase client is missing.");
-    showMessage("Supabase is not configured correctly.", "error");
+
+/* =========================
+   CONNECT COACH
+========================= */
+
+function openConnect() {
+
+  $("modalRoot").innerHTML = `
+
+    <div class="modal-back">
+
+      <div class="modal">
+
+
+        <div class="modal-top">
+
+          <button
+            type="button"
+            class="btn ghost modal-back-btn"
+            onclick="closeModal()">
+
+            ← Back
+
+          </button>
+
+
+          <h2>
+            Connect to Coach
+          </h2>
+
+        </div>
+
+
+        <p class="muted">
+
+          Enter the coach's
+          3 letters + 3 numbers.
+
+        </p>
+
+
+        <form id="connectForm">
+
+          <input
+            id="newCode"
+            maxlength="6"
+            placeholder="ABC123"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            style="text-transform:uppercase"
+            required>
+
+
+          <div class="modal-actions">
+
+            <button
+              type="button"
+              class="btn ghost"
+              onclick="closeModal()">
+
+              Cancel
+
+            </button>
+
+
+            <button class="btn">
+
+              Send Request
+
+            </button>
+
+          </div>
+
+        </form>
+
+
+      </div>
+
+    </div>
+
+  `;
+
+
+  $("newCode").addEventListener(
+    "input",
+    () => {
+
+      $("newCode").value =
+        $("newCode")
+          .value
+          .replace(
+            /[^a-zA-Z0-9]/g,
+            ""
+          )
+          .slice(0, 6)
+          .toUpperCase();
+
+    }
+  );
+
+
+  $("connectForm").onsubmit =
+    async e => {
+
+      e.preventDefault();
+
+
+      const code =
+        $("newCode")
+          .value
+          .trim()
+          .toUpperCase();
+
+
+      const {
+        data,
+        error
+      } =
+        await sb.rpc(
+          "find_coach_by_code",
+          {
+            code_input:
+              code
+          }
+        );
+
+
+      if (error) {
+
+        alert(
+          error.message
+        );
+
+      }
+
+      else if (
+        !data?.length
+      ) {
+
+        alert(
+          "Coach code not found."
+        );
+
+      }
+
+      else {
+
+        const {
+          error: requestError
+        } =
+          await sb
+            .from(
+              "connection_requests"
+            )
+            .insert({
+
+              player_id:
+                currentUser.id,
+
+              coach_id:
+                data[0].id,
+
+              status:
+                "pending"
+
+            });
+
+
+        if (requestError) {
+
+          alert(
+            requestError.message
+          );
+
+        }
+
+        else {
+
+          closeModal();
+
+          alert(
+            "Connection request sent."
+          );
+
+          render("coach");
+
+        }
+
+      }
+
+    };
+
+}
+
+
+/* =========================
+   TRAINING SESSION
+========================= */
+
+function openSession() {
+
+  $("modalRoot").innerHTML = `
+
+    <div class="modal-back">
+
+      <div class="modal">
+
+        <h2>
+          Add Training Session
+        </h2>
+
+
+        <form id="sessionForm">
+
+
+          <label>
+
+            Session name
+
+            <input
+              id="sessionName"
+              required>
+
+          </label>
+
+
+          <label>
+
+            Date
+
+            <input
+              id="sessionDate"
+              type="date"
+              value="${
+                new Date()
+                  .toISOString()
+                  .slice(0, 10)
+              }">
+
+          </label>
+
+
+          <label>
+
+            Duration (minutes)
+
+            <input
+              id="duration"
+              type="number"
+              min="1">
+
+          </label>
+
+
+          <label>
+
+            Focus
+
+            <select id="focus">
+
+              <option>
+                None
+              </option>
+
+              <option>
+                Serve
+              </option>
+
+              <option>
+                Return
+              </option>
+
+              <option>
+                Forehand
+              </option>
+
+              <option>
+                Backhand
+              </option>
+
+              <option>
+                Movement
+              </option>
+
+              <option>
+                Mental game
+              </option>
+
+              <option>
+                Consistency
+              </option>
+
+            </select>
+
+          </label>
+
+
+          <label>
+
+            Notes
+
+            <textarea
+              id="sessionNotes"
+              rows="3"></textarea>
+
+          </label>
+
+
+          <div class="modal-actions">
+
+            <button
+              type="button"
+              class="btn ghost"
+              onclick="closeModal()">
+
+              Cancel
+
+            </button>
+
+
+            <button class="btn">
+
+              Add Session
+
+            </button>
+
+          </div>
+
+
+        </form>
+
+
+      </div>
+
+    </div>
+
+  `;
+
+
+  $("sessionForm").onsubmit =
+    async e => {
+
+      e.preventDefault();
+
+
+      const {
+        error
+      } =
+        await sb
+          .from(
+            "training_sessions"
+          )
+          .insert({
+
+            player_id:
+              currentUser.id,
+
+            session_name:
+              $("sessionName")
+                .value
+                .trim(),
+
+            session_date:
+              $("sessionDate")
+                .value,
+
+            duration_minutes:
+              Number(
+                $("duration")
+                  .value
+              ) || null,
+
+            focus:
+              $("focus")
+                .value,
+
+            notes:
+              $("sessionNotes")
+                .value
+                .trim()
+
+          });
+
+
+      if (error) {
+
+        alert(
+          error.message
+        );
+
+      }
+
+      else {
+
+        closeModal();
+
+        render("training");
+
+      }
+
+    };
+
+}
+
+
+/* =========================
+   CLOSE MODAL
+========================= */
+
+function closeModal() {
+
+  $("modalRoot").innerHTML = "";
+
+}
+
+
+/* =========================
+   START
+========================= */
+
+async function start() {
+
+  if (
+    document.getElementById(
+      "authForm"
+    )
+  ) {
+
+    setupAuth();
+
     return;
+
   }
 
-  const profile = await requireUser();
 
-  if (!profile) return;
+  if (
+    document.getElementById(
+      "app"
+    )
+  ) {
 
-  setupProfileBox(profile);
-  setupGlobalLogout();
-  setupNavigation(profile);
+    if (
+      await loadProfile()
+    ) {
 
-  if (profile.role === "coach") {
-    await loadCoachData();
-    renderCoachDashboard();
-  } else {
-    await loadPlayerData();
-    renderPlayerDashboard();
-  }
-}
+      shell();
 
-async function startLogin() {
-  if (!sb) {
-    console.error("Supabase client is missing.");
-    return;
+      render("overview");
+
+    }
+
   }
 
-  const {
-    data: { session },
-  } = await sb.auth.getSession();
-
-  if (session && sessionIsFresh()) {
-    window.location.href = "dashboard.html";
-    return;
-  }
-
-  setupAuth();
 }
 
-if (location.pathname.endsWith("login.html")) {
-  startLogin();
-}
 
-if (location.pathname.endsWith("dashboard.html")) {
-  startDashboard();
-}
+start();
