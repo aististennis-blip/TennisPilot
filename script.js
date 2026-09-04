@@ -16,17 +16,14 @@ const esc = value =>
     "'": "&#39;"
   }[char]));
 
-function showMessage(text, bad = false) {
+const msg = (text, bad = false) => {
+  const e = $("authMessage");
 
-  const element = $("authMessage");
-
-  if (!element) return;
-
-  element.textContent = text;
-
-  element.className =
-    "message " + (bad ? "danger" : "success");
-}
+  if (e) {
+    e.textContent = text;
+    e.className = "message " + (bad ? "danger" : "success");
+  }
+};
 
 
 /* =========================
@@ -34,34 +31,25 @@ function showMessage(text, bad = false) {
 ========================= */
 
 function setupAuth() {
-
   const tabs = document.querySelectorAll(".tab");
   const roles = document.querySelectorAll(".role");
 
   if (!tabs.length) return;
 
   tabs.forEach(button => {
-
     button.onclick = () => {
-
       mode = button.dataset.mode;
 
       tabs.forEach(tab =>
-        tab.classList.toggle(
-          "active",
-          tab === button
-        )
+        tab.classList.toggle("active", tab === button)
       );
 
       updateAuth();
     };
-
   });
 
   roles.forEach(button => {
-
     button.onclick = () => {
-
       role = button.dataset.role;
 
       roles.forEach(roleButton =>
@@ -73,7 +61,6 @@ function setupAuth() {
 
       updateAuth();
     };
-
   });
 
   $("authForm").onsubmit = handleAuth;
@@ -83,7 +70,6 @@ function setupAuth() {
 
 
 function updateAuth() {
-
   $("name").parentElement.classList.toggle(
     "hidden",
     mode === "login"
@@ -118,7 +104,6 @@ function updateAuth() {
 
 
 function validPassword(password) {
-
   return (
     password.length >= 8 &&
     /[A-Z]/.test(password) &&
@@ -128,61 +113,14 @@ function validPassword(password) {
 }
 
 
-function makeCode() {
-
-  const letters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-  let code = "";
-
-  for (let i = 0; i < 3; i++) {
-
-    code +=
-      letters[
-        Math.floor(
-          Math.random() * letters.length
-        )
-      ];
-  }
-
-  code += Math.floor(
-    100 + Math.random() * 900
-  );
-
-  return code;
-}
-
-
-async function uniqueCoachCode() {
-
-  for (let attempt = 0; attempt < 30; attempt++) {
-
-    const code = makeCode();
-
-    const { data, error } =
-      await sb.rpc(
-        "find_coach_by_code",
-        {
-          code_input: code
-        }
-      );
-
-    if (!error && !data?.length) {
-      return code;
-    }
-  }
-
-  throw new Error(
-    "Could not create a unique coach code."
-  );
-}
-
+/* =========================
+   AUTH HANDLER
+========================= */
 
 async function handleAuth(event) {
-
   event.preventDefault();
 
-  showMessage("");
+  msg("");
 
   const email =
     $("email").value.trim();
@@ -202,9 +140,11 @@ async function handleAuth(event) {
           password
         });
 
-      if (error) throw error;
+      if (error)
+        throw error;
 
-      location.href = "dashboard.html";
+      location.href =
+        "dashboard.html";
 
       return;
     }
@@ -213,27 +153,27 @@ async function handleAuth(event) {
     /* SIGNUP */
 
     if (!validPassword(password)) {
-
       throw new Error(
         "Password needs 8+ characters, an uppercase letter, a number and a special symbol."
       );
     }
 
+
     if (
       password !==
       $("confirm").value
     ) {
-
       throw new Error(
         "Passwords do not match."
       );
     }
 
+
     const fullName =
       $("name").value.trim();
 
-    if (!fullName) {
 
+    if (!fullName) {
       throw new Error(
         "Enter your full name."
       );
@@ -258,10 +198,12 @@ async function handleAuth(event) {
 
       });
 
-    if (error) throw error;
+
+    if (error)
+      throw error;
+
 
     if (!data.user) {
-
       throw new Error(
         "Account could not be created."
       );
@@ -269,16 +211,6 @@ async function handleAuth(event) {
 
 
     let coachId = null;
-    let coachCode = null;
-
-
-    /* COACH CODE */
-
-    if (role === "coach") {
-
-      coachCode =
-        await uniqueCoachCode();
-    }
 
 
     /* PLAYER ENTERED COACH CODE */
@@ -288,53 +220,44 @@ async function handleAuth(event) {
       $("coachCode").value.trim()
     ) {
 
-      const { data: coaches, error } =
-        await sb.rpc(
-          "find_coach_by_code",
-          {
-            code_input:
-              $("coachCode")
-                .value
-                .trim()
-                .toUpperCase()
-          }
-        );
+      const {
+        data: coaches,
+        error: coachError
+      } = await sb.rpc(
+        "find_coach_by_code",
+        {
+          code_input:
+            $("coachCode")
+              .value
+              .trim()
+              .toUpperCase()
+        }
+      );
 
-      if (error) throw error;
+
+      if (coachError)
+        throw coachError;
+
 
       if (!coaches?.length) {
-
         throw new Error(
           "Coach code not found."
         );
       }
+
 
       coachId =
         coaches[0].id;
     }
 
 
-    /* CREATE PROFILE */
+    /*
+      IMPORTANT:
+      The profile is now created automatically
+      by the Supabase auth trigger.
 
-    const { error: profileError } =
-      await sb
-        .from("profiles")
-        .insert({
-
-          id: data.user.id,
-
-          full_name: fullName,
-
-          role: role,
-
-          coach_code: coachCode,
-
-          connected_coach_id: null
-
-        });
-
-    if (profileError)
-      throw profileError;
+      We DO NOT insert into profiles here.
+    */
 
 
     /* SEND CONNECTION REQUEST */
@@ -344,28 +267,30 @@ async function handleAuth(event) {
       coachId
     ) {
 
-      const { error: requestError } =
-        await sb
-          .from("connection_requests")
-          .insert({
+      const {
+        error: requestError
+      } = await sb
+        .from("connection_requests")
+        .insert({
 
-            player_id:
-              data.user.id,
+          player_id:
+            data.user.id,
 
-            coach_id:
-              coachId,
+          coach_id:
+            coachId,
 
-            status:
-              "pending"
+          status:
+            "pending"
 
-          });
+        });
+
 
       if (requestError)
         throw requestError;
     }
 
 
-    /* EMAIL CONFIRMATION */
+    /* LOGIN / SESSION */
 
     if (data.session) {
 
@@ -374,14 +299,17 @@ async function handleAuth(event) {
 
     } else {
 
-      showMessage(
+      msg(
         "Account created. Check your email to confirm your account, then log in."
       );
+
     }
 
   } catch (error) {
 
-    showMessage(
+    console.error(error);
+
+    msg(
       error.message ||
       "Something went wrong.",
       true
@@ -400,6 +328,7 @@ async function loadProfile() {
     data: { user }
   } = await sb.auth.getUser();
 
+
   if (!user) {
 
     location.href =
@@ -408,15 +337,20 @@ async function loadProfile() {
     return false;
   }
 
-  currentUser = user;
+
+  currentUser =
+    user;
 
 
-  const { data, error } =
-    await sb
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
+  const {
+    data,
+    error
+  } = await sb
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
 
   if (error) {
 
@@ -429,7 +363,10 @@ async function loadProfile() {
     return false;
   }
 
-  profile = data;
+
+  profile =
+    data;
+
 
   return true;
 }
@@ -441,32 +378,36 @@ async function loadProfile() {
 
 function shell() {
 
-  $("profileBox").innerHTML = `
+  $("profileBox").innerHTML =
 
-    <strong>
+    `<strong>
       ${esc(profile.full_name)}
     </strong>
 
     <small>
       ${esc(profile.role)}
-    </small>
+    </small>`
 
-    ${
+    +
+
+    (
       profile.role === "coach"
-        ? `
-        <small>
+
+        ?
+
+        `<small>
           Code:
           <b>
             ${esc(
               profile.coach_code || ""
             )}
           </b>
-        </small>
-        `
-        : ""
-    }
+        </small>`
 
-  `;
+        :
+
+        ""
+    );
 
 
   if (profile.role === "coach") {
@@ -560,20 +501,25 @@ function shell() {
 
 async function connectedPlayers() {
 
-  const { data, error } =
-    await sb
-      .from("profiles")
-      .select("*")
-      .eq(
-        "connected_coach_id",
-        currentUser.id
-      )
-      .eq(
-        "role",
-        "player"
-      );
+  const {
+    data,
+    error
+  } = await sb
+    .from("profiles")
+    .select("*")
+    .eq(
+      "connected_coach_id",
+      currentUser.id
+    )
+    .eq(
+      "role",
+      "player"
+    );
 
-  if (error) throw error;
+
+  if (error)
+    throw error;
+
 
   return data || [];
 }
@@ -583,22 +529,27 @@ async function playerMatches(
   playerId = currentUser.id
 ) {
 
-  const { data, error } =
-    await sb
-      .from("matches")
-      .select("*")
-      .eq(
-        "player_id",
-        playerId
-      )
-      .order(
-        "match_date",
-        {
-          ascending: false
-        }
-      );
+  const {
+    data,
+    error
+  } = await sb
+    .from("matches")
+    .select("*")
+    .eq(
+      "player_id",
+      playerId
+    )
+    .order(
+      "match_date",
+      {
+        ascending: false
+      }
+    );
 
-  if (error) throw error;
+
+  if (error)
+    throw error;
+
 
   return data || [];
 }
@@ -622,7 +573,9 @@ async function render(
     );
 
 
-  const app = $("app");
+  const app =
+    $("app");
+
 
   app.innerHTML =
     "<div class='empty'>Loading…</div>";
@@ -630,17 +583,25 @@ async function render(
 
   try {
 
-    if (profile.role === "coach") {
+    if (
+      profile.role === "coach"
+    ) {
 
-      await renderCoach(page);
+      await renderCoach(
+        page
+      );
 
     } else {
 
-      await renderPlayer(page);
+      await renderPlayer(
+        page
+      );
 
     }
 
   } catch (error) {
+
+    console.error(error);
 
     app.innerHTML = `
 
@@ -661,7 +622,9 @@ async function render(
    COACH
 ========================= */
 
-async function renderCoach(page) {
+async function renderCoach(
+  page
+) {
 
   const players =
     await connectedPlayers();
@@ -688,7 +651,9 @@ async function renderCoach(page) {
         <button
           class="btn"
           onclick="render('players')">
+
           View players
+
         </button>
 
       </div>
@@ -767,7 +732,9 @@ async function renderCoach(page) {
                 <span
                   class="pill"
                   style="float:right">
+
                   Connected
+
                 </span>
 
               </div>
@@ -779,7 +746,9 @@ async function renderCoach(page) {
 
           `
           <div class="empty">
+
             No players connected yet.
+
           </div>
           `
         }
@@ -787,11 +756,12 @@ async function renderCoach(page) {
       </div>
 
     `;
-
   }
 
 
-  else if (page === "players") {
+  else if (
+    page === "players"
+  ) {
 
     $("app").innerHTML = `
 
@@ -819,57 +789,69 @@ async function renderCoach(page) {
 
         `<div class="grid">
 
-          ${players
-            .map(player => `
+          ${
+            players
+              .map(player => `
 
-              <div class="card">
+                <div class="card">
 
-                <h3>
-                  ${esc(
-                    player.full_name
-                  )}
-                </h3>
+                  <h3>
+                    ${esc(
+                      player.full_name
+                    )}
+                  </h3>
 
-                <p class="muted">
-                  Player account
-                </p>
+                  <p class="muted">
+                    Player account
+                  </p>
 
-                <button
-                  class="btn small"
-                  onclick="viewPlayer('${player.id}')">
-                  Open player
-                </button>
+                  <button
+                    class="btn small"
+                    onclick="viewPlayer('${player.id}')">
 
-              </div>
+                    Open player
 
-            `)
-            .join("")}
+                  </button>
+
+                </div>
+
+              `)
+              .join("")
+          }
 
         </div>`
 
         :
 
         `
+
         <div class="empty">
+
           No players yet.
+
           Give a player your connection code.
+
         </div>
+
         `
       }
 
     `;
-
   }
 
 
-  else if (page === "requests") {
+  else if (
+    page === "requests"
+  ) {
 
     await renderRequests();
 
   }
 
 
-  else if (page === "matches") {
+  else if (
+    page === "matches"
+  ) {
 
     await renderCoachMatches(
       players
@@ -885,26 +867,30 @@ async function renderCoach(page) {
 
 async function renderRequests() {
 
-  const { data, error } =
-    await sb
-      .from("connection_requests")
-      .select("*")
-      .eq(
-        "coach_id",
-        currentUser.id
-      )
-      .eq(
-        "status",
-        "pending"
-      )
-      .order(
-        "created_at",
-        {
-          ascending: false
-        }
-      );
+  const {
+    data,
+    error
+  } = await sb
+    .from("connection_requests")
+    .select("*")
+    .eq(
+      "coach_id",
+      currentUser.id
+    )
+    .eq(
+      "status",
+      "pending"
+    )
+    .order(
+      "created_at",
+      {
+        ascending: false
+      }
+    );
 
-  if (error) throw error;
+
+  if (error)
+    throw error;
 
 
   let html = `
@@ -930,25 +916,25 @@ async function renderRequests() {
 
   if (!data.length) {
 
-    html += `
-      <div class="empty">
-        No pending requests.
-      </div>
-    `;
+    html +=
+      "<div class='empty'>No pending requests.</div>";
 
   } else {
 
-    for (const request of data) {
+    for (
+      const request of data
+    ) {
 
-      const { data: player } =
-        await sb
-          .from("profiles")
-          .select("full_name")
-          .eq(
-            "id",
-            request.player_id
-          )
-          .single();
+      const {
+        data: player
+      } = await sb
+        .from("profiles")
+        .select("full_name")
+        .eq(
+          "id",
+          request.player_id
+        )
+        .single();
 
 
       html += `
@@ -969,13 +955,17 @@ async function renderRequests() {
             <button
               class="btn small"
               onclick="acceptReq('${request.id}')">
+
               Accept
+
             </button>
 
             <button
               class="btn small ghost"
               onclick="declineReq('${request.id}')">
+
               Decline
+
             </button>
 
           </div>
@@ -994,13 +984,15 @@ async function renderRequests() {
 
 async function acceptReq(id) {
 
-  const { error } =
-    await sb.rpc(
-      "accept_connection_request",
-      {
-        request_uuid: id
-      }
-    );
+  const {
+    error
+  } = await sb.rpc(
+    "accept_connection_request",
+    {
+      request_uuid: id
+    }
+  );
+
 
   if (error) {
 
@@ -1008,21 +1000,24 @@ async function acceptReq(id) {
 
   } else {
 
-    render("requests");
-
+    render(
+      "requests"
+    );
   }
 }
 
 
 async function declineReq(id) {
 
-  const { error } =
-    await sb.rpc(
-      "decline_connection_request",
-      {
-        request_uuid: id
-      }
-    );
+  const {
+    error
+  } = await sb.rpc(
+    "decline_connection_request",
+    {
+      request_uuid: id
+    }
+  );
+
 
   if (error) {
 
@@ -1030,8 +1025,9 @@ async function declineReq(id) {
 
   } else {
 
-    render("requests");
-
+    render(
+      "requests"
+    );
   }
 }
 
@@ -1049,30 +1045,36 @@ async function renderCoachMatches(
       player => player.id
     );
 
-  let matches = [];
+
+  let data = [];
 
 
   if (ids.length) {
 
-    const { data, error } =
-      await sb
-        .from("matches")
-        .select("*")
-        .in(
-          "player_id",
-          ids
-        )
-        .order(
-          "match_date",
-          {
-            ascending: false
-          }
-        );
+    const {
+      data: matches,
+      error
+    } = await sb
+      .from("matches")
+      .select("*")
+      .in(
+        "player_id",
+        ids
+      )
+      .order(
+        "match_date",
+        {
+          ascending: false
+        }
+      );
 
-    if (error) throw error;
 
-    matches =
-      data || [];
+    if (error)
+      throw error;
+
+
+    data =
+      matches || [];
   }
 
 
@@ -1096,102 +1098,102 @@ async function renderCoachMatches(
 
 
     ${
-      matches.length
+      data.length
 
       ?
 
-      matches.map(match => {
+      data
+        .map(match => {
 
-        const player =
-          players.find(
-            p =>
-              p.id ===
-              match.player_id
-          );
+          const player =
+            players.find(
+              p =>
+                p.id ===
+                match.player_id
+            );
 
 
-        return `
+          return `
 
-          <div class="match">
+            <div class="match">
 
-            <b>
-              ${esc(
-                player?.full_name ||
-                "Player"
-              )}
-            </b>
-
-            ·
-
-            ${esc(match.result)}
-
-            <h3>
-              vs ${esc(
-                match.opponent
-              )}
-            </h3>
-
-            <div class="muted">
-
-              ${esc(
-                match.match_date
-              )}
+              <b>
+                ${esc(
+                  player?.full_name ||
+                  "Player"
+                )}
+              </b>
 
               ·
 
               ${esc(
-                match.score ||
-                "No score"
+                match.result
               )}
+
+              <h3>
+                vs
+                ${esc(
+                  match.opponent
+                )}
+              </h3>
+
+              <div class="muted">
+
+                ${esc(
+                  match.match_date
+                )}
+
+                ·
+
+                ${esc(
+                  match.score ||
+                  "No score"
+                )}
+
+              </div>
+
+              <p>
+
+                <b>
+                  Problem:
+                </b>
+
+                ${esc(
+                  match.biggest_problem ||
+                  "None"
+                )}
+
+              </p>
+
+              <p>
+
+                <b>
+                  Positive:
+                </b>
+
+                ${esc(
+                  match.biggest_positive ||
+                  "None"
+                )}
+
+              </p>
+
+              <p>
+                ${esc(
+                  match.notes ||
+                  ""
+                )}
+              </p>
 
             </div>
 
-            <p>
-
-              <b>
-                Problem:
-              </b>
-
-              ${esc(
-                match.biggest_problem ||
-                "None"
-              )}
-
-            </p>
-
-            <p>
-
-              <b>
-                Positive:
-              </b>
-
-              ${esc(
-                match.biggest_positive ||
-                "None"
-              )}
-
-            </p>
-
-            <p>
-              ${esc(
-                match.notes ||
-                ""
-              )}
-            </p>
-
-          </div>
-
-        `;
-
-      }).join("")
+          `;
+        })
+        .join("")
 
       :
 
-      `
-      <div class="empty">
-        No match reviews yet.
-      </div>
-      `
+      "<div class='empty'>No match reviews yet.</div>"
     }
 
   `;
@@ -1199,24 +1201,31 @@ async function renderCoachMatches(
 
 
 /* =========================
-   VIEW PLAYER
+   PLAYER PROFILE
 ========================= */
 
-async function viewPlayer(id) {
+async function viewPlayer(
+  id
+) {
 
   const players =
     await connectedPlayers();
+
 
   const player =
     players.find(
       p => p.id === id
     );
 
-  if (!player) return;
+
+  if (!player)
+    return;
 
 
   const matches =
-    await playerMatches(id);
+    await playerMatches(
+      id
+    );
 
 
   $("app").innerHTML = `
@@ -1270,13 +1279,15 @@ async function viewPlayer(id) {
         </span>
 
         <div class="stat">
+
           ${
             matches.filter(
-              m =>
-                m.result ===
+              match =>
+                match.result ===
                 "win"
             ).length
           }
+
         </div>
 
       </div>
@@ -1289,13 +1300,15 @@ async function viewPlayer(id) {
         </span>
 
         <div class="stat">
+
           ${
             matches.filter(
-              m =>
-                m.result ===
+              match =>
+                match.result ===
                 "loss"
             ).length
           }
+
         </div>
 
       </div>
@@ -1316,64 +1329,69 @@ async function viewPlayer(id) {
 
         ?
 
-        matches.map(match => `
+        matches
+          .map(match => `
 
-          <div class="match">
+            <div class="match">
 
-            <b>
+              <b>
+                ${esc(
+                  match.match_date
+                )}
+
+                —
+
+                ${esc(
+                  match.result
+                )}
+
+              </b>
+
+              vs
+
               ${esc(
-                match.match_date
+                match.opponent
               )}
 
-              —
+              <br>
 
-              ${esc(
-                match.result
-              )}
-            </b>
+              <span class="muted">
 
-            vs
+                ${esc(
+                  match.score ||
+                  ""
+                )}
 
-            ${esc(
-              match.opponent
-            )}
+              </span>
 
-            <br>
+              <p>
 
-            <span class="muted">
-              ${esc(
-                match.score ||
-                ""
-              )}
-            </span>
+                Problem:
+                ${esc(
+                  match.biggest_problem ||
+                  "None"
+                )}
 
-            <p>
-              Problem:
-              ${esc(
-                match.biggest_problem ||
-                "None"
-              )}
-            </p>
+              </p>
 
-            <p>
-              Positive:
-              ${esc(
-                match.biggest_positive ||
-                "None"
-              )}
-            </p>
+              <p>
 
-          </div>
+                Positive:
+                ${esc(
+                  match.biggest_positive ||
+                  "None"
+                )}
 
-        `).join("")
+              </p>
+
+            </div>
+
+          `)
+          .join("")
 
         :
 
-        `
-        <p class="muted">
-          No matches yet.
-        </p>
-        `
+        "<p class='muted'>No matches yet.</p>"
       }
 
     </div>
@@ -1386,9 +1404,13 @@ async function viewPlayer(id) {
    PLAYER
 ========================= */
 
-async function renderPlayer(page) {
+async function renderPlayer(
+  page
+) {
 
-  if (page === "overview") {
+  if (
+    page === "overview"
+  ) {
 
     const matches =
       await playerMatches();
@@ -1447,13 +1469,15 @@ async function renderPlayer(page) {
           </span>
 
           <div class="stat">
+
             ${
               matches.filter(
-                m =>
-                  m.result ===
+                match =>
+                  match.result ===
                   "win"
               ).length
             }
+
           </div>
 
         </div>
@@ -1466,13 +1490,15 @@ async function renderPlayer(page) {
           </span>
 
           <div class="stat">
+
             ${
               matches.filter(
-                m =>
-                  m.result ===
+                match =>
+                  match.result ===
                   "loss"
               ).length
             }
+
           </div>
 
         </div>
@@ -1490,12 +1516,13 @@ async function renderPlayer(page) {
 
         ${
           matches
-            .slice(0,5)
+            .slice(0, 5)
             .map(match => `
 
               <div class="list-item">
 
                 <b>
+
                   ${esc(
                     match.result
                   ).toUpperCase()}
@@ -1505,6 +1532,7 @@ async function renderPlayer(page) {
                   ${esc(
                     match.opponent
                   )}
+
                 </b>
 
                 <span
@@ -1524,17 +1552,12 @@ async function renderPlayer(page) {
 
           ||
 
-          `
-          <p class="muted">
-            Log your first match.
-          </p>
-          `
+          "<p class='muted'>Log your first match.</p>"
         }
 
       </div>
 
     `;
-
   }
 
 
@@ -1551,7 +1574,8 @@ async function renderPlayer(page) {
     page === "coach"
   ) {
 
-    let coach = null;
+    let coach =
+      null;
 
 
     if (
@@ -1574,7 +1598,11 @@ async function renderPlayer(page) {
     }
 
 
-    $("app").innerHTML = `
+    $("app").innerHTML = coach
+
+      ?
+
+      `
 
       <div class="dash-head">
 
@@ -1593,62 +1621,69 @@ async function renderPlayer(page) {
       </div>
 
 
-      ${
-        coach
+      <div class="card">
 
-        ?
+        <h2>
+          ${esc(
+            coach.full_name
+          )}
+        </h2>
 
-        `
+        <p class="muted">
+          Your connected coach
+        </p>
 
-        <div class="card">
+      </div>
 
-          <h2>
-            ${esc(
-              coach.full_name
-            )}
-          </h2>
+      `
 
-          <p class="muted">
-            Your connected coach
-          </p>
+      :
 
-        </div>
+      `
 
-        `
+      <div class="dash-head">
 
-        :
+        <div>
 
-        `
+          <span class="eyebrow">
+            CONNECTION
+          </span>
 
-        <div class="card">
-
-          <h3>
-            No coach connected
-          </h3>
-
-          <p class="muted">
-
-            Ask your coach for their
-            3 letters + 3 number
-            connection code.
-
-          </p>
-
-          <button
-            class="btn"
-            onclick="openConnect()">
-
-            Connect to Coach
-
-          </button>
+          <h1>
+            My Coach
+          </h1>
 
         </div>
 
-        `
-      }
+      </div>
 
-    `;
 
+      <div class="card">
+
+        <h3>
+          No coach connected
+        </h3>
+
+        <p class="muted">
+
+          Ask your coach for their
+          3 letters + 3 number
+          connection code.
+
+        </p>
+
+
+        <button
+          class="btn"
+          onclick="openConnect()">
+
+          Connect to Coach
+
+        </button>
+
+      </div>
+
+      `;
   }
 
 
@@ -1656,22 +1691,26 @@ async function renderPlayer(page) {
     page === "training"
   ) {
 
-    const { data, error } =
-      await sb
-        .from("training_sessions")
-        .select("*")
-        .eq(
-          "player_id",
-          currentUser.id
-        )
-        .order(
-          "session_date",
-          {
-            ascending: false
-          }
-        );
+    const {
+      data,
+      error
+    } = await sb
+      .from("training_sessions")
+      .select("*")
+      .eq(
+        "player_id",
+        currentUser.id
+      )
+      .order(
+        "session_date",
+        {
+          ascending: false
+        }
+      );
 
-    if (error) throw error;
+
+    if (error)
+      throw error;
 
 
     $("app").innerHTML = `
@@ -1706,74 +1745,74 @@ async function renderPlayer(page) {
 
         ?
 
-        data.map(session => `
+        data
+          .map(session => `
 
-          <div class="match">
+            <div class="match">
 
-            <b>
-              ${esc(
-                session.session_name
-              )}
-            </b>
+              <b>
+                ${esc(
+                  session.session_name
+                )}
+              </b>
 
-            <span
-              class="pill"
-              style="float:right">
+              <span
+                class="pill"
+                style="float:right">
 
-              ${
-                session.completed
-                  ? "Completed"
-                  : "Planned"
-              }
+                ${
+                  session.completed
+                    ? "Completed"
+                    : "Planned"
+                }
 
-            </span>
+              </span>
 
-            <p class="muted">
+              <p class="muted">
 
-              ${esc(
-                session.session_date
-              )}
+                ${esc(
+                  session.session_date
+                )}
 
-              ·
+                ·
 
-              ${esc(
-                session.duration_minutes ||
-                "—"
-              )}
+                ${esc(
+                  session.duration_minutes ||
+                  "—"
+                )}
 
-              min
+                min
 
-              ·
+                ·
 
-              ${esc(
-                session.focus ||
-                "No focus"
-              )}
+                ${esc(
+                  session.focus ||
+                  "No focus"
+                )}
 
-            </p>
+              </p>
 
-            <p>
-              ${esc(
-                session.notes ||
-                ""
-              )}
-            </p>
 
-          </div>
+              <p>
 
-        `).join("")
+                ${esc(
+                  session.notes ||
+                  ""
+                )}
+
+              </p>
+
+            </div>
+
+          `)
+          .join("")
 
         :
 
-        `
-        <div class="empty">
-          No training sessions yet.
-        </div>
-        `
+        "<div class='empty'>No training sessions yet.</div>"
       }
 
     `;
-
   }
 }
 
@@ -1793,6 +1832,7 @@ function openMatch() {
         <h2>
           Log Match
         </h2>
+
 
         <form id="matchForm">
 
@@ -1818,7 +1858,7 @@ function openMatch() {
               value="${
                 new Date()
                   .toISOString()
-                  .slice(0,10)
+                  .slice(0, 10)
               }"
               required
             >
@@ -1863,15 +1903,41 @@ function openMatch() {
 
             <select id="problem">
 
-              <option>None</option>
-              <option>Serve</option>
-              <option>Return</option>
-              <option>Forehand</option>
-              <option>Backhand</option>
-              <option>Movement</option>
-              <option>Mental game</option>
-              <option>Consistency</option>
-              <option>Other</option>
+              <option>
+                None
+              </option>
+
+              <option>
+                Serve
+              </option>
+
+              <option>
+                Return
+              </option>
+
+              <option>
+                Forehand
+              </option>
+
+              <option>
+                Backhand
+              </option>
+
+              <option>
+                Movement
+              </option>
+
+              <option>
+                Mental game
+              </option>
+
+              <option>
+                Consistency
+              </option>
+
+              <option>
+                Other
+              </option>
 
             </select>
 
@@ -1884,15 +1950,41 @@ function openMatch() {
 
             <select id="positive">
 
-              <option>None</option>
-              <option>Serve</option>
-              <option>Return</option>
-              <option>Forehand</option>
-              <option>Backhand</option>
-              <option>Movement</option>
-              <option>Mental game</option>
-              <option>Consistency</option>
-              <option>Other</option>
+              <option>
+                None
+              </option>
+
+              <option>
+                Serve
+              </option>
+
+              <option>
+                Return
+              </option>
+
+              <option>
+                Forehand
+              </option>
+
+              <option>
+                Backhand
+              </option>
+
+              <option>
+                Movement
+              </option>
+
+              <option>
+                Mental game
+              </option>
+
+              <option>
+                Consistency
+              </option>
+
+              <option>
+                Other
+              </option>
 
             </select>
 
@@ -1905,8 +1997,8 @@ function openMatch() {
 
             <textarea
               id="notes"
-              rows="4">
-            </textarea>
+              rows="4"
+            ></textarea>
 
           </label>
 
@@ -1946,46 +2038,47 @@ function openMatch() {
       event.preventDefault();
 
 
-      const { error } =
-        await sb
-          .from("matches")
-          .insert({
+      const {
+        error
+      } = await sb
+        .from("matches")
+        .insert({
 
-            player_id:
-              currentUser.id,
+          player_id:
+            currentUser.id,
 
-            opponent:
-              $("opponent")
-                .value
-                .trim(),
+          opponent:
+            $("opponent")
+              .value
+              .trim(),
 
-            match_date:
-              $("matchDate")
-                .value,
+          match_date:
+            $("matchDate")
+              .value,
 
-            result:
-              $("result")
-                .value,
+          result:
+            $("result")
+              .value,
 
-            score:
-              $("score")
-                .value
-                .trim(),
+          score:
+            $("score")
+              .value
+              .trim(),
 
-            biggest_problem:
-              $("problem")
-                .value,
+          biggest_problem:
+            $("problem")
+              .value,
 
-            biggest_positive:
-              $("positive")
-                .value,
+          biggest_positive:
+            $("positive")
+              .value,
 
-            notes:
-              $("notes")
-                .value
-                .trim()
+          notes:
+            $("notes")
+              .value
+              .trim()
 
-          });
+        });
 
 
       if (error) {
@@ -1998,8 +2091,9 @@ function openMatch() {
 
         closeModal();
 
-        render("overview");
-
+        render(
+          "overview"
+        );
       }
 
     };
@@ -2029,6 +2123,7 @@ function openConnect() {
 
         </p>
 
+
         <form id="connectForm">
 
           <input
@@ -2037,6 +2132,7 @@ function openConnect() {
             placeholder="ABC123"
             required
           >
+
 
           <div class="modal-actions">
 
@@ -2080,13 +2176,16 @@ function openConnect() {
           .toUpperCase();
 
 
-      const { data, error } =
-        await sb.rpc(
-          "find_coach_by_code",
-          {
-            code_input: code
-          }
-        );
+      const {
+        data,
+        error
+      } = await sb.rpc(
+        "find_coach_by_code",
+        {
+          code_input:
+            code
+        }
+      );
 
 
       if (error) {
@@ -2095,22 +2194,23 @@ function openConnect() {
           error.message
         );
 
-        return;
       }
 
-
-      if (!data?.length) {
+      else if (
+        !data?.length
+      ) {
 
         alert(
           "Coach code not found."
         );
 
-        return;
       }
 
+      else {
 
-      const { error: requestError } =
-        await sb
+        const {
+          error: requestError
+        } = await sb
           .from(
             "connection_requests"
           )
@@ -2128,29 +2228,33 @@ function openConnect() {
           });
 
 
-      if (requestError) {
+        if (requestError) {
 
-        alert(
-          requestError.message
-        );
+          alert(
+            requestError.message
+          );
 
-        return;
+        }
+
+        else {
+
+          closeModal();
+
+          alert(
+            "Connection request sent."
+          );
+
+          render(
+            "coach"
+          );
+        }
       }
-
-
-      closeModal();
-
-      alert(
-        "Connection request sent."
-      );
-
-      render("coach");
     };
 }
 
 
 /* =========================
-   TRAINING MODAL
+   TRAINING SESSION
 ========================= */
 
 function openSession() {
@@ -2164,6 +2268,7 @@ function openSession() {
         <h2>
           Add Training Session
         </h2>
+
 
         <form id="sessionForm">
 
@@ -2189,7 +2294,7 @@ function openSession() {
               value="${
                 new Date()
                   .toISOString()
-                  .slice(0,10)
+                  .slice(0, 10)
               }"
             >
 
@@ -2215,14 +2320,37 @@ function openSession() {
 
             <select id="focus">
 
-              <option>None</option>
-              <option>Serve</option>
-              <option>Return</option>
-              <option>Forehand</option>
-              <option>Backhand</option>
-              <option>Movement</option>
-              <option>Mental game</option>
-              <option>Consistency</option>
+              <option>
+                None
+              </option>
+
+              <option>
+                Serve
+              </option>
+
+              <option>
+                Return
+              </option>
+
+              <option>
+                Forehand
+              </option>
+
+              <option>
+                Backhand
+              </option>
+
+              <option>
+                Movement
+              </option>
+
+              <option>
+                Mental game
+              </option>
+
+              <option>
+                Consistency
+              </option>
 
             </select>
 
@@ -2235,8 +2363,8 @@ function openSession() {
 
             <textarea
               id="sessionNotes"
-              rows="3">
-            </textarea>
+              rows="3"
+            ></textarea>
 
           </label>
 
@@ -2276,39 +2404,42 @@ function openSession() {
       event.preventDefault();
 
 
-      const { error } =
-        await sb
-          .from("training_sessions")
-          .insert({
+      const {
+        error
+      } = await sb
+        .from(
+          "training_sessions"
+        )
+        .insert({
 
-            player_id:
-              currentUser.id,
+          player_id:
+            currentUser.id,
 
-            session_name:
-              $("sessionName")
+          session_name:
+            $("sessionName")
+              .value
+              .trim(),
+
+          session_date:
+            $("sessionDate")
+              .value,
+
+          duration_minutes:
+            Number(
+              $("duration")
                 .value
-                .trim(),
+            ) || null,
 
-            session_date:
-              $("sessionDate")
-                .value,
+          focus:
+            $("focus")
+              .value,
 
-            duration_minutes:
-              Number(
-                $("duration")
-                  .value
-              ) || null,
+          notes:
+            $("sessionNotes")
+              .value
+              .trim()
 
-            focus:
-              $("focus")
-                .value,
-
-            notes:
-              $("sessionNotes")
-                .value
-                .trim()
-
-          });
+        });
 
 
       if (error) {
@@ -2321,23 +2452,28 @@ function openSession() {
 
         closeModal();
 
-        render("training");
-
+        render(
+          "training"
+        );
       }
 
     };
 }
 
 
+/* =========================
+   MODAL
+========================= */
+
 function closeModal() {
 
-  $("modalRoot").innerHTML =
-    "";
+  $("modalRoot")
+    .innerHTML = "";
 }
 
 
 /* =========================
-   START APP
+   START
 ========================= */
 
 async function start() {
@@ -2360,10 +2496,9 @@ async function start() {
     )
   ) {
 
-    const loaded =
-      await loadProfile();
-
-    if (loaded) {
+    if (
+      await loadProfile()
+    ) {
 
       shell();
 
