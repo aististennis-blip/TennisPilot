@@ -3,75 +3,74 @@
 
 <head>
 
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1.0">
 
-    <title>Dashboard — TennisPilot</title>
+<title>Dashboard — TennisPilot</title>
 
-    <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css">
 
 </head>
-
 
 <body>
 
 <div class="app">
 
+  <aside class="sidebar">
 
-    <aside class="sidebar">
+    <a class="brand" href="index.html">
 
+      <span class="logo">
+        TP<span>•</span>
+      </span>
 
-        <a class="brand" href="index.html">
+      <span>
+        TennisPilot
+        <small>Train smarter. Coach better.</small>
+      </span>
 
-            <span class="logo">
-                TP<span>•</span>
-            </span>
+    </a>
 
-            <span>
-                TennisPilot
-                <small>Train smarter. Coach better.</small>
-            </span>
+    <div
+      id="profileBox"
+      class="profile">
+    </div>
 
-        </a>
+    <nav id="nav"></nav>
 
+    <button
+      class="btn small"
+      onclick="logout()"
+      style="margin-top:16px">
+      Log Out
+    </button>
 
-        <div
-            id="profileBox"
-            class="profile"
-        ></div>
+    <div class="side-bottom">
 
+      <a href="index.html">
+        ← Back to Home
+      </a>
 
-        <nav id="nav"></nav>
+      <button onclick="resetDemo()">
+        Reset Demo
+      </button>
 
+    </div>
 
-        <div class="side-bottom">
+  </aside>
 
-            <a href="index.html">
-                ← Back to Home
-            </a>
+  <main class="content">
 
-            <button onclick="resetDemo()">
-                Reset Demo
-            </button>
+    <div id="dashboard"></div>
 
-        </div>
-
-
-    </aside>
-
-
-    <main class="content">
-
-        <div id="dashboard"></div>
-
-    </main>
+  </main>
 
 </div>
 
+<div id="modalRoot"></div>
 
 <script src="script.js"></script>
 
