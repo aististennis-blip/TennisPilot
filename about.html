@@ -4,317 +4,219 @@
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>How TennisPilot Works</title>
+<title>About — TennisPilot</title>
 
-<style>
+<link rel="stylesheet" href="style.css">
 
-*{
-  box-sizing:border-box
-}
-
-body{
-  margin:0;
-  background:#f5f7fb;
-  color:#0b1220;
-  font-family:Inter,system-ui,sans-serif
-}
-
-.nav{
-  height:76px;
-  background:#07111f;
-  color:#fff;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:0 7%
-}
-
-.logo{
-  font-size:25px;
-  font-weight:900
-}
-
-.logo span{
-  color:#4d8dff
-}
-
-.nav a{
-  color:white;
-  text-decoration:none;
-  font-weight:800
-}
-
-.wrap{
-  max-width:1050px;
-  margin:auto;
-  padding:70px 7%
-}
-
-.tag{
-  color:#2563eb;
-  font-weight:900;
-  font-size:13px;
-  letter-spacing:1px
-}
-
-.hero h1{
-  font-size:58px;
-  line-height:1;
-  letter-spacing:-3px;
-  max-width:800px;
-  margin:15px 0
-}
-
-.lead{
-  font-size:19px;
-  color:#64748b;
-  line-height:1.7;
-  max-width:750px
-}
-
-.grid{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:16px;
-  margin-top:45px
-}
-
-.card{
-  background:#fff;
-  border:1px solid #e2e8f0;
-  border-radius:20px;
-  padding:28px
-}
-
-.card h2{
-  margin-top:0
-}
-
-.num{
-  color:#2563eb;
-  font-weight:900
-}
-
-.loop{
-  margin-top:45px;
-  background:#091525;
-  color:white;
-  border-radius:24px;
-  padding:30px
-}
-
-.row{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
-  margin-top:20px
-}
-
-.step{
-  background:#13243b;
-  border-radius:15px;
-  padding:18px
-}
-
-.step b{
-  color:#76a8ff
-}
-
-.button{
-  display:inline-block;
-  margin-top:30px;
-  background:#2563eb;
-  color:#fff;
-  padding:14px 20px;
-  border-radius:12px;
-  font-weight:900;
-  text-decoration:none
-}
-
-@media(max-width:700px){
-
-  .grid,
-  .row{
-    grid-template-columns:1fr
-  }
-
-  .hero h1{
-    font-size:45px
-  }
-
-}
-
-</style>
+<script defer src="script.js"></script>
 
 </head>
 
+
 <body>
 
-<nav class="nav">
 
-<a class="logo" href="index.html">
+<nav class="site-nav">
+
+<a class="brand" href="index.html">
+
+<span class="mark">
+
+<b>TP</b>
+<i></i>
+<em></em>
+
+</span>
+
+<span>
 Tennis<span>Pilot</span>
+</span>
+
 </a>
 
-<a href="dashboard.html">
-Open demo →
+
+<div class="nav-links">
+
+<a href="index.html">
+Home
 </a>
+
+<a class="nav-cta" href="dashboard.html">
+Open Demo →
+</a>
+
+</div>
 
 </nav>
 
-<div class="wrap">
 
-<div class="tag">
+
+<main>
+
+
+<section class="simple-hero">
+
+<div class="pill">
+WHY TENNISPILOT
+</div>
+
+<h1>
+Less guessing.<br>
+<span>Better development.</span>
+</h1>
+
+<p>
+TennisPilot is designed around one question:
+<strong>What should this player work on next?</strong>
+</p>
+
+</section>
+
+
+
+<section class="section">
+
+<div class="about-grid">
+
+<div>
+
+<div class="eyebrow">
 THE IDEA
 </div>
 
-<div class="hero">
-
-<h1>
-Your coach knows tennis.
-TennisPilot organizes the process.
-</h1>
-
-<p class="lead">
-Players often collect hundreds of tips but still don't know what
-to work on this week. TennisPilot creates a repeatable system around
-assessment, focused training and match feedback.
-</p>
+<h2>
+A coaching operating system
+built around the player.
+</h2>
 
 </div>
 
-<div class="grid">
 
-<div class="card">
-
-<span class="num">01</span>
-
-<h2>
-For players
-</h2>
+<div>
 
 <p>
-Turn vague goals like “improve my forehand” into small weekly actions,
-measurable point tests and post-match reflections.
+Most coaching tools help record information.
+TennisPilot is designed to help turn that
+information into a decision.
 </p>
-
-</div>
-
-<div class="card">
-
-<span class="num">02</span>
-
-<h2>
-For coaches
-</h2>
 
 <p>
-Give players structure between lessons while keeping the coach's
-priorities at the center of the plan.
+A coach can assess a player, review recent
+matches, spot recurring patterns, choose a
+priority, build a focused training week, and
+then check whether the work is making a difference.
 </p>
 
 </div>
 
-<div class="card">
+</div>
 
-<span class="num">03</span>
+</section>
+
+
+
+<section class="dark-section">
+
+<div class="section-head">
+
+<div class="eyebrow light">
+SIX STEPS
+</div>
 
 <h2>
-Not another video library
+The TennisPilot<br>
+<span>development loop.</span>
 </h2>
 
+</div>
+
+
+<div class="steps">
+
+<div>
+<b>01</b>
+<strong>Assess</strong>
 <p>
-The value is the system: deciding what matters, doing the work,
-reviewing results and adjusting the next week.
+Rate the player's current game.
 </p>
-
 </div>
 
-<div class="card">
 
-<span class="num">04</span>
-
-<h2>
-Built for a demo first
-</h2>
-
+<div>
+<b>02</b>
+<strong>Plan</strong>
 <p>
-This version is intentionally simple and login-free so a coach can
-understand the concept immediately before any complex backend is added.
+Choose the highest-impact priority.
 </p>
+</div>
 
+
+<div>
+<b>03</b>
+<strong>Train</strong>
+<p>
+Create focused sessions.
+</p>
+</div>
+
+
+<div>
+<b>04</b>
+<strong>Play</strong>
+<p>
+Test the idea in competition.
+</p>
+</div>
+
+
+<div>
+<b>05</b>
+<strong>Review</strong>
+<p>
+Record what happened.
+</p>
+</div>
+
+
+<div>
+<b>06</b>
+<strong>Adjust</strong>
+<p>
+Decide what comes next.
+</p>
 </div>
 
 </div>
 
-<div class="loop">
+</section>
+
+
+
+<section class="final-cta">
+
+<div class="eyebrow">
+TRY IT
+</div>
 
 <h2>
-One simple loop
+See the coach dashboard.
 </h2>
 
-<p style="color:#aebed4">
-Every part of the product feeds the next decision.
-</p>
-
-<div class="row">
-
-<div class="step">
-<b>Assess</b>
-<br>
-Rate the game
-</div>
-
-<div class="step">
-<b>Plan</b>
-<br>
-Pick priorities
-</div>
-
-<div class="step">
-<b>Train</b>
-<br>
-Complete sessions
-</div>
-
-<div class="step">
-<b>Play</b>
-<br>
-Test under pressure
-</div>
-
-<div class="step">
-<b>Review</b>
-<br>
-Find patterns
-</div>
-
-<div class="step">
-<b>Adjust</b>
-<br>
-Set next week
-</div>
-
-</div>
-
-</div>
-
-<a class="button" href="dashboard.html">
-See the player + coach dashboard →
+<a class="button primary" href="dashboard.html">
+Open Demo →
 </a>
 
-</div>
+</section>
 
-<script>
-window.va=window.va||function(){
-(window.vaq=window.vaq||[]).push(arguments)
-};
-</script>
+</main>
 
-<script defer src="/_vercel/insights/script.js"></script>
+
+<footer>
+© 2026 TennisPilot · Coach development software
+</footer>
+
 
 </body>
-
 </html>
