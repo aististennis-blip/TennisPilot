@@ -2,507 +2,277 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TennisPilot — Train Smarter. Play Better.</title>
-
-<style>
-*{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  background:#f5f7fb;
-  color:#0b1220
-}
-a{text-decoration:none;color:inherit}
-
-.nav{
-  height:76px;
-  background:#07111f;
-  color:white;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 7%;
-  position:sticky;
-  top:0;
-  z-index:10
-}
-
-.logo{
-  font-size:25px;
-  font-weight:900;
-  letter-spacing:-1px
-}
-
-.logo span{color:#4d8dff}
-
-.navlinks{
-  display:flex;
-  gap:10px;
-  align-items:center
-}
-
-.navlinks a{
-  padding:10px 15px;
-  border-radius:10px;
-  color:#cbd5e1;
-  font-weight:700;
-  font-size:14px
-}
-
-.navlinks a:hover{
-  background:#142238;
-  color:#fff
-}
-
-.navcta{
-  background:#fff!important;
-  color:#081221!important
-}
-
-.hero{
-  padding:72px 7% 40px
-}
-
-.heroBox{
-  max-width:1250px;
-  margin:auto;
-  border-radius:30px;
-  padding:68px;
-  min-height:535px;
-  background:linear-gradient(120deg,#071827,#123768 60%,#2866dd);
-  color:white;
-  position:relative;
-  overflow:hidden
-}
-
-.heroBox:after{
-  content:"";
-  position:absolute;
-  width:520px;
-  height:520px;
-  border:80px solid rgba(255,255,255,.08);
-  border-radius:50%;
-  right:-150px;
-  top:-180px
-}
-
-.eyebrow{
-  display:inline-flex;
-  padding:8px 13px;
-  border-radius:999px;
-  background:rgba(255,255,255,.12);
-  font-size:12px;
-  font-weight:900;
-  letter-spacing:.6px
-}
-
-.hero h1{
-  font-size:clamp(48px,6vw,78px);
-  line-height:.98;
-  max-width:760px;
-  letter-spacing:-4px;
-  margin:25px 0 20px
-}
-
-.hero p{
-  font-size:19px;
-  line-height:1.6;
-  color:#dce8fa;
-  max-width:700px
-}
-
-.buttons{
-  display:flex;
-  gap:12px;
-  margin-top:28px;
-  flex-wrap:wrap
-}
-
-.btn{
-  border:0;
-  padding:14px 20px;
-  border-radius:12px;
-  font-weight:900;
-  font-size:15px;
-  cursor:pointer
-}
-
-.primary{
-  background:white;
-  color:#07111f
-}
-
-.secondary{
-  background:#14253e;
-  color:white;
-  border:1px solid rgba(255,255,255,.14)
-}
-
-.court{
-  position:absolute;
-  right:7%;
-  bottom:25px;
-  width:300px;
-  height:190px;
-  border:4px solid rgba(255,255,255,.75);
-  transform:skewY(-4deg);
-  opacity:.8
-}
-
-.court:before,
-.court:after{
-  content:"";
-  position:absolute;
-  left:50%;
-  top:0;
-  height:100%;
-  border-left:2px solid rgba(255,255,255,.65)
-}
-
-.court:after{
-  left:0;
-  right:0;
-  top:50%;
-  height:0;
-  border-left:0;
-  border-top:2px solid rgba(255,255,255,.65)
-}
-
-.section{
-  max-width:1250px;
-  margin:auto;
-  padding:55px 7%
-}
-
-.sectionHead{
-  display:flex;
-  justify-content:space-between;
-  gap:30px;
-  align-items:end;
-  margin-bottom:24px
-}
-
-.section h2{
-  font-size:36px;
-  letter-spacing:-1.5px;
-  margin:0
-}
-
-.muted{
-  color:#64748b;
-  line-height:1.6
-}
-
-.features{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:16px
-}
-
-.card{
-  background:white;
-  border:1px solid #e4e9f1;
-  border-radius:20px;
-  padding:25px;
-  box-shadow:0 8px 30px rgba(15,23,42,.04)
-}
-
-.icon{
-  width:42px;
-  height:42px;
-  border-radius:12px;
-  background:#eaf1ff;
-  display:grid;
-  place-items:center;
-  font-size:21px;
-  margin-bottom:20px
-}
-
-.card h3{
-  margin:0 0 9px;
-  font-size:19px
-}
-
-.workflow{
-  display:grid;
-  grid-template-columns:repeat(6,1fr);
-  gap:10px
-}
-
-.step{
-  background:#0b1727;
-  color:white;
-  border-radius:16px;
-  padding:18px;
-  min-height:145px
-}
-
-.step b{
-  display:block;
-  color:#76a8ff;
-  margin-bottom:18px
-}
-
-.demo{
-  background:#0a1423;
-  border-radius:28px;
-  padding:35px;
-  color:white;
-  display:grid;
-  grid-template-columns:1.2fr .8fr;
-  gap:30px
-}
-
-.demo h2{
-  font-size:38px;
-  letter-spacing:-1.5px;
-  margin:0 0 12px
-}
-
-.mini{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:12px
-}
-
-.miniCard{
-  background:#121f32;
-  border:1px solid #20324d;
-  padding:18px;
-  border-radius:16px
-}
-
-.miniCard small{color:#94a3b8}
-
-.miniCard strong{
-  display:block;
-  font-size:25px;
-  margin-top:5px
-}
-
-.footer{
-  padding:40px 7%;
-  border-top:1px solid #e5e7eb;
-  color:#64748b;
-  display:flex;
-  justify-content:space-between
-}
-
-@media(max-width:850px){
-  .navlinks a:not(.navcta){display:none}
-  .heroBox{padding:40px 28px}
-  .court{opacity:.18;right:-60px}
-  .features,.workflow{grid-template-columns:1fr}
-  .demo{grid-template-columns:1fr}
-  .sectionHead{display:block}
-}
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TennisPilot — Train Smarter</title>
+<link rel="stylesheet" href="style.css">
+<script defer src="script.js"></script>
 </head>
 
 <body>
 
-<nav class="nav">
-  <a class="logo" href="index.html">
-    Tennis<span>Pilot</span>
+<nav class="site-nav">
+
+  <a class="brand" href="index.html">
+    <span class="mark">
+      <b>TP</b>
+      <i></i>
+      <em></em>
+    </span>
+
+    <span>Tennis<span>Pilot</span></span>
   </a>
 
-  <div class="navlinks">
-    <a href="#how">How it works</a>
-    <a href="#coach">For coaches</a>
-    <a class="navcta" href="dashboard.html">Open demo →</a>
+  <div class="nav-links">
+    <a href="about.html">How it works</a>
+    <a class="nav-cta" href="dashboard.html">Open Demo →</a>
   </div>
+
 </nav>
+
 
 <main>
 
 <section class="hero">
-  <div class="heroBox">
 
-    <div class="eyebrow">
-      🎾 TRAINING • MATCHES • PROGRESS
+  <div class="hero-copy">
+
+    <div class="pill">
+      COACHING SOFTWARE FOR TENNIS
     </div>
 
     <h1>
-      Stop guessing what to train next.
+      Turn every match<br>
+      <span>into a better plan.</span>
     </h1>
 
     <p>
-      TennisPilot turns your assessment, match results and coach priorities
-      into a simple training plan you can actually follow.
+      TennisPilot helps coaches connect assessment,
+      match patterns, training sessions, and player
+      progress in one simple workflow.
     </p>
 
-    <div class="buttons">
-      <a class="btn primary" href="dashboard.html">
-        Try the player demo →
+    <div class="hero-actions">
+
+      <a class="button primary" href="dashboard.html">
+        Start assessment →
       </a>
 
-      <a class="btn secondary" href="about.html">
+      <a class="button ghost" href="about.html">
         See how it works
       </a>
+
     </div>
 
-    <div class="court"></div>
+    <div class="trust-row">
+      <span>✓ No login required</span>
+      <span>✓ Coach-first</span>
+      <span>✓ Built around development</span>
+    </div>
 
   </div>
+
+
+  <div class="hero-visual">
+
+    <div class="float-card top">
+      MATCH INSIGHT
+      <strong>Return depth</strong>
+      <small>4 of last 6 matches</small>
+    </div>
+
+
+    <div class="mock-window">
+
+      <div class="mock-top">
+        <span></span>
+        <span></span>
+        <span></span>
+        <b>Alex Morgan</b>
+      </div>
+
+      <div class="mock-body">
+
+        <div class="mini-title">
+          RECOMMENDED NEXT PRIORITY
+        </div>
+
+        <h3>Return depth</h3>
+
+        <p>
+          Most frequent recurring weakness.
+        </p>
+
+        <div class="mock-grid">
+
+          <div>
+            <b>8.1</b>
+            <small>UTR</small>
+          </div>
+
+          <div>
+            <b>68%</b>
+            <small>WIN RATE</small>
+          </div>
+
+          <div>
+            <b>82%</b>
+            <small>TRAINING</small>
+          </div>
+
+        </div>
+
+        <div class="progress">
+          <i></i>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="float-card bottom">
+
+      <span>THIS WEEK</span>
+
+      <strong>
+        3 sessions planned
+      </strong>
+
+    </div>
+
+  </div>
+
 </section>
 
-<section class="section" id="how">
-
-  <div class="sectionHead">
-    <div>
-      <h2>Everything connects.</h2>
-      <p class="muted">
-        One place for the work that happens between coaching sessions.
-      </p>
-    </div>
-  </div>
-
-  <div class="features">
-
-    <div class="card">
-      <div class="icon">🎯</div>
-      <h3>Know your priorities</h3>
-      <p class="muted">
-        Rate your game, identify weak areas and turn them into clear
-        weekly objectives.
-      </p>
-    </div>
-
-    <div class="card">
-      <div class="icon">📅</div>
-      <h3>Train with purpose</h3>
-      <p class="muted">
-        Build a practical weekly plan with short sessions, point tests
-        and specific targets.
-      </p>
-    </div>
-
-    <div class="card">
-      <div class="icon">📈</div>
-      <h3>Learn from matches</h3>
-      <p class="muted">
-        Review patterns after matches so the next training week responds
-        to what actually happened.
-      </p>
-    </div>
-
-  </div>
-</section>
 
 <section class="section">
 
-  <div class="sectionHead">
-    <div>
-      <h2>The coaching loop.</h2>
-      <p class="muted">
-        Assessment → Plan → Train → Play → Review → Adjust.
-      </p>
-    </div>
-  </div>
-
-  <div class="workflow">
-
-    <div class="step">
-      <b>01</b>
-      <strong>Assess</strong>
-      <p>Find priorities.</p>
-    </div>
-
-    <div class="step">
-      <b>02</b>
-      <strong>Plan</strong>
-      <p>Choose the week.</p>
-    </div>
-
-    <div class="step">
-      <b>03</b>
-      <strong>Train</strong>
-      <p>Do focused work.</p>
-    </div>
-
-    <div class="step">
-      <b>04</b>
-      <strong>Play</strong>
-      <p>Test under pressure.</p>
-    </div>
-
-    <div class="step">
-      <b>05</b>
-      <strong>Review</strong>
-      <p>Spot patterns.</p>
-    </div>
-
-    <div class="step">
-      <b>06</b>
-      <strong>Adjust</strong>
-      <p>Set the next priority.</p>
-    </div>
-
-  </div>
-</section>
-
-<section class="section" id="coach">
-
-  <div class="demo">
+  <div class="section-head">
 
     <div>
+
+      <div class="eyebrow">
+        THE PROBLEM
+      </div>
+
       <h2>
-        A coach can finally see the whole picture.
+        Good coaches already have the information.<br>
+        They need a faster way to connect it.
       </h2>
 
-      <p style="color:#aebed4;line-height:1.7">
-        Instead of sending another generic practice list, a coach can use
-        a player's assessment, training completion and match notes to
-        guide the next conversation.
-      </p>
-
-      <a class="btn primary" href="dashboard.html">
-        Open coach demo →
-      </a>
-    </div>
-
-    <div class="mini">
-
-      <div class="miniCard">
-        <small>Training completion</small>
-        <strong>78%</strong>
-      </div>
-
-      <div class="miniCard">
-        <small>Current priority</small>
-        <strong>Serve +1</strong>
-      </div>
-
-      <div class="miniCard">
-        <small>Matches reviewed</small>
-        <strong>12</strong>
-      </div>
-
-      <div class="miniCard">
-        <small>Next check-in</small>
-        <strong>Friday</strong>
-      </div>
-
     </div>
 
   </div>
+
+
+  <div class="problem-grid">
+
+    <div class="info-card">
+      <b>01</b>
+      <h3>Assess</h3>
+      <p>
+        Identify strengths, weaknesses,
+        and development gaps.
+      </p>
+    </div>
+
+
+    <div class="info-card">
+      <b>02</b>
+      <h3>Play</h3>
+      <p>
+        Capture what actually happens
+        when the player competes.
+      </p>
+    </div>
+
+
+    <div class="info-card featured">
+      <b>03</b>
+      <h3>Prioritize</h3>
+      <p>
+        Turn repeated match patterns
+        into the next training priority.
+      </p>
+    </div>
+
+
+    <div class="info-card">
+      <b>04</b>
+      <h3>Train</h3>
+      <p>
+        Build focused sessions around
+        what matters most right now.
+      </p>
+    </div>
+
+  </div>
+
+</section>
+
+
+<section class="dark-section">
+
+  <div class="section-head">
+
+    <div>
+      <div class="eyebrow light">
+        THE COACHING LOOP
+      </div>
+
+      <h2>
+        From match result to<br>
+        <span>next session.</span>
+      </h2>
+    </div>
+
+  </div>
+
+
+  <div class="loop">
+
+    <div>ASSESS</div>
+    <i>→</i>
+
+    <div>TRAIN</div>
+    <i>→</i>
+
+    <div>PLAY</div>
+    <i>→</i>
+
+    <div>REVIEW</div>
+    <i>→</i>
+
+    <div>ADJUST</div>
+
+  </div>
+
+</section>
+
+
+<section class="final-cta">
+
+  <div class="eyebrow">
+    SEE THE PRODUCT
+  </div>
+
+  <h2>
+    Build the next session<br>
+    with more confidence.
+  </h2>
+
+  <a class="button primary" href="dashboard.html">
+    Open TennisPilot Demo →
+  </a>
+
 </section>
 
 </main>
 
-<footer class="footer">
-  <span>© 2026 TennisPilot</span>
-  <span>Train smarter. Play better.</span>
+
+<footer>
+  © 2026 TennisPilot · Coach development software
 </footer>
-
-<script>
-window.va=window.va||function(){
-  (window.vaq=window.vaq||[]).push(arguments)
-};
-</script>
-
-<script defer src="/_vercel/insights/script.js"></script>
 
 </body>
 </html>
