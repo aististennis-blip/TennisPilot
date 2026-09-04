@@ -1,11 +1,7 @@
-const KEY = 'tpLinkedDemoV6';
+const KEY = 'tpLinkedDemoV5';
 const SESSION_KEY = 'tpSessionV6';
 
 const SESSION_DAYS = 30;
-
-const defaultData = {
-  users: []
-};
 
 
 /* =========================
@@ -13,6 +9,7 @@ const defaultData = {
 ========================= */
 
 function data() {
+
   let saved = localStorage.getItem(KEY);
 
   if (!saved) {
@@ -25,30 +22,99 @@ function data() {
   }
 
   try {
+
     const d = JSON.parse(saved);
 
     if (!Array.isArray(d.users)) {
       d.users = [];
     }
 
+    /*
+      Repair older coach accounts.
+      This keeps existing accounts and
+      gives them a proper coach code if needed.
+    */
+
+    d.users.forEach(user => {
+
+      if (user.role !== 'coach') return;
+
+      if (!user.profile) {
+        user.profile = {};
+      }
+
+      if (!user.profile.requests) {
+        user.profile.requests = [];
+      }
+
+      if (!user.profile.players) {
+        user.profile.players = [];
+      }
+
+      if (!user.coachCode) {
+
+        user.coachCode =
+          generateCoachCode(d);
+
+      }
+
+      user.profile.coachCode =
+        user.coachCode;
+
+    });
+
+
+    /*
+      Repair older player accounts.
+    */
+
+    d.users.forEach(user => {
+
+      if (user.role !== 'player') return;
+
+      if (!user.profile) {
+        user.profile = {};
+      }
+
+      if (!Array.isArray(user.profile.matches)) {
+        user.profile.matches = [];
+      }
+
+      if (!user.profile.focus) {
+        user.profile.focus = 'None';
+      }
+
+      if (!user.profile.coachStatus) {
+        user.profile.coachStatus = 'none';
+      }
+
+    });
+
+
+    save(d);
+
     return d;
 
   } catch {
+
     const fresh = {
       users: []
     };
 
     save(fresh);
+
     return fresh;
   }
 }
 
 
 function save(d) {
+
   localStorage.setItem(
     KEY,
     JSON.stringify(d)
   );
+
 }
 
 
@@ -59,13 +125,16 @@ function save(d) {
 function getSession() {
 
   const raw =
-    localStorage.getItem(SESSION_KEY);
+    localStorage.getItem(
+      SESSION_KEY
+    );
 
   if (!raw) return null;
 
   try {
 
-    const session = JSON.parse(raw);
+    const session =
+      JSON.parse(raw);
 
     if (
       !session.expiresAt ||
@@ -107,6 +176,7 @@ function setSession(email, role) {
 
     })
   );
+
 }
 
 
@@ -125,12 +195,9 @@ function refreshSession() {
     SESSION_KEY,
     JSON.stringify(session)
   );
+
 }
 
-
-/* =========================
-   CURRENT USER
-========================= */
 
 function getCurrentUser() {
 
@@ -147,6 +214,7 @@ function getCurrentUser() {
       user.email === session.email &&
       user.role === session.role
   ) || null;
+
 }
 
 
@@ -155,6 +223,7 @@ function getCurrentUser() {
 ========================= */
 
 let authMode = 'login';
+
 let selectedRole = null;
 
 
@@ -186,6 +255,7 @@ function showAuthMode(mode) {
         : 'Create your TennisPilot account';
 
   backRole();
+
 }
 
 
@@ -266,6 +336,7 @@ function chooseRole(role) {
     .textContent = '';
 
   updatePasswordRules();
+
 }
 
 
@@ -284,6 +355,7 @@ function backRole() {
   document
     .getElementById('authMessage')
     .textContent = '';
+
 }
 
 
@@ -299,17 +371,21 @@ function validPassword(password) {
     /[^A-Za-z0-9]/.test(password) &&
     /[A-Z]/.test(password)
   );
+
 }
 
 
 function updatePasswordRules() {
 
   const input =
-    document.getElementById('password');
+    document.getElementById(
+      'password'
+    );
 
   if (!input) return;
 
-  const p = input.value;
+  const p =
+    input.value;
 
   const rules = [
 
@@ -354,16 +430,21 @@ function updatePasswordRules() {
         'valid',
         valid
       );
+
     }
   );
+
 }
 
 
 function msg(text) {
 
   document
-    .getElementById('authMessage')
+    .getElementById(
+      'authMessage'
+    )
     .textContent = text;
+
 }
 
 
@@ -394,6 +475,7 @@ function generateCoachCode(d) {
             letters.length
           )
         ];
+
     }
 
     for (let i = 0; i < 3; i++) {
@@ -405,27 +487,33 @@ function generateCoachCode(d) {
             numbers.length
           )
         ];
+
     }
 
   } while (
     d.users.some(
       user =>
         user.role === 'coach' &&
-        String(user.coachCode || '')
-          .toUpperCase() ===
+        String(
+          user.coachCode || ''
+        ).toUpperCase() ===
         code.toUpperCase()
     )
   );
 
   return code;
+
 }
 
 
 /* =========================
-   FIND COACH BY CODE
+   FIND COACH
 ========================= */
 
-function findCoachByCode(code, d) {
+function findCoachByCode(
+  code,
+  d
+) {
 
   const cleanCode =
     String(code || '')
@@ -437,13 +525,30 @@ function findCoachByCode(code, d) {
   }
 
   return d.users.find(
-    user =>
-      user.role === 'coach' &&
-      String(user.coachCode || '')
+    user => {
+
+      if (
+        user.role !== 'coach'
+      ) {
+        return false;
+      }
+
+      const storedCode =
+        String(
+          user.coachCode ||
+          user.profile?.coachCode ||
+          ''
+        )
         .trim()
-        .toUpperCase() ===
-      cleanCode
+        .toUpperCase();
+
+      return (
+        storedCode === cleanCode
+      );
+
+    }
   ) || null;
+
 }
 
 
@@ -477,9 +582,13 @@ function submitAuth(e) {
       .trim();
 
 
-  /* LOGIN */
+  /* =========================
+     LOGIN
+  ========================= */
 
-  if (authMode === 'login') {
+  if (
+    authMode === 'login'
+  ) {
 
     const user =
       d.users.find(
@@ -505,10 +614,6 @@ function submitAuth(e) {
       user.role
     );
 
-    refreshSession();
-
-    save(d);
-
     location.href =
       'dashboard.html';
 
@@ -516,7 +621,9 @@ function submitAuth(e) {
   }
 
 
-  /* SIGNUP */
+  /* =========================
+     SIGNUP VALIDATION
+  ========================= */
 
   if (!name) {
 
@@ -540,10 +647,15 @@ function submitAuth(e) {
 
   const confirm =
     document
-      .getElementById('confirmPassword')
+      .getElementById(
+        'confirmPassword'
+      )
       .value;
 
-  if (password !== confirm) {
+
+  if (
+    password !== confirm
+  ) {
 
     msg(
       'Passwords do not match.'
@@ -572,7 +684,9 @@ function submitAuth(e) {
      COACH SIGNUP
   ========================= */
 
-  if (selectedRole === 'coach') {
+  if (
+    selectedRole === 'coach'
+  ) {
 
     const coachCode =
       generateCoachCode(d);
@@ -589,6 +703,7 @@ function submitAuth(e) {
 
     };
 
+
     const coachUser = {
 
       email,
@@ -603,16 +718,20 @@ function submitAuth(e) {
 
     };
 
+
     d.users.push(
       coachUser
     );
 
+
     save(d);
+
 
     setSession(
       email,
       'coach'
     );
+
 
     location.href =
       'dashboard.html';
@@ -646,13 +765,17 @@ function submitAuth(e) {
 
   const codeInput =
     document
-      .getElementById('coachCode')
+      .getElementById(
+        'coachCode'
+      )
       .value
       .trim()
       .toUpperCase();
 
 
-  /* PLAYER ENTERED CODE */
+  /* =========================
+     COACH CODE CHECK
+  ========================= */
 
   if (codeInput) {
 
@@ -683,8 +806,6 @@ function submitAuth(e) {
       coach.coachCode;
 
 
-    /* Make sure requests exists */
-
     if (
       !coach.profile.requests ||
       !Array.isArray(
@@ -692,11 +813,11 @@ function submitAuth(e) {
       )
     ) {
 
-      coach.profile.requests = [];
+      coach.profile.requests =
+        [];
+
     }
 
-
-    /* Prevent duplicate request */
 
     const alreadyRequested =
       coach.profile.requests.some(
@@ -714,10 +835,7 @@ function submitAuth(e) {
         level:
           player.level,
 
-        email,
-
-        playerEmail:
-          email
+        email
 
       });
 
@@ -746,13 +864,16 @@ function submitAuth(e) {
 
   save(d);
 
+
   setSession(
     email,
     'player'
   );
 
+
   location.href =
     'dashboard.html';
+
 }
 
 
@@ -768,16 +889,24 @@ function logout() {
 
   location.href =
     'login.html';
+
 }
 
 
 /* =========================
-   RESET
+   RESET DEMO
 ========================= */
 
 function resetDemo() {
 
-  localStorage.removeItem(KEY);
+  /*
+    This intentionally deletes the
+    prototype accounts and data.
+  */
+
+  localStorage.removeItem(
+    KEY
+  );
 
   localStorage.removeItem(
     SESSION_KEY
@@ -785,11 +914,12 @@ function resetDemo() {
 
   location.href =
     'login.html';
+
 }
 
 
 /* =========================
-   DASHBOARD START
+   DASHBOARD
 ========================= */
 
 function dashboard() {
@@ -805,10 +935,13 @@ function dashboard() {
     return;
   }
 
+
   refreshSession();
+
 
   const user =
     getCurrentUser();
+
 
   if (!user) {
 
@@ -819,7 +952,9 @@ function dashboard() {
 
 
   document
-    .getElementById('profileBox')
+    .getElementById(
+      'profileBox'
+    )
     .innerHTML =
 
     user.role === 'coach'
@@ -827,20 +962,32 @@ function dashboard() {
       ?
 
       `
-      <b>${esc(user.profile.name)}</b>
-      <small>Coach Account</small>
+      <b>
+        ${esc(user.profile.name)}
+      </b>
+
+      <small>
+        Coach Account
+      </small>
       `
 
       :
 
       `
-      <b>${esc(user.profile.name)}</b>
-      <small>Player Account</small>
+      <b>
+        ${esc(user.profile.name)}
+      </b>
+
+      <small>
+        Player Account
+      </small>
       `;
 
 
   document
-    .getElementById('nav')
+    .getElementById(
+      'nav'
+    )
     .innerHTML =
 
     user.role === 'coach'
@@ -886,7 +1033,9 @@ function dashboard() {
       `;
 
 
-  if (user.role === 'coach') {
+  if (
+    user.role === 'coach'
+  ) {
 
     renderCoach();
 
@@ -895,44 +1044,42 @@ function dashboard() {
     renderPlayer();
 
   }
+
 }
 
 
 /* =========================
-   COACH PLAYERS
+   GET COACH PLAYERS
 ========================= */
 
-function getCoachPlayers(coachUser, d) {
+function getCoachPlayers(
+  coachUser,
+  d
+) {
 
-  const players = [];
+  return d.users
 
-  d.users.forEach(
-    user => {
+    .filter(
+      user =>
+        user.role === 'player'
+    )
 
-      if (
-        user.role !== 'player'
-      ) {
-        return;
-      }
-
-      if (
+    .filter(
+      user =>
         user.profile &&
         user.profile.connectedCoachEmail ===
         coachUser.email &&
         user.profile.coachStatus ===
         'connected'
-      ) {
+    )
 
-        players.push(
-          user.profile
-        );
+    .map(
+      user => ({
+        ...user.profile,
+        email: user.email
+      })
+    );
 
-      }
-
-    }
-  );
-
-  return players;
 }
 
 
@@ -947,6 +1094,7 @@ function renderCoach() {
 
   const coach =
     getCurrentUser();
+
 
   if (
     !coach ||
@@ -966,8 +1114,15 @@ function renderCoach() {
     );
 
 
+  const requests =
+    coach.profile.requests ||
+    [];
+
+
   document
-    .getElementById('dashboard')
+    .getElementById(
+      'dashboard'
+    )
     .innerHTML =
 
     `
@@ -980,7 +1135,7 @@ function renderCoach() {
     </h1>
 
     <p class="sub">
-      See your players, their match reports and what needs attention.
+      See your players, match reports and what needs attention.
     </p>
 
     <div class="cards">
@@ -997,6 +1152,7 @@ function renderCoach() {
 
       </div>
 
+
       <div class="card">
 
         <h3>
@@ -1004,13 +1160,11 @@ function renderCoach() {
         </h3>
 
         <div class="stat">
-          ${
-            (coach.profile.requests || [])
-              .length
-          }
+          ${requests.length}
         </div>
 
       </div>
+
 
       <div class="card">
 
@@ -1024,7 +1178,10 @@ function renderCoach() {
             players.reduce(
               (total, player) =>
                 total +
-                (player.matches?.length || 0),
+                (
+                  player.matches?.length ||
+                  0
+                ),
               0
             )
           }
@@ -1034,6 +1191,7 @@ function renderCoach() {
       </div>
 
     </div>
+
 
     <div class="card">
 
@@ -1051,6 +1209,7 @@ function renderCoach() {
 
     </div>
 
+
     <div
       class="card"
       style="margin-top:18px">
@@ -1062,54 +1221,62 @@ function renderCoach() {
       ${
         players.length
 
-        ?
+          ?
 
-        players
-          .map(
-            player =>
+          players
+            .map(
+              player =>
 
-              `
-              <div class="row">
+                `
+                <div class="row">
 
-                <div>
+                  <div>
 
-                  <b>
-                    ${esc(player.name)}
-                  </b>
+                    <b>
+                      ${esc(player.name)}
+                    </b>
 
-                  <div class="muted">
-                    Focus:
-                    ${esc(player.focus || 'None')}
+                    <div class="muted">
+
+                      Focus:
+                      ${esc(
+                        player.focus ||
+                        'None'
+                      )}
+
+                    </div>
+
                   </div>
 
+
+                  <span class="pill">
+
+                    ${
+                      player.matches?.length ||
+                      0
+                    }
+
+                    matches
+
+                  </span>
+
                 </div>
+                `
+            )
+            .join('')
 
-                <span class="pill">
+          :
 
-                  ${
-                    player.matches?.length || 0
-                  }
-
-                  matches
-
-                </span>
-
-              </div>
-              `
-          )
-          .join('')
-
-        :
-
-        `
-        <div class="empty">
-          No connected players yet.
-        </div>
-        `
+          `
+          <div class="empty">
+            No connected players yet.
+          </div>
+          `
       }
 
     </div>
     `;
+
 }
 
 
@@ -1124,6 +1291,7 @@ function renderPlayers() {
 
   const coach =
     getCurrentUser();
+
 
   if (
     !coach ||
@@ -1144,7 +1312,9 @@ function renderPlayers() {
 
 
   document
-    .getElementById('dashboard')
+    .getElementById(
+      'dashboard'
+    )
     .innerHTML =
 
     `
@@ -1165,62 +1335,68 @@ function renderPlayers() {
       ${
         players.length
 
-        ?
+          ?
 
-        players
-          .map(
-            player =>
+          players
+            .map(
+              player =>
 
-              `
-              <div class="row">
+                `
+                <div class="row">
 
-                <div>
+                  <div>
 
-                  <b>
-                    ${esc(player.name)}
-                  </b>
+                    <b>
+                      ${esc(player.name)}
+                    </b>
 
-                  <div class="muted">
+                    <div class="muted">
 
-                    ${esc(player.level)}
+                      ${esc(
+                        player.level ||
+                        'Player'
+                      )}
 
-                    · Focus:
+                      · Focus:
 
-                    ${esc(
-                      player.focus ||
-                      'None'
-                    )}
+                      ${esc(
+                        player.focus ||
+                        'None'
+                      )}
+
+                    </div>
 
                   </div>
 
+
+                  <span class="pill">
+
+                    ${
+                      player.matches?.length ||
+                      0
+                    }
+
+                    matches
+
+                  </span>
+
                 </div>
+                `
+            )
+            .join('')
 
-                <span class="pill">
+          :
 
-                  ${
-                    player.matches?.length || 0
-                  }
-
-                  matches
-
-                </span>
-
-              </div>
-              `
-          )
-          .join('')
-
-        :
-
-        `
-        <div class="empty">
-          No players connected yet.
-        </div>
-        `
+          `
+          <div class="empty">
+            No players connected yet.
+          </div>
+          `
       }
 
     </div>
     `;
+
 }
 
 
@@ -1236,6 +1412,7 @@ function renderRequests() {
   const coach =
     getCurrentUser();
 
+
   if (
     !coach ||
     coach.role !== 'coach'
@@ -1248,11 +1425,14 @@ function renderRequests() {
 
 
   const requests =
-    coach.profile.requests || [];
+    coach.profile.requests ||
+    [];
 
 
   document
-    .getElementById('dashboard')
+    .getElementById(
+      'dashboard'
+    )
     .innerHTML =
 
     `
@@ -1268,6 +1448,7 @@ function renderRequests() {
       Share your connection code with your players.
     </p>
 
+
     <div class="card">
 
       <p>
@@ -1280,6 +1461,7 @@ function renderRequests() {
 
     </div>
 
+
     <div
       class="card"
       style="margin-top:18px">
@@ -1291,63 +1473,69 @@ function renderRequests() {
       ${
         requests.length
 
-        ?
+          ?
 
-        requests
-          .map(
-            (request, index) =>
+          requests
+            .map(
+              (request, index) =>
 
-              `
-              <div class="row">
+                `
+                <div class="row">
 
-                <div>
+                  <div>
 
-                  <b>
-                    ${esc(request.name)}
-                  </b>
+                    <b>
+                      ${esc(request.name)}
+                    </b>
 
-                  <div class="muted">
-                    ${esc(request.level)}
+                    <div class="muted">
+                      ${esc(
+                        request.level ||
+                        'Player'
+                      )}
+                    </div>
+
+                  </div>
+
+
+                  <div>
+
+                    <button
+                      class="btn primary small"
+                      onclick="acceptRequest(${index})">
+
+                      Accept
+
+                    </button>
+
+
+                    <button
+                      class="btn small"
+                      onclick="declineRequest(${index})">
+
+                      Decline
+
+                    </button>
+
                   </div>
 
                 </div>
+                `
+            )
+            .join('')
 
-                <div>
+          :
 
-                  <button
-                    class="btn primary small"
-                    onclick="acceptRequest(${index})">
-
-                    Accept
-
-                  </button>
-
-                  <button
-                    class="btn small"
-                    onclick="declineRequest(${index})">
-
-                    Decline
-
-                  </button>
-
-                </div>
-
-              </div>
-              `
-          )
-          .join('')
-
-        :
-
-        `
-        <div class="empty">
-          No pending requests.
-        </div>
-        `
+          `
+          <div class="empty">
+            No pending requests.
+          </div>
+          `
       }
 
     </div>
     `;
+
 }
 
 
@@ -1363,6 +1551,7 @@ function acceptRequest(index) {
   const coach =
     getCurrentUser();
 
+
   if (
     !coach ||
     coach.role !== 'coach'
@@ -1373,7 +1562,8 @@ function acceptRequest(index) {
 
 
   const requests =
-    coach.profile.requests || [];
+    coach.profile.requests ||
+    [];
 
 
   const request =
@@ -1381,7 +1571,6 @@ function acceptRequest(index) {
 
 
   if (!request) {
-
     return;
   }
 
@@ -1396,7 +1585,7 @@ function acceptRequest(index) {
 
   if (!playerUser) {
 
-    coach.profile.requests.splice(
+    requests.splice(
       index,
       1
     );
@@ -1409,8 +1598,6 @@ function acceptRequest(index) {
   }
 
 
-  /* Connect player */
-
   playerUser.profile.coachStatus =
     'connected';
 
@@ -1422,10 +1609,9 @@ function acceptRequest(index) {
 
 
   coach.profile.players =
-    coach.profile.players || [];
+    coach.profile.players ||
+    [];
 
-
-  /* Add only once */
 
   const alreadyConnected =
     coach.profile.players.some(
@@ -1449,7 +1635,7 @@ function acceptRequest(index) {
   }
 
 
-  coach.profile.requests.splice(
+  requests.splice(
     index,
     1
   );
@@ -1458,6 +1644,7 @@ function acceptRequest(index) {
   save(d);
 
   renderRequests();
+
 }
 
 
@@ -1473,6 +1660,7 @@ function declineRequest(index) {
   const coach =
     getCurrentUser();
 
+
   if (
     !coach ||
     coach.role !== 'coach'
@@ -1482,8 +1670,13 @@ function declineRequest(index) {
   }
 
 
+  const requests =
+    coach.profile.requests ||
+    [];
+
+
   const request =
-    coach.profile.requests[index];
+    requests[index];
 
 
   if (!request) {
@@ -1513,7 +1706,7 @@ function declineRequest(index) {
   }
 
 
-  coach.profile.requests.splice(
+  requests.splice(
     index,
     1
   );
@@ -1522,6 +1715,7 @@ function declineRequest(index) {
   save(d);
 
   renderRequests();
+
 }
 
 
@@ -1531,11 +1725,9 @@ function declineRequest(index) {
 
 function renderPlayer() {
 
-  const d =
-    data();
-
   const playerUser =
     getCurrentUser();
+
 
   if (
     !playerUser ||
@@ -1556,7 +1748,9 @@ function renderPlayer() {
 
 
   document
-    .getElementById('dashboard')
+    .getElementById(
+      'dashboard'
+    )
     .innerHTML =
 
     `
@@ -1572,6 +1766,7 @@ function renderPlayer() {
       Your match feedback goes directly to your connected coach.
     </p>
 
+
     <div class="cards">
 
       <div class="card">
@@ -1585,7 +1780,8 @@ function renderPlayer() {
           style="font-size:24px">
 
           ${esc(
-            p.focus || 'None'
+            p.focus ||
+            'None'
           )}
 
         </div>
@@ -1617,10 +1813,16 @@ function renderPlayer() {
           style="font-size:20px">
 
           ${
-            p.coachStatus === 'connected'
+            p.coachStatus ===
+            'connected'
+
               ? 'Connected ✓'
-              : p.coachStatus === 'pending'
+
+              : p.coachStatus ===
+                'pending'
+
               ? 'Pending'
+
               : 'Not connected'
           }
 
@@ -1640,34 +1842,35 @@ function renderPlayer() {
       ${
         matches.length
 
-        ?
+          ?
 
-        matches
-          .slice(-5)
-          .reverse()
-          .map(
-            match =>
-              matchRow(match)
-          )
-          .join('')
+          matches
+            .slice(-5)
+            .reverse()
+            .map(
+              match =>
+                matchRow(match)
+            )
+            .join('')
 
-        :
+          :
 
-        `
-        <div class="empty">
+          `
+          <div class="empty">
 
-          No matches logged yet.
+            No matches logged yet.
 
-          After a match, log the score and what
-          you felt were your biggest weaknesses
-          and positives.
+            After a match, log the score
+            and what you felt were your
+            biggest weaknesses and positives.
 
-        </div>
-        `
+          </div>
+          `
       }
 
     </div>
     `;
+
 }
 
 
@@ -1678,7 +1881,9 @@ function renderPlayer() {
 function renderPlayerMatch() {
 
   document
-    .getElementById('dashboard')
+    .getElementById(
+      'dashboard'
+    )
     .innerHTML =
 
     `
@@ -1693,6 +1898,7 @@ function renderPlayerMatch() {
     <p class="sub">
       Report what you experienced in the match.
     </p>
+
 
     <div class="card">
 
@@ -1796,6 +2002,7 @@ function renderPlayerMatch() {
 
     </div>
     `;
+
 }
 
 
@@ -1810,6 +2017,7 @@ function saveMatch() {
 
   const playerUser =
     getCurrentUser();
+
 
   if (
     !playerUser ||
@@ -1832,7 +2040,8 @@ function saveMatch() {
         .getElementById('mo')
         .value
         .trim()
-      || 'Unknown',
+      ||
+      'Unknown',
 
     date:
       document
@@ -1871,7 +2080,8 @@ function saveMatch() {
 
 
   playerUser.profile.matches =
-    playerUser.profile.matches || [];
+    playerUser.profile.matches ||
+    [];
 
 
   playerUser.profile.matches.push(
@@ -1882,6 +2092,7 @@ function saveMatch() {
   save(d);
 
   renderPlayer();
+
 }
 
 
@@ -1893,6 +2104,7 @@ function renderPlayerConnection() {
 
   const playerUser =
     getCurrentUser();
+
 
   if (
     !playerUser ||
@@ -1908,7 +2120,9 @@ function renderPlayerConnection() {
 
 
   document
-    .getElementById('dashboard')
+    .getElementById(
+      'dashboard'
+    )
     .innerHTML =
 
     `
@@ -1920,16 +2134,19 @@ function renderPlayerConnection() {
       Coach connection
     </h1>
 
+
     <div class="card">
 
       <h3>
 
         ${
-          p.coachStatus === 'connected'
+          p.coachStatus ===
+          'connected'
 
             ? 'Connected to your coach ✓'
 
-            : p.coachStatus === 'pending'
+            : p.coachStatus ===
+              'pending'
 
             ? 'Connection pending'
 
@@ -1938,10 +2155,12 @@ function renderPlayerConnection() {
 
       </h3>
 
+
       <p class="muted">
 
         ${
-          p.coachStatus === 'connected'
+          p.coachStatus ===
+          'connected'
 
             ?
 
@@ -1949,7 +2168,8 @@ function renderPlayerConnection() {
 
             :
 
-          p.coachStatus === 'pending'
+          p.coachStatus ===
+          'pending'
 
             ?
 
@@ -1964,11 +2184,12 @@ function renderPlayerConnection() {
 
     </div>
     `;
+
 }
 
 
 /* =========================
-   OPTIONS
+   TENNIS OPTIONS
 ========================= */
 
 function focusOptions() {
@@ -2046,6 +2267,7 @@ function focusOptions() {
         `<option>${esc(option)}</option>`
     )
     .join('');
+
 }
 
 
@@ -2057,7 +2279,7 @@ function positiveOptions() {
 
 
 /* =========================
-   MATCH ROW
+   MATCH DISPLAY
 ========================= */
 
 function matchRow(match) {
@@ -2132,11 +2354,12 @@ function matchRow(match) {
     </div>
 
   `;
+
 }
 
 
 /* =========================
-   HTML ESCAPE
+   ESCAPE HTML
 ========================= */
 
 function esc(value) {
@@ -2157,11 +2380,12 @@ function esc(value) {
     }[character])
 
   );
+
 }
 
 
 /* =========================
-   START
+   START DASHBOARD
 ========================= */
 
 if (
