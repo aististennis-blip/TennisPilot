@@ -1,1343 +1,749 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — TennisPilot</title>
 
-<title>TennisPilot — Dashboard</title>
+  <link rel="stylesheet" href="style.css">
 
-<link rel="stylesheet" href="style.css">
-
-<script defer src="script.js"></script>
-
+  <script>
+    window.va = window.va || function () {
+      (window.vaq = window.vaq || []).push(arguments);
+    };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
 </head>
-
 
 <body class="dashboard-page">
 
-
-<div class="app">
-
+<div class="app-shell">
 
 <aside class="sidebar">
 
+  <a href="index.html" class="brand sidebar-brand">
+    <span class="brand-mark">
+      <span class="motion motion-1"></span>
+      <span class="motion motion-2"></span>
+      <span class="tp">TP</span>
+      <span class="ball"></span>
+    </span>
 
-<a class="brand side-brand" href="index.html">
+    <span>TennisPilot</span>
+  </a>
 
-<span class="mark">
+  <div class="player-mini">
+    <div class="avatar">A</div>
+    <div>
+      <strong>Alex Morgan</strong>
+      <span>UTR 8.1</span>
+    </div>
+  </div>
 
-<b>TP</b>
-<i></i>
-<em></em>
+  <nav class="side-nav">
 
-</span>
+    <button class="side-link active" data-panel="overview">
+      <span>▦</span>
+      Overview
+    </button>
 
-<span>
-Tennis<span>Pilot</span>
-</span>
+    <button class="side-link" data-panel="assessment">
+      <span>◉</span>
+      Assessment
+    </button>
 
-</a>
+    <button class="side-link" data-panel="training">
+      <span>✓</span>
+      Training Plan
+    </button>
 
+    <button class="side-link" data-panel="matches">
+      <span>↗</span>
+      Match Review
+    </button>
 
+    <button class="side-link" data-panel="progress">
+      <span>◒</span>
+      Progress
+    </button>
 
-<div class="side-label">
-PLAYER
-</div>
+    <button class="side-link" data-panel="coach">
+      <span>♙</span>
+      Coach View
+    </button>
 
+  </nav>
 
-<div class="player-mini">
+  <div class="sidebar-bottom">
 
-<div class="avatar">
-AM
-</div>
+    <a href="index.html" class="back-home">
+      ← Back to Home
+    </a>
 
-<div>
+    <button id="resetDemo" class="reset-button">
+      Reset Demo
+    </button>
 
-<b>
-Alex Morgan
-</b>
-
-<small>
-UTR 8.1 · Competitive
-</small>
-
-</div>
-
-</div>
-
-
-
-<div class="side-label">
-WORKSPACE
-</div>
-
-
-
-<button
-class="side-link active"
-data-panel="overview"
->
-
-⌂
-
-<span>
-Overview
-</span>
-
-</button>
-
-
-
-<button
-class="side-link"
-data-panel="assessment"
->
-
-◎
-
-<span>
-Assessment
-</span>
-
-</button>
-
-
-
-<button
-class="side-link"
-data-panel="training"
->
-
-◈
-
-<span>
-Training Plan
-</span>
-
-</button>
-
-
-
-<button
-class="side-link"
-data-panel="match"
->
-
-▣
-
-<span>
-Match Review
-</span>
-
-</button>
-
-
-
-<button
-class="side-link"
-data-panel="progress"
->
-
-↗
-
-<span>
-Progress
-</span>
-
-</button>
-
-
-
-<button
-class="side-link"
-data-panel="coach"
->
-
-♙
-
-<span>
-Coach View
-</span>
-
-</button>
-
-
-
-<div class="side-bottom">
-
-<a href="index.html">
-← Back to Home
-</a>
-
-<button id="resetBtn">
-Reset Demo
-</button>
-
-</div>
-
+  </div>
 
 </aside>
 
 
+<main class="dashboard-main">
 
-<main class="dash-main">
+<header class="dashboard-header">
 
+  <div>
+    <div class="eyebrow">PLAYER DASHBOARD</div>
+    <h1 id="pageTitle">Good afternoon, Alex.</h1>
+    <p id="pageSubtitle">
+      Here's what you should focus on this week.
+    </p>
+  </div>
 
-<header class="dash-top">
-
-<div>
-
-<span>
-Players
-</span>
-
-/
-
-<b>
-Alex Morgan
-</b>
-
-</div>
-
-
-<div class="top-right">
-
-<span class="live-dot"></span>
-
-Demo workspace
-
-</div>
+  <div class="header-actions">
+    <a href="about.html" class="button secondary small-button">
+      How it works
+    </a>
+  </div>
 
 </header>
 
 
-
-<div class="dash-content">
-
-
-
 <!-- OVERVIEW -->
 
-<section
-class="panel active"
-id="overview"
->
+<section class="panel active" id="overview">
+
+  <div class="stat-grid">
 
+    <div class="stat-card">
+      <span>UTR</span>
+      <strong>8.1</strong>
+      <small>+0.3 this month</small>
+    </div>
 
-<div class="dash-title">
+    <div class="stat-card">
+      <span>TRAINING</span>
+      <strong id="trainingPercent">72%</strong>
+      <small>This week</small>
+    </div>
 
-<div>
+    <div class="stat-card">
+      <span>MATCHES</span>
+      <strong>6</strong>
+      <small>Reviewed</small>
+    </div>
 
-<div class="eyebrow">
-PLAYER DASHBOARD
-</div>
+    <div class="stat-card">
+      <span>STREAK</span>
+      <strong>12</strong>
+      <small>Days</small>
+    </div>
 
-<h1>
-Alex's development
-</h1>
+  </div>
 
-<p>
-Everything you need to decide what Alex should work on next.
-</p>
 
-</div>
+  <div class="dashboard-grid">
 
+    <div class="dashboard-card focus-card">
 
-<button
-class="button primary"
-data-go="training"
->
+      <div class="card-header">
+        <div>
+          <span class="card-label">WEEKLY FOCUS</span>
+          <h2>Return Depth</h2>
+        </div>
 
-+ Plan Session
+        <span class="priority high">HIGH PRIORITY</span>
+      </div>
 
-</button>
+      <p>
+        Your recent match reviews show that short returns are
+        creating pressure in the first two shots of the rally.
+      </p>
 
-</div>
+      <div class="focus-reason">
+        <strong>Why this?</strong>
+        <span>
+          Appeared in 4 of your last 6 match reviews.
+        </span>
+      </div>
 
+      <button class="button primary" data-panel-target="training">
+        View Training Plan →
+      </button>
 
+    </div>
 
-<div class="player-banner">
 
+    <div class="dashboard-card">
 
-<div class="player-main">
+      <div class="card-header">
+        <div>
+          <span class="card-label">PROGRESS</span>
+          <h2>This Week</h2>
+        </div>
+      </div>
 
-<div class="avatar big">
-AM
-</div>
+      <div class="big-progress">
+        <div class="progress-ring">
+          <span id="progressNumber">72%</span>
+        </div>
 
+        <div>
+          <strong>Training completed</strong>
+          <span>5 of 7 sessions</span>
+        </div>
+      </div>
 
-<div>
+      <div class="mini-bars">
 
-<h2>
-Alex Morgan
-</h2>
+        <div>
+          <span>Serve +1</span>
+          <div><i style="width:82%"></i></div>
+        </div>
 
-<p>
-Competitive Player · 17 years old · Chattanooga
-</p>
+        <div>
+          <span>Return</span>
+          <div><i style="width:61%"></i></div>
+        </div>
 
+        <div>
+          <span>Forehand</span>
+          <div><i style="width:88%"></i></div>
+        </div>
 
-<div class="tags">
+      </div>
 
-<span>
-UTR 8.1
-</span>
+    </div>
 
-<span>
-Right Handed
-</span>
+  </div>
 
-<span>
-Hard Court
-</span>
 
-</div>
+  <div class="dashboard-card recent-card">
 
-</div>
+    <div class="card-header">
 
-</div>
+      <div>
+        <span class="card-label">UPCOMING</span>
+        <h2>Training Plan</h2>
+      </div>
 
+      <button
+        id="addSessionBtn"
+        class="button primary small-button"
+      >
+        + Add Session
+      </button>
 
+    </div>
 
-<div class="banner-stats">
+    <div id="sessionList">
 
-<div>
-<b>
-8.1
-</b>
+      <div class="session-row">
+        <div class="session-date">
+          <strong>MON</strong>
+          <span>03</span>
+        </div>
 
-<small>
-UTR
-</small>
+        <div class="session-info">
+          <strong>Return Depth</strong>
+          <span>20 min · Medium</span>
+        </div>
 
-</div>
+        <span class="session-status completed">
+          Completed
+        </span>
+      </div>
 
 
-<div>
-<b>
-68%
-</b>
+      <div class="session-row">
+        <div class="session-date">
+          <strong>WED</strong>
+          <span>05</span>
+        </div>
 
-<small>
-WIN RATE
-</small>
+        <div class="session-info">
+          <strong>Return Under Pressure</strong>
+          <span>25 min · High</span>
+        </div>
 
-</div>
+        <span class="session-status upcoming">
+          Upcoming
+        </span>
+      </div>
 
 
-<div>
-<b>
-12
-</b>
+      <div class="session-row">
+        <div class="session-date">
+          <strong>FRI</strong>
+          <span>07</span>
+        </div>
 
-<small>
-MATCHES
-</small>
+        <div class="session-info">
+          <strong>20-Point Return Test</strong>
+          <span>20 min · High</span>
+        </div>
 
-</div>
+        <span class="session-status upcoming">
+          Upcoming
+        </span>
+      </div>
 
-</div>
+    </div>
 
-</div>
-
-
-
-<!-- PRIORITY -->
-
-<div class="priority-card">
-
-
-<div class="priority-head">
-
-<div>
-
-<span class="status-dot"></span>
-
-<b>
-RECOMMENDED NEXT PRIORITY
-</b>
-
-</div>
-
-
-<span class="impact">
-HIGH IMPACT
-</span>
-
-</div>
-
-
-
-<div class="priority-grid">
-
-
-<div class="focus">
-
-<small>
-FOCUS #1
-</small>
-
-<h2>
-Return depth
-</h2>
-
-<p>
-Improve the quality and depth of the first return,
-especially against second serves.
-</p>
-
-<hr>
-
-<small>
-WHY THIS?
-</small>
-
-<p>
-
-<strong>
-Appeared in 4 of the last 6 match reviews.
-</strong>
-
-</p>
-
-</div>
-
-
-
-<div class="focus">
-
-<small>
-THIS WEEK
-</small>
-
-
-<div class="task">
-
-<b>
-01
-</b>
-
-<span>
-15 min second-serve return drill
-</span>
-
-</div>
-
-
-<div class="task">
-
-<b>
-02
-</b>
-
-<span>
-20-point return depth test
-</span>
-
-</div>
-
-
-<div class="task">
-
-<b>
-03
-</b>
-
-<span>
-Return + first-ball pattern
-</span>
-
-</div>
-
-</div>
-
-
-
-<div class="focus">
-
-<small>
-MATCH OBJECTIVE
-</small>
-
-<h2>
-+2 feet
-</h2>
-
-<p>
-Aim to land the majority of returns at least
-two feet inside the baseline.
-</p>
-
-<hr>
-
-<small>
-REVIEW AFTER
-</small>
-
-<p>
-
-<strong>
-Next competitive match
-</strong>
-
-</p>
-
-</div>
-
-
-</div>
-
-</div>
-
-
-
-<!-- METRICS -->
-
-<div class="metric-grid">
-
-
-<div class="metric">
-
-<small>
-SERVE +1
-</small>
-
-<b>
-7.8
-</b>
-
-<span class="up">
-↑ +0.6 this month
-</span>
-
-</div>
-
-
-<div class="metric">
-
-<small>
-RETURN
-</small>
-
-<b>
-5.9
-</b>
-
-<span class="neutral">
-Needs attention
-</span>
-
-</div>
-
-
-<div class="metric">
-
-<small>
-FOOTWORK
-</small>
-
-<b>
-7.4
-</b>
-
-<span class="up">
-↑ +0.3 this month
-</span>
-
-</div>
-
-
-<div class="metric">
-
-<small>
-TRAINING
-</small>
-
-<b>
-82%
-</b>
-
-<span class="up">
-On track
-</span>
-
-</div>
-
-</div>
-
-
-
-<div class="two-col">
-
-
-<!-- WEEK -->
-
-<div class="card">
-
-<div class="card-title">
-
-<b>
-This week's plan
-</b>
-
-<small>
-Week 3 · Return focus
-</small>
-
-</div>
-
-
-<div class="schedule">
-
-
-<div>
-
-<small>
-MON
-</small>
-
-<p>
-
-<b>
-Second serve return
-</b>
-
-<span>
-60 min · Return + first ball
-</span>
-
-</p>
-
-<em class="done">
-DONE
-</em>
-
-</div>
-
-
-
-<div>
-
-<small>
-WED
-</small>
-
-<p>
-
-<b>
-Depth under pressure
-</b>
-
-<span>
-75 min · 20-point challenge
-</span>
-
-</p>
-
-<em class="planned">
-PLANNED
-</em>
-
-</div>
-
-
-
-<div>
-
-<small>
-FRI
-</small>
-
-<p>
-
-<b>
-Match simulation
-</b>
-
-<span>
-90 min · Return games
-</span>
-
-</p>
-
-<em class="upcoming">
-UPCOMING
-</em>
-
-</div>
-
-
-</div>
-
-</div>
-
-
-
-<!-- PATTERNS -->
-
-<div class="card">
-
-<div class="card-title">
-
-<b>
-Performance patterns
-</b>
-
-<small>
-Last 6 matches
-</small>
-
-</div>
-
-
-<div class="bar-row">
-
-<span>
-Serve +1
-</span>
-
-<b>
-78%
-</b>
-
-<i>
-<em style="width:78%"></em>
-</i>
-
-</div>
-
-
-<div class="bar-row">
-
-<span>
-Return depth
-</span>
-
-<b>
-51%
-</b>
-
-<i>
-<em style="width:51%"></em>
-</i>
-
-</div>
-
-
-<div class="bar-row">
-
-<span>
-Forehand attack
-</span>
-
-<b>
-71%
-</b>
-
-<i>
-<em style="width:71%"></em>
-</i>
-
-</div>
-
-
-<div class="insight">
-
-<b>
-✦ TennisPilot insight
-</b>
-
-<p>
-Alex's return issue is showing up more often
-than any other weakness.
-</p>
-
-</div>
-
-</div>
-
-</div>
+  </div>
 
 </section>
-
 
 
 <!-- ASSESSMENT -->
 
-<section
-class="panel"
-id="assessment"
->
+<section class="panel" id="assessment">
 
-<div class="dash-title">
+  <div class="panel-heading">
+    <div>
+      <div class="eyebrow">PLAYER ASSESSMENT</div>
+      <h2>How would you rate your game?</h2>
+    </div>
 
-<div>
-
-<div class="eyebrow">
-ASSESSMENT
-</div>
-
-<h1>
-Assess Alex
-</h1>
-
-<p>
-Rate each area and identify the biggest development gaps.
-</p>
-
-</div>
+    <button id="saveAssessment" class="button primary">
+      Save Assessment
+    </button>
+  </div>
 
 
-<button
-class="button primary"
-id="saveAssessment"
->
-Save Assessment
-</button>
+  <div class="assessment-grid">
 
-</div>
+    <div class="assessment-card">
+      <label>Serve</label>
+      <input type="range" min="1" max="10" value="8">
+      <span>8 / 10</span>
+    </div>
 
+    <div class="assessment-card">
+      <label>Return</label>
+      <input type="range" min="1" max="10" value="6">
+      <span>6 / 10</span>
+    </div>
 
-<div class="assessment-grid">
+    <div class="assessment-card">
+      <label>Forehand</label>
+      <input type="range" min="1" max="10" value="9">
+      <span>9 / 10</span>
+    </div>
 
-<div
-class="card"
-id="skillsA"
-></div>
+    <div class="assessment-card">
+      <label>Backhand</label>
+      <input type="range" min="1" max="10" value="8">
+      <span>8 / 10</span>
+    </div>
 
-<div
-class="card"
-id="skillsB"
-></div>
+    <div class="assessment-card">
+      <label>Movement</label>
+      <input type="range" min="1" max="10" value="8">
+      <span>8 / 10</span>
+    </div>
 
-</div>
+    <div class="assessment-card">
+      <label>Mental Game</label>
+      <input type="range" min="1" max="10" value="7">
+      <span>7 / 10</span>
+    </div>
+
+  </div>
 
 </section>
-
 
 
 <!-- TRAINING -->
 
-<section
-class="panel"
-id="training"
->
+<section class="panel" id="training">
 
-<div class="dash-title">
+  <div class="panel-heading">
 
-<div>
+    <div>
+      <div class="eyebrow">THIS WEEK</div>
+      <h2>Training Plan</h2>
+      <p>Focus: Return Depth</p>
+    </div>
 
-<div class="eyebrow">
-DEVELOPMENT PLAN
-</div>
+    <button
+      id="addSessionBtn2"
+      class="button primary"
+    >
+      + Add Session
+    </button>
 
-<h1>
-Alex's training plan
-</h1>
-
-<p>
-Built around the highest-priority development gap.
-</p>
-
-</div>
+  </div>
 
 
-<button
-class="button primary"
-onclick="alert('New session created in demo mode.')"
->
+  <div class="training-list">
 
-+ Add Session
+    <label class="training-item">
+      <input type="checkbox" class="training-check" checked>
 
-</button>
+      <div>
+        <strong>Return Depth Fundamentals</strong>
+        <span>15 min · Technical</span>
+      </div>
 
-</div>
-
-
-
-<div class="plan-hero">
-
-<small>
-8-WEEK DEVELOPMENT BLOCK · WEEK 3
-</small>
-
-<h2>
-Return Depth & First-Ball Attack
-</h2>
-
-<p>
-Build a deeper first return and improve the transition
-from return to the first attacking ball.
-</p>
+      <em>Monday</em>
+    </label>
 
 
-<div class="plan-progress">
+    <label class="training-item">
+      <input type="checkbox" class="training-check" checked>
 
-<i></i>
+      <div>
+        <strong>Deep Return Target Drill</strong>
+        <span>20 min · Technical</span>
+      </div>
 
-</div>
-
-</div>
-
+      <em>Tuesday</em>
+    </label>
 
 
-<div
-class="training-grid"
-id="trainingGrid"
-></div>
+    <label class="training-item">
+      <input type="checkbox" class="training-check">
+
+      <div>
+        <strong>Return Under Pressure</strong>
+        <span>25 min · Match Simulation</span>
+      </div>
+
+      <em>Wednesday</em>
+    </label>
+
+
+    <label class="training-item">
+      <input type="checkbox" class="training-check">
+
+      <div>
+        <strong>20-Point Return Test</strong>
+        <span>20 min · Assessment</span>
+      </div>
+
+      <em>Friday</em>
+    </label>
+
+  </div>
 
 </section>
 
 
+<!-- MATCH REVIEW -->
 
-<!-- MATCH -->
+<section class="panel" id="matches">
 
-<section
-class="panel"
-id="match"
->
+  <div class="panel-heading">
 
-<div class="dash-title">
+    <div>
+      <div class="eyebrow">COMPETITION</div>
+      <h2>Match Review</h2>
+    </div>
 
-<div>
+    <button id="addMatch" class="button primary">
+      + Add Match
+    </button>
 
-<div class="eyebrow">
-COMPETITION
-</div>
-
-<h1>
-Match review
-</h1>
-
-<p>
-Turn what happened in competition into the next training priority.
-</p>
-
-</div>
+  </div>
 
 
-<button
-class="button primary"
-onclick="alert('New match added in demo mode.')"
->
+  <div class="match-review-card">
 
-+ Add Match
+    <div class="match-result">
+      <span>LAST MATCH</span>
 
-</button>
+      <strong>W</strong>
 
-</div>
-
-
-
-<div class="match-grid">
+      <div>
+        <b>6–4, 7–5</b>
+        <small>vs. Player #24</small>
+      </div>
+    </div>
 
 
-<div class="card score-card">
+    <div class="match-patterns">
 
-<small>
-LATEST MATCH · AUG 29
-</small>
+      <div>
+        <span>MAIN POSITIVE</span>
+        <strong>Serve +1</strong>
+      </div>
 
-<h2>
-Alex Morgan
-<span>
-vs.
-</span>
-Jordan Lee
-</h2>
+      <div>
+        <span>MAIN ISSUE</span>
+        <strong>Short returns</strong>
+      </div>
 
-<strong>
-6–4 · 4–6 · 10–7
-</strong>
+      <div>
+        <span>MENTAL</span>
+        <strong>Strong under pressure</strong>
+      </div>
 
-<em>
-WIN
-</em>
+    </div>
 
-</div>
+  </div>
 
 
+  <div class="dashboard-card">
 
-<div class="card">
+    <span class="card-label">RECURRING PATTERN</span>
 
-<div class="card-title">
+    <h2>Return depth is your biggest opportunity.</h2>
 
-<b>
-What happened?
-</b>
+    <p>
+      Short returns appeared in 4 of your last 6 match reviews.
+      TennisPilot recommends making return depth the focus of
+      your next training block.
+    </p>
 
-<small>
-Coach review
-</small>
-
-</div>
-
-
-<div class="review">
-
-<span>
-Best pattern
-</span>
-
-<b>
-Serve + 1 forehand
-</b>
-
-</div>
-
-
-<div class="review">
-
-<span>
-Main weakness
-</span>
-
-<b>
-Return depth
-</b>
-
-</div>
-
-
-<div class="review">
-
-<span>
-Pressure points
-</span>
-
-<b>
-6 / 10
-</b>
-
-</div>
-
-
-<div class="review">
-
-<span>
-Second serve returns deep
-</span>
-
-<b>
-9 / 18
-</b>
-
-</div>
-
-
-<div class="review highlight">
-
-<span>
-Next training priority
-</span>
-
-<b>
-Return depth
-</b>
-
-</div>
-
-</div>
-
-</div>
+  </div>
 
 </section>
-
 
 
 <!-- PROGRESS -->
 
-<section
-class="panel"
-id="progress"
->
+<section class="panel" id="progress">
 
-<div class="dash-title">
+  <div class="panel-heading">
 
-<div>
+    <div>
+      <div class="eyebrow">DEVELOPMENT</div>
+      <h2>Progress</h2>
+    </div>
 
-<div class="eyebrow">
-LONG-TERM DEVELOPMENT
-</div>
-
-<h1>
-Progress
-</h1>
-
-<p>
-See whether training priorities are actually improving.
-</p>
-
-</div>
-
-</div>
+  </div>
 
 
+  <div class="progress-grid">
 
-<div class="progress-grid">
+    <div class="dashboard-card">
+      <span class="card-label">UTR</span>
+      <strong class="big-number">8.1</strong>
+      <p>+0.3 over the last 30 days.</p>
+    </div>
 
+    <div class="dashboard-card">
+      <span class="card-label">MATCH WIN RATE</span>
+      <strong class="big-number">67%</strong>
+      <p>4 wins from your last 6 matches.</p>
+    </div>
 
-<div class="card">
+    <div class="dashboard-card">
+      <span class="card-label">TRAINING</span>
+      <strong class="big-number">84%</strong>
+      <p>Average completion over 4 weeks.</p>
+    </div>
 
-<div class="card-title">
-
-<b>
-Overall development
-</b>
-
-<small>
-Last 6 months
-</small>
-
-</div>
-
-
-<div class="chart">
-
-<div style="height:42%">
-<span>APR</span>
-</div>
-
-<div style="height:48%">
-<span>MAY</span>
-</div>
-
-<div style="height:54%">
-<span>JUN</span>
-</div>
-
-<div style="height:59%">
-<span>JUL</span>
-</div>
-
-<div style="height:67%">
-<span>AUG</span>
-</div>
-
-<div style="height:75%">
-<span>SEP</span>
-</div>
-
-</div>
-
-</div>
-
-
-
-<div class="card">
-
-<div class="card-title">
-
-<b>
-Development areas
-</b>
-
-<small>
-Current
-</small>
-
-</div>
-
-
-<div class="area">
-
-<span>
-Serve
-</span>
-
-<b>
-8.1 / 10
-</b>
-
-<i>
-<em style="width:81%"></em>
-</i>
-
-</div>
-
-
-<div class="area">
-
-<span>
-Forehand
-</span>
-
-<b>
-8.0 / 10
-</b>
-
-<i>
-<em style="width:80%"></em>
-</i>
-
-</div>
-
-
-<div class="area">
-
-<span>
-Footwork
-</span>
-
-<b>
-7.4 / 10
-</b>
-
-<i>
-<em style="width:74%"></em>
-</i>
-
-</div>
-
-
-<div class="area">
-
-<span>
-Return
-</span>
-
-<b>
-5.9 / 10
-</b>
-
-<i>
-<em style="width:59%"></em>
-</i>
-
-</div>
-
-</div>
-
-</div>
+  </div>
 
 </section>
 
 
+<!-- COACH -->
 
-<!-- COACH VIEW -->
+<section class="panel" id="coach">
 
-<section
-class="panel"
-id="coach"
->
+  <div class="panel-heading">
 
-<div class="coach-hero">
+    <div>
+      <div class="eyebrow">COACH VIEW</div>
+      <h2>Alex's Development</h2>
+    </div>
 
-<div class="eyebrow light">
-COACH VIEW
-</div>
-
-<h1>
-Your players at a glance.
-</h1>
-
-<p>
-TennisPilot highlights who needs attention,
-what each player should work on, and what
-changed since the last review.
-</p>
-
-</div>
+  </div>
 
 
+  <div class="coach-grid">
 
-<div class="roster">
+    <div class="dashboard-card">
 
+      <span class="card-label">CURRENT PRIORITY</span>
 
-<div class="roster-card">
+      <h2>Return Depth</h2>
 
-<div class="avatar">
-AM
-</div>
+      <p>
+        Recommended based on recurring match-review patterns.
+      </p>
 
-<b>
-Alex Morgan
-</b>
+      <div class="coach-recommendation">
+        <strong>Next 7 Days</strong>
 
-<small>
-UTR 8.1 · On track
-</small>
+        <ul>
+          <li>15-minute return drill</li>
+          <li>20-point return test</li>
+          <li>Match objective: return deep</li>
+          <li>Review after next match</li>
+        </ul>
+      </div>
 
-<hr>
-
-<label>
-NEXT PRIORITY
-</label>
-
-<strong>
-Return depth
-</strong>
-
-</div>
+    </div>
 
 
+    <div class="dashboard-card">
 
-<div class="roster-card">
+      <span class="card-label">COACH NOTES</span>
 
-<div class="avatar purple">
-JM
-</div>
+      <textarea
+        id="coachNotes"
+        placeholder="Write notes about this player..."
+      ></textarea>
 
-<b>
-Jake Miller
-</b>
+      <button id="saveCoachNotes" class="button primary">
+        Save Notes
+      </button>
 
-<small>
-UTR 7.4 · Needs review
-</small>
+    </div>
 
-<hr>
-
-<label>
-NEXT PRIORITY
-</label>
-
-<strong>
-Backhand defense
-</strong>
-
-</div>
-
-
-
-<div class="roster-card">
-
-<div class="avatar orange">
-LS
-</div>
-
-<b>
-Liam Smith
-</b>
-
-<small>
-UTR 6.9 · Improving
-</small>
-
-<hr>
-
-<label>
-NEXT PRIORITY
-</label>
-
-<strong>
-Serve consistency
-</strong>
-
-</div>
-
-</div>
+  </div>
 
 </section>
-
-
-</div>
 
 </main>
 
 </div>
+
+
+<!-- ADD SESSION MODAL -->
+
+<div class="modal-overlay" id="sessionModal">
+
+  <div class="modal">
+
+    <button class="modal-close" id="closeSessionModal">
+      ×
+    </button>
+
+    <div class="eyebrow">NEW TRAINING SESSION</div>
+
+    <h2>Add a session</h2>
+
+    <p class="modal-description">
+      Create a new session and add it to the player's training plan.
+    </p>
+
+
+    <form id="sessionForm">
+
+      <div class="form-grid">
+
+        <div class="form-group full">
+          <label for="sessionName">Session Name</label>
+          <input
+            id="sessionName"
+            type="text"
+            placeholder="e.g. Return Under Pressure"
+            required
+          >
+        </div>
+
+
+        <div class="form-group">
+          <label for="sessionDate">Date</label>
+          <input
+            id="sessionDate"
+            type="date"
+            required
+          >
+        </div>
+
+
+        <div class="form-group">
+          <label for="sessionDuration">Duration</label>
+
+          <select id="sessionDuration">
+            <option>15 min</option>
+            <option>20 min</option>
+            <option>25 min</option>
+            <option>30 min</option>
+            <option>45 min</option>
+            <option>60 min</option>
+          </select>
+
+        </div>
+
+
+        <div class="form-group">
+          <label for="sessionFocus">Focus Area</label>
+
+          <select id="sessionFocus">
+            <option>Serve</option>
+            <option>Return</option>
+            <option>Forehand</option>
+            <option>Backhand</option>
+            <option>Movement</option>
+            <option>Mental Game</option>
+            <option>Match Play</option>
+          </select>
+
+        </div>
+
+
+        <div class="form-group">
+          <label for="sessionIntensity">Intensity</label>
+
+          <select id="sessionIntensity">
+            <option>Low</option>
+            <option selected>Medium</option>
+            <option>High</option>
+          </select>
+
+        </div>
+
+
+        <div class="form-group full">
+          <label for="sessionObjective">Objective</label>
+
+          <input
+            id="sessionObjective"
+            type="text"
+            placeholder="What should the player accomplish?"
+          >
+        </div>
+
+
+        <div class="form-group full">
+          <label for="sessionNotes">Coach Notes</label>
+
+          <textarea
+            id="sessionNotes"
+            placeholder="Optional notes..."
+          ></textarea>
+
+        </div>
+
+      </div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          id="cancelSession"
+          class="button secondary"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          class="button primary"
+        >
+          Add Session
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<script src="script.js"></script>
 
 </body>
 </html>
