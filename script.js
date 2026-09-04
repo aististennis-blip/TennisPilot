@@ -1,27 +1,21 @@
 const sb = window.tennisPilotSupabase;
-
-let mode = "login";
-let role = "coach";
-let currentUser = null;
-let profile = null;
+let mode = "login", role = "coach", currentUser = null, profile = null;
 
 const $ = id => document.getElementById(id);
 
-const esc = s =>
-  String(s ?? "").replace(
-    /[&<>"']/g,
-    c => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    }[c])
-  );
+const esc = s => String(s ?? "").replace(
+  /[&<>"']/g,
+  c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[c])
+);
 
 const msg = (text, bad = false) => {
   const e = $("authMessage");
-
   if (e) {
     e.textContent = text;
     e.className = "message " + (bad ? "danger" : "success");
@@ -34,212 +28,95 @@ const msg = (text, bad = false) => {
 ========================= */
 
 function setupAuth() {
-
   const tabs = document.querySelectorAll(".tab");
   const roles = document.querySelectorAll(".role");
 
   if (!tabs.length) return;
 
+  tabs.forEach(b => b.onclick = () => {
+    mode = b.dataset.mode;
 
-  /* LOGIN / SIGN UP */
+    tabs.forEach(x =>
+      x.classList.toggle("active", x === b)
+    );
 
-  tabs.forEach(button => {
-
-    button.addEventListener("click", function (e) {
-
-      e.preventDefault();
-
-      mode = this.dataset.mode;
-
-      tabs.forEach(tab => {
-        tab.classList.toggle(
-          "active",
-          tab.dataset.mode === mode
-        );
-      });
-
-      updateAuth();
-
-    });
-
+    updateAuth();
   });
 
+  roles.forEach(b => b.onclick = () => {
+    role = b.dataset.role;
 
-  /* COACH / PLAYER */
+    roles.forEach(x =>
+      x.classList.toggle("active", x === b)
+    );
 
-  roles.forEach(button => {
-
-    button.addEventListener("click", function (e) {
-
-      e.preventDefault();
-
-      role = this.dataset.role;
-
-      roles.forEach(r => {
-        r.classList.toggle(
-          "active",
-          r.dataset.role === role
-        );
-      });
-
-      updateAuth();
-
-    });
-
+    updateAuth();
   });
 
-
-  const form = $("authForm");
-
-  if (form) {
-    form.addEventListener("submit", handleAuth);
-  }
-
-
-  /* COACH CODE */
+  $("authForm").onsubmit = handleAuth;
 
   const codeInput = $("coachCode");
 
   if (codeInput) {
-
     codeInput.addEventListener("input", () => {
-
-      codeInput.value =
-        codeInput.value
-          .replace(/[^a-zA-Z0-9]/g, "")
-          .slice(0, 6)
-          .toUpperCase();
-
+      codeInput.value = codeInput.value
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .slice(0, 6)
+        .toUpperCase();
     });
-
   }
-
 
   updateAuth();
-
 }
 
-
-/* =========================
-   UPDATE AUTH FORM
-========================= */
 
 function updateAuth() {
-
-  const nameLabel = $("nameLabel");
-  const nameInput = $("name");
-
-  const confirmWrap = $("confirmWrap");
-  const confirmInput = $("confirm");
-
-  const passwordHint = $("passwordHint");
-
-  const codeWrap = $("codeWrap");
-
-  const submitBtn = $("submitBtn");
-
-
-  if (!nameLabel || !nameInput) return;
-
-
-  const isLogin = mode === "login";
-  const isSignup = mode === "signup";
-  const isPlayer = role === "player";
-
-
-  /* FULL NAME */
-
-  nameLabel.classList.toggle(
+  $("name").parentElement.classList.toggle(
     "hidden",
-    isLogin
+    mode === "login"
   );
 
-  nameInput.required = isSignup;
+  $("confirmWrap").classList.toggle(
+    "hidden",
+    mode === "login"
+  );
 
+  $("passwordHint").classList.toggle(
+    "hidden",
+    mode === "login"
+  );
 
-  /* CONFIRM PASSWORD */
+  $("codeWrap").classList.toggle(
+    "hidden",
+    !(mode === "signup" && role === "player")
+  );
 
-  if (confirmWrap) {
+  $("submitBtn").textContent =
+    mode === "login"
+      ? "Log In"
+      : "Create Account";
 
-    confirmWrap.classList.toggle(
-      "hidden",
-      isLogin
-    );
-
-  }
-
-  if (confirmInput) {
-    confirmInput.required = isSignup;
-  }
-
-
-  /* PASSWORD HINT */
-
-  if (passwordHint) {
-
-    passwordHint.classList.toggle(
-      "hidden",
-      isLogin
-    );
-
-  }
-
-
-  /* COACH CODE */
-
-  if (codeWrap) {
-
-    codeWrap.classList.toggle(
-      "hidden",
-      !(isSignup && isPlayer)
-    );
-
-  }
-
-
-  /* BUTTON */
-
-  if (submitBtn) {
-
-    submitBtn.textContent =
-      isLogin
-        ? "Log In"
-        : "Create Account";
-
-  }
-
+  $("name").required = mode === "signup";
+  $("confirm").required = mode === "signup";
 }
 
 
-/* =========================
-   PASSWORD
-========================= */
-
-function validPassword(password) {
-
+function validPassword(p) {
   return (
-    password.length >= 8 &&
-    /[A-Z]/.test(password) &&
-    /[0-9]/.test(password) &&
-    /[^A-Za-z0-9]/.test(password)
+    p.length >= 8 &&
+    /[A-Z]/.test(p) &&
+    /[0-9]/.test(p) &&
+    /[^A-Za-z0-9]/.test(p)
   );
-
 }
 
-
-/* =========================
-   AUTH SUBMIT
-========================= */
 
 async function handleAuth(e) {
-
   e.preventDefault();
-
   msg("");
 
   const email = $("email").value.trim();
   const password = $("password").value;
-
 
   try {
 
@@ -256,7 +133,6 @@ async function handleAuth(e) {
       if (error) throw error;
 
       location.href = "dashboard.html";
-
       return;
     }
 
@@ -264,73 +140,55 @@ async function handleAuth(e) {
     /* SIGN UP */
 
     if (!validPassword(password)) {
-
       throw Error(
         "Password needs 8+ characters, an uppercase letter, a number and a special symbol."
       );
-
     }
-
 
     if (password !== $("confirm").value) {
-
-      throw Error(
-        "Passwords do not match."
-      );
-
+      throw Error("Passwords do not match.");
     }
 
-
-    const fullName =
-      $("name").value.trim();
-
+    const fullName = $("name").value.trim();
 
     if (!fullName) {
-
-      throw Error(
-        "Enter your full name."
-      );
-
+      throw Error("Enter your full name.");
     }
 
 
     const { data, error } =
       await sb.auth.signUp({
-
         email,
         password,
-
         options: {
           data: {
             full_name: fullName,
             role
           }
         }
-
       });
-
 
     if (error) throw error;
 
     if (!data.user) {
-
-      throw Error(
-        "Account could not be created."
-      );
-
+      throw Error("Account could not be created.");
     }
 
 
-    /* FIND COACH */
-
     let coachId = null;
+
+
+    /* FIND COACH */
 
     if (
       role === "player" &&
       $("coachCode").value.trim()
     ) {
 
-      const { data: coachData, error: coachError } =
+      const {
+        data: c,
+        error: ce
+      } =
         await sb.rpc(
           "find_coach_by_code",
           {
@@ -342,26 +200,13 @@ async function handleAuth(e) {
           }
         );
 
+      if (ce) throw ce;
 
-      if (coachError) {
-        throw coachError;
+      if (!c || !c.length) {
+        throw Error("Coach code not found.");
       }
 
-
-      if (
-        !coachData ||
-        !coachData.length
-      ) {
-
-        throw Error(
-          "Coach code not found."
-        );
-
-      }
-
-
-      coachId = coachData[0].id;
-
+      coachId = c[0].id;
     }
 
 
@@ -378,43 +223,30 @@ async function handleAuth(e) {
       coachId
     ) {
 
-      const { error: requestError } =
+      const {
+        error: re
+      } =
         await sb
           .from("connection_requests")
           .insert({
-
             player_id: data.user.id,
-
             coach_id: coachId,
-
             status: "pending"
-
           });
 
-
-      if (requestError) {
-        throw requestError;
-      }
-
+      if (re) throw re;
     }
 
 
     if (data.session) {
-
-      location.href =
-        "dashboard.html";
-
+      location.href = "dashboard.html";
     } else {
-
       msg(
         "Account created. Check your email to confirm your account, then log in."
       );
-
     }
 
-  }
-
-  catch (err) {
+  } catch (err) {
 
     msg(
       err.message ||
@@ -423,7 +255,6 @@ async function handleAuth(e) {
     );
 
   }
-
 }
 
 
@@ -437,19 +268,12 @@ async function loadProfile() {
     data: { user }
   } = await sb.auth.getUser();
 
-
   if (!user) {
-
-    location.href =
-      "login.html";
-
+    location.href = "login.html";
     return false;
-
   }
 
-
   currentUser = user;
-
 
   const {
     data,
@@ -461,24 +285,15 @@ async function loadProfile() {
       .eq("id", user.id)
       .single();
 
-
   if (error) {
-
     console.error(error);
-
-    alert(
-      "Profile could not be loaded."
-    );
-
+    alert("Profile could not be loaded.");
     return false;
-
   }
-
 
   profile = data;
 
   return true;
-
 }
 
 
@@ -489,24 +304,20 @@ async function loadProfile() {
 function shell() {
 
   $("profileBox").innerHTML =
-
     `<strong>${esc(profile.full_name)}</strong>
      <small>${esc(profile.role)}</small>` +
 
     (
       profile.role === "coach"
-
         ? `<small>
              Code:
              <b>${esc(profile.coach_code || "")}</b>
            </small>`
-
         : ""
     );
 
 
   $("sideNav").innerHTML =
-
     profile.role === "coach"
 
       ? `
@@ -570,29 +381,22 @@ function shell() {
 
   document
     .querySelectorAll(".nav-item")
-    .forEach(button => {
-
-      button.onclick = () =>
-        render(button.dataset.page);
-
+    .forEach(b => {
+      b.onclick = () =>
+        render(b.dataset.page);
     });
 
 
   $("logoutBtn").onclick =
     async () => {
-
       await sb.auth.signOut();
-
-      location.href =
-        "index.html";
-
+      location.href = "index.html";
     };
-
 }
 
 
 /* =========================
-   PLAYERS
+   CONNECTED PLAYERS
 ========================= */
 
 async function connectedPlayers() {
@@ -608,18 +412,19 @@ async function connectedPlayers() {
         "connected_coach_id",
         currentUser.id
       )
-      .eq("role", "player");
-
+      .eq(
+        "role",
+        "player"
+      );
 
   if (error) throw error;
 
   return data || [];
-
 }
 
 
 /* =========================
-   MATCHES
+   PLAYER MATCHES
 ========================= */
 
 async function playerMatches(
@@ -641,16 +446,14 @@ async function playerMatches(
         }
       );
 
-
   if (error) throw error;
 
   return data || [];
-
 }
 
 
 /* =========================
-   PROFILE PHOTO
+   PROFILE PHOTOS
 ========================= */
 
 async function signedProfilePhoto(path) {
@@ -669,11 +472,9 @@ async function signedProfilePhoto(path) {
         3600
       );
 
-
   if (error) return "";
 
   return data?.signedUrl || "";
-
 }
 
 
@@ -695,20 +496,21 @@ function photoHTML(
     : `
       <div
         class="${className} avatar-placeholder">
+
         ${esc(
           (name || "P")
             .trim()
             .charAt(0)
             .toUpperCase()
         )}
+
       </div>
       `;
-
 }
 
 
 /* =========================
-   RENDER
+   MAIN RENDER
 ========================= */
 
 async function render(
@@ -717,13 +519,11 @@ async function render(
 
   document
     .querySelectorAll(".nav-item")
-    .forEach(button => {
-
-      button.classList.toggle(
+    .forEach(b => {
+      b.classList.toggle(
         "active",
-        button.dataset.page === page
+        b.dataset.page === page
       );
-
     });
 
 
@@ -747,23 +547,19 @@ async function render(
 
     }
 
-  }
-
-  catch (e) {
+  } catch (e) {
 
     app.innerHTML =
       `<div class="card">
         <b>Error:</b>
         ${esc(e.message)}
       </div>`;
-
   }
-
 }
 
 
 /* =========================
-   COACH DASHBOARD
+   COACH
 ========================= */
 
 async function renderCoach(page) {
@@ -779,6 +575,7 @@ async function renderCoach(page) {
       <div class="dash-head">
 
         <div>
+
           <span class="eyebrow">
             COACH DASHBOARD
           </span>
@@ -786,7 +583,9 @@ async function renderCoach(page) {
           <h1>
             Overview
           </h1>
+
         </div>
+
 
         <button
           class="btn"
@@ -861,7 +660,9 @@ async function renderCoach(page) {
                     <div class="list-item">
 
                       <b>
-                        ${esc(p.full_name)}
+                        ${esc(
+                          p.full_name
+                        )}
                       </b>
 
                       <span
@@ -885,9 +686,7 @@ async function renderCoach(page) {
         }
 
       </div>
-
     `;
-
   }
 
 
@@ -926,7 +725,9 @@ async function renderCoach(page) {
                       <div class="card">
 
                         <h3>
-                          ${esc(p.full_name)}
+                          ${esc(
+                            p.full_name
+                          )}
                         </h3>
 
                         <p class="muted">
@@ -960,23 +761,27 @@ async function renderCoach(page) {
       }
 
     `;
-
   }
 
 
-  else if (page === "requests") {
+  else if (
+    page === "requests"
+  ) {
 
     await renderRequests();
 
   }
 
 
-  else if (page === "matches") {
+  else if (
+    page === "matches"
+  ) {
 
-    await renderCoachMatches(players);
+    await renderCoachMatches(
+      players
+    );
 
   }
-
 }
 
 
@@ -1008,7 +813,6 @@ async function renderRequests() {
         }
       );
 
-
   if (error) throw error;
 
 
@@ -1029,7 +833,6 @@ async function renderRequests() {
       </div>
 
     </div>
-
   `;
 
 
@@ -1041,9 +844,7 @@ async function renderRequests() {
       </div>
     `;
 
-  }
-
-  else {
+  } else {
 
     for (const r of data) {
 
@@ -1068,7 +869,8 @@ async function renderRequests() {
 
           <b>
             ${esc(
-              p?.full_name || "Player"
+              p?.full_name ||
+              "Player"
             )}
           </b>
 
@@ -1097,14 +899,11 @@ async function renderRequests() {
         </div>
 
       `;
-
     }
-
   }
 
 
   $("app").innerHTML = html;
-
 }
 
 
@@ -1120,19 +919,11 @@ async function acceptReq(id) {
       }
     );
 
-
   if (error) {
-
     alert(error.message);
-
-  }
-
-  else {
-
+  } else {
     render("requests");
-
   }
-
 }
 
 
@@ -1148,24 +939,16 @@ async function declineReq(id) {
       }
     );
 
-
   if (error) {
-
     alert(error.message);
-
-  }
-
-  else {
-
+  } else {
     render("requests");
-
   }
-
 }
 
 
 /* =========================
-   COACH MATCHES
+   COACH MATCH REVIEWS
 ========================= */
 
 async function renderCoachMatches(
@@ -1176,7 +959,6 @@ async function renderCoachMatches(
     players.map(
       p => p.id
     );
-
 
   let data = [];
 
@@ -1201,11 +983,9 @@ async function renderCoachMatches(
           }
         );
 
-
     if (error) throw error;
 
     data = matches || [];
-
   }
 
 
@@ -1241,7 +1021,6 @@ async function renderCoachMatches(
                     m.player_id
                 );
 
-
               return `
 
                 <div class="match">
@@ -1255,18 +1034,34 @@ async function renderCoachMatches(
 
                   ·
 
-                  ${esc(m.result)}
+                  ${esc(
+                    m.result
+                  )}
 
 
                   <h3>
-                    vs ${esc(m.opponent)}
+                    vs
+                    ${esc(
+                      m.opponent
+                    )}
                   </h3>
 
 
                   <div class="muted">
 
-                    ${esc(m.match_date)}
+                    ${esc(
+                      m.match_date
+                    )}
+
                     ·
+
+                    ${esc(
+                      m.surface ||
+                      "Unknown surface"
+                    )}
+
+                    ·
+
                     ${esc(
                       m.score ||
                       "No score"
@@ -1305,14 +1100,14 @@ async function renderCoachMatches(
 
                   <p>
                     ${esc(
-                      m.notes || ""
+                      m.notes ||
+                      ""
                     )}
                   </p>
 
                 </div>
 
               `;
-
             })
             .join("")
 
@@ -1324,7 +1119,6 @@ async function renderCoachMatches(
     }
 
   `;
-
 }
 
 
@@ -1337,12 +1131,10 @@ async function viewPlayer(id) {
   const players =
     await connectedPlayers();
 
-
   const p =
     players.find(
       x => x.id === id
     );
-
 
   if (!p) return;
 
@@ -1368,7 +1160,9 @@ async function viewPlayer(id) {
         </span>
 
         <h1>
-          ${esc(p.full_name)}
+          ${esc(
+            p.full_name
+          )}
         </h1>
 
       </div>
@@ -1397,13 +1191,17 @@ async function viewPlayer(id) {
       <div>
 
         <h2>
-          ${esc(p.full_name)}
+          ${esc(
+            p.full_name
+          )}
         </h2>
 
 
         <p class="muted">
 
-          ${esc(p.age || "")}
+          ${esc(
+            p.age || ""
+          )}
 
           ${
             p.age
@@ -1440,7 +1238,9 @@ async function viewPlayer(id) {
 
         ${
           p.bio
-            ? `<p>${esc(p.bio)}</p>`
+            ? `<p>${esc(
+                p.bio
+              )}</p>`
             : ""
         }
 
@@ -1570,6 +1370,7 @@ async function viewPlayer(id) {
         </span>
 
         <div class="stat">
+
           ${
             matches.filter(
               m =>
@@ -1577,6 +1378,7 @@ async function viewPlayer(id) {
                 "win"
             ).length
           }
+
         </div>
 
       </div>
@@ -1589,6 +1391,7 @@ async function viewPlayer(id) {
         </span>
 
         <div class="stat">
+
           ${
             matches.filter(
               m =>
@@ -1596,6 +1399,7 @@ async function viewPlayer(id) {
                 "loss"
             ).length
           }
+
         </div>
 
       </div>
@@ -1625,13 +1429,16 @@ async function viewPlayer(id) {
                       ${esc(
                         m.match_date
                       )}
+
                       —
+
                       ${esc(
                         m.result
                       )}
                     </b>
 
                     vs
+
                     ${esc(
                       m.opponent
                     )}
@@ -1639,10 +1446,19 @@ async function viewPlayer(id) {
 
                     <br>
 
+
                     <span class="muted">
 
                       ${esc(
-                        m.score || ""
+                        m.surface ||
+                        "Unknown surface"
+                      )}
+
+                      ·
+
+                      ${esc(
+                        m.score ||
+                        ""
                       )}
 
                     </span>
@@ -1681,7 +1497,6 @@ async function viewPlayer(id) {
     </div>
 
   `;
-
 }
 
 
@@ -1695,6 +1510,28 @@ async function renderPlayer(page) {
 
     const matches =
       await playerMatches();
+
+
+    const wins =
+      matches.filter(
+        m => m.result === "win"
+      ).length;
+
+
+    const losses =
+      matches.filter(
+        m => m.result === "loss"
+      ).length;
+
+
+    const winRate =
+      matches.length
+        ? Math.round(
+            (wins /
+              matches.length) *
+            100
+          )
+        : 0;
 
 
     $("app").innerHTML = `
@@ -1720,9 +1557,9 @@ async function renderPlayer(page) {
 
         <button
           class="btn"
-          onclick="openMatch()">
+          onclick="render('logmatch')">
 
-          + Log Match
+          Match History
 
         </button>
 
@@ -1751,15 +1588,7 @@ async function renderPlayer(page) {
           </span>
 
           <div class="stat">
-
-            ${
-              matches.filter(
-                m =>
-                  m.result ===
-                  "win"
-              ).length
-            }
-
+            ${wins}
           </div>
 
         </div>
@@ -1768,19 +1597,11 @@ async function renderPlayer(page) {
         <div class="card">
 
           <span class="muted">
-            Losses
+            Win Rate
           </span>
 
           <div class="stat">
-
-            ${
-              matches.filter(
-                m =>
-                  m.result ===
-                  "loss"
-              ).length
-            }
-
+            ${winRate}%
           </div>
 
         </div>
@@ -1830,6 +1651,25 @@ async function renderPlayer(page) {
 
                   </span>
 
+
+                  <div
+                    class="muted"
+                    style="margin-top:5px">
+
+                    ${esc(
+                      m.surface ||
+                      "Unknown surface"
+                    )}
+
+                    ·
+
+                    ${esc(
+                      m.score ||
+                      "No score"
+                    )}
+
+                  </div>
+
                 </div>
 
               `
@@ -1838,13 +1678,22 @@ async function renderPlayer(page) {
 
           ||
 
-          "<p class='muted'>Log your first match.</p>"
+          "<p class='muted'>No matches yet.</p>"
         }
+
+
+        <button
+          class="btn small ghost"
+          style="margin-top:12px"
+          onclick="render('logmatch')">
+
+          View Match History
+
+        </button>
 
       </div>
 
     `;
-
   }
 
 
@@ -1852,7 +1701,7 @@ async function renderPlayer(page) {
     page === "logmatch"
   ) {
 
-    openMatch();
+    await renderMatchHistory();
 
   }
 
@@ -1965,7 +1814,6 @@ async function renderPlayer(page) {
         </div>
 
       `;
-
   }
 
 
@@ -2109,14 +1957,662 @@ async function renderPlayer(page) {
       }
 
     `;
-
   }
-
 }
 
 
 /* =========================
-   BIO
+   MATCH HISTORY
+========================= */
+
+async function renderMatchHistory() {
+
+  const matches =
+    await playerMatches();
+
+
+  const wins =
+    matches.filter(
+      m => m.result === "win"
+    ).length;
+
+
+  const losses =
+    matches.filter(
+      m => m.result === "loss"
+    ).length;
+
+
+  const winRate =
+    matches.length
+      ? Math.round(
+          (wins /
+            matches.length) *
+          100
+        )
+      : 0;
+
+
+  $("app").innerHTML = `
+
+    <div class="dash-head">
+
+      <div>
+
+        <span class="eyebrow">
+          MATCHES
+        </span>
+
+        <h1>
+          Match History
+        </h1>
+
+        <p class="muted">
+          Keep track of every match you've played.
+        </p>
+
+      </div>
+
+
+      <button
+        class="btn"
+        onclick="openMatch()">
+
+        + Add Match
+
+      </button>
+
+    </div>
+
+
+    <div class="grid">
+
+      <div class="card">
+
+        <span class="muted">
+          Matches
+        </span>
+
+        <div class="stat">
+          ${matches.length}
+        </div>
+
+      </div>
+
+
+      <div class="card">
+
+        <span class="muted">
+          Wins
+        </span>
+
+        <div class="stat">
+          ${wins}
+        </div>
+
+      </div>
+
+
+      <div class="card">
+
+        <span class="muted">
+          Win Rate
+        </span>
+
+        <div class="stat">
+          ${winRate}%
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div
+      class="card"
+      style="margin-top:18px">
+
+      <div
+        style="
+          display:flex;
+          gap:10px;
+          flex-wrap:wrap;
+          align-items:center;
+          margin-bottom:18px;
+        ">
+
+        <input
+          id="matchSearch"
+          placeholder="Search opponent..."
+          style="
+            flex:1;
+            min-width:200px;
+            padding:12px;
+            border:1px solid #d7dee7;
+            border-radius:10px;
+          ">
+
+
+        <select
+          id="matchFilter"
+          style="
+            padding:12px;
+            border:1px solid #d7dee7;
+            border-radius:10px;
+          ">
+
+          <option value="all">
+            All
+          </option>
+
+          <option value="win">
+            Wins
+          </option>
+
+          <option value="loss">
+            Losses
+          </option>
+
+          <option value="Hard">
+            Hard
+          </option>
+
+          <option value="Clay">
+            Clay
+          </option>
+
+          <option value="Grass">
+            Grass
+          </option>
+
+          <option value="Carpet">
+            Carpet
+          </option>
+
+          <option value="Other">
+            Other
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div id="matchHistoryList"></div>
+
+    </div>
+
+  `;
+
+
+  const search =
+    $("matchSearch");
+
+  const filter =
+    $("matchFilter");
+
+
+  function updateMatches() {
+
+    const query =
+      search.value
+        .trim()
+        .toLowerCase();
+
+
+    const selected =
+      filter.value;
+
+
+    const filtered =
+      matches.filter(m => {
+
+        const opponent =
+          String(
+            m.opponent || ""
+          ).toLowerCase();
+
+
+        const surface =
+          m.surface ||
+          "Hard";
+
+
+        const searchMatches =
+          !query ||
+          opponent.includes(
+            query
+          );
+
+
+        let filterMatches =
+          true;
+
+
+        if (
+          selected ===
+          "win"
+        ) {
+
+          filterMatches =
+            m.result ===
+            "win";
+
+        }
+
+
+        else if (
+          selected ===
+          "loss"
+        ) {
+
+          filterMatches =
+            m.result ===
+            "loss";
+
+        }
+
+
+        else if (
+          [
+            "Hard",
+            "Clay",
+            "Grass",
+            "Carpet",
+            "Other"
+          ].includes(selected)
+        ) {
+
+          filterMatches =
+            surface ===
+            selected;
+
+        }
+
+
+        return (
+          searchMatches &&
+          filterMatches
+        );
+
+      });
+
+
+    renderMatchCards(
+      filtered
+    );
+
+  }
+
+
+  search.oninput =
+    updateMatches;
+
+  filter.onchange =
+    updateMatches;
+
+
+  updateMatches();
+}
+
+
+/* =========================
+   MATCH CARDS
+========================= */
+
+function renderMatchCards(
+  matches
+) {
+
+  const container =
+    $("matchHistoryList");
+
+
+  if (!matches.length) {
+
+    container.innerHTML = `
+
+      <div class="empty">
+
+        No matches found.
+
+      </div>
+
+    `;
+
+    return;
+  }
+
+
+  const years = {};
+
+
+  matches.forEach(m => {
+
+    const year =
+      String(
+        m.match_date || ""
+      ).slice(0, 4) ||
+      "Other";
+
+
+    if (!years[year]) {
+      years[year] = [];
+    }
+
+
+    years[year].push(m);
+
+  });
+
+
+  const sortedYears =
+    Object.keys(years)
+      .sort(
+        (a, b) =>
+          Number(b) -
+          Number(a)
+      );
+
+
+  container.innerHTML =
+    sortedYears
+      .map(year => {
+
+        return `
+
+          <section
+            style="margin-bottom:28px">
+
+            <h2
+              style="
+                margin:0 0 12px;
+                font-size:24px;
+              ">
+
+              ${esc(year)}
+
+            </h2>
+
+
+            ${years[year]
+              .map(
+                m => {
+
+                  const isWin =
+                    m.result ===
+                    "win";
+
+
+                  const surface =
+                    m.surface ||
+                    "Hard";
+
+
+                  return `
+
+                    <div
+                      class="match"
+                      style="
+                        cursor:pointer;
+                        margin-bottom:10px;
+                      "
+                      onclick="toggleMatchDetails('${m.id}')">
+
+
+                      <div
+                        style="
+                          display:flex;
+                          justify-content:space-between;
+                          gap:12px;
+                          flex-wrap:wrap;
+                        ">
+
+
+                        <div>
+
+                          <strong>
+
+                            <span
+                              class="pill">
+
+                              ${
+                                isWin
+                                  ? "WIN"
+                                  : "LOSS"
+                              }
+
+                            </span>
+
+                            vs
+                            ${esc(
+                              m.opponent
+                            )}
+
+                          </strong>
+
+
+                          <div
+                            class="muted"
+                            style="margin-top:7px">
+
+                            ${esc(
+                              formatMatchDate(
+                                m.match_date
+                              )
+                            )}
+
+                            ·
+
+                            ${esc(
+                              surface
+                            )}
+
+                            ·
+
+                            ${esc(
+                              m.score ||
+                              "No score"
+                            )}
+
+                          </div>
+
+                        </div>
+
+
+                        <span
+                          class="muted">
+
+                          View details
+                          ↓
+
+                        </span>
+
+                      </div>
+
+
+                      <div
+                        id="match-details-${esc(m.id)}"
+                        class="hidden"
+                        style="
+                          border-top:1px solid #e5e9ef;
+                          margin-top:15px;
+                          padding-top:15px;
+                        ">
+
+
+                        <p>
+
+                          <b>
+                            Surface:
+                          </b>
+
+                          ${esc(
+                            surface
+                          )}
+
+                        </p>
+
+
+                        <p>
+
+                          <b>
+                            Result:
+                          </b>
+
+                          ${esc(
+                            m.result
+                              .charAt(0)
+                              .toUpperCase() +
+                            m.result.slice(1)
+                          )}
+
+                        </p>
+
+
+                        <p>
+
+                          <b>
+                            Score:
+                          </b>
+
+                          ${esc(
+                            m.score ||
+                            "Not added"
+                          )}
+
+                        </p>
+
+
+                        <p>
+
+                          <b>
+                            Biggest problem:
+                          </b>
+
+                          ${esc(
+                            m.biggest_problem ||
+                            "None"
+                          )}
+
+                        </p>
+
+
+                        <p>
+
+                          <b>
+                            Biggest positive:
+                          </b>
+
+                          ${esc(
+                            m.biggest_positive ||
+                            "None"
+                          )}
+
+                        </p>
+
+
+                        ${
+                          m.notes
+                            ? `
+                              <p>
+
+                                <b>
+                                  Notes:
+                                </b>
+
+                                ${esc(
+                                  m.notes
+                                )}
+
+                              </p>
+                            `
+                            : ""
+                        }
+
+                      </div>
+
+                    </div>
+
+                  `;
+                }
+              )
+              .join("")}
+
+          </section>
+
+        `;
+      })
+      .join("");
+}
+
+
+function formatMatchDate(
+  date
+) {
+
+  if (!date) return "";
+
+  const parts =
+    date.split("-");
+
+  if (
+    parts.length !== 3
+  ) {
+    return date;
+  }
+
+
+  const [
+    year,
+    month,
+    day
+  ] = parts;
+
+
+  const names = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+  ];
+
+
+  return `${names[
+    Number(month) - 1
+  ] || month} ${Number(day)}, ${year}`;
+}
+
+
+function toggleMatchDetails(
+  id
+) {
+
+  const el =
+    document.getElementById(
+      `match-details-${id}`
+    );
+
+
+  if (!el) return;
+
+
+  el.classList.toggle(
+    "hidden"
+  );
+}
+
+
+/* =========================
+   VIEW PLAYER
 ========================= */
 
 async function renderBio() {
@@ -2730,12 +3226,11 @@ async function renderBio() {
       render("bio");
 
     };
-
 }
 
 
 /* =========================
-   LOG MATCH
+   ADD MATCH
 ========================= */
 
 function openMatch() {
@@ -2752,7 +3247,7 @@ function openMatch() {
           <button
             type="button"
             class="btn ghost modal-back-btn"
-            onclick="closeModal()">
+            onclick="closeModal();render('logmatch')">
 
             ← Back
 
@@ -2760,13 +3255,14 @@ function openMatch() {
 
 
           <h2>
-            Log Match
+            Add Match
           </h2>
 
         </div>
 
 
-        <form id="matchForm">
+        <form
+          id="matchForm">
 
 
           <label>
@@ -2793,6 +3289,48 @@ function openMatch() {
                   .slice(0, 10)
               }"
               required>
+
+          </label>
+
+
+          <label>
+
+            Surface
+
+            <select
+              id="surface"
+              required>
+
+              <option
+                value=""
+                selected
+                disabled>
+
+                Select surface
+
+              </option>
+
+              <option>
+                Hard
+              </option>
+
+              <option>
+                Clay
+              </option>
+
+              <option>
+                Grass
+              </option>
+
+              <option>
+                Carpet
+              </option>
+
+              <option>
+                Other
+              </option>
+
+            </select>
 
           </label>
 
@@ -2932,19 +3470,22 @@ function openMatch() {
           </label>
 
 
-          <div class="modal-actions">
+          <div
+            class="modal-actions">
+
 
             <button
               type="button"
               class="btn ghost"
-              onclick="closeModal()">
+              onclick="closeModal();render('logmatch')">
 
               Cancel
 
             </button>
 
 
-            <button class="btn">
+            <button
+              class="btn">
 
               Save Match
 
@@ -2988,6 +3529,10 @@ function openMatch() {
               $("matchDate")
                 .value,
 
+            surface:
+              $("surface")
+                .value,
+
             result:
               $("result")
                 .value,
@@ -3019,23 +3564,22 @@ function openMatch() {
           error.message
         );
 
-      }
-
-      else {
+      } else {
 
         closeModal();
 
-        render("overview");
+        render(
+          "logmatch"
+        );
 
       }
 
     };
-
 }
 
 
 /* =========================
-   CONNECT COACH
+   CONNECT TO COACH
 ========================= */
 
 function openConnect() {
@@ -3074,7 +3618,9 @@ function openConnect() {
         </p>
 
 
-        <form id="connectForm">
+        <form
+          id="connectForm">
+
 
           <input
             id="newCode"
@@ -3087,7 +3633,9 @@ function openConnect() {
             required>
 
 
-          <div class="modal-actions">
+          <div
+            class="modal-actions">
+
 
             <button
               type="button"
@@ -3106,6 +3654,7 @@ function openConnect() {
             </button>
 
           </div>
+
 
         </form>
 
@@ -3169,6 +3718,7 @@ function openConnect() {
 
       }
 
+
       else if (
         !data?.length
       ) {
@@ -3179,10 +3729,11 @@ function openConnect() {
 
       }
 
+
       else {
 
         const {
-          error: requestError
+          error: re
         } =
           await sb
             .from(
@@ -3202,15 +3753,13 @@ function openConnect() {
             });
 
 
-        if (requestError) {
+        if (re) {
 
           alert(
-            requestError.message
+            re.message
           );
 
-        }
-
-        else {
+        } else {
 
           closeModal();
 
@@ -3218,14 +3767,15 @@ function openConnect() {
             "Connection request sent."
           );
 
-          render("coach");
+          render(
+            "coach"
+          );
 
         }
 
       }
 
     };
-
 }
 
 
@@ -3246,7 +3796,8 @@ function openSession() {
         </h2>
 
 
-        <form id="sessionForm">
+        <form
+          id="sessionForm">
 
 
           <label>
@@ -3342,7 +3893,9 @@ function openSession() {
           </label>
 
 
-          <div class="modal-actions">
+          <div
+            class="modal-actions">
+
 
             <button
               type="button"
@@ -3354,7 +3907,8 @@ function openSession() {
             </button>
 
 
-            <button class="btn">
+            <button
+              class="btn">
 
               Add Session
 
@@ -3424,18 +3978,17 @@ function openSession() {
           error.message
         );
 
-      }
-
-      else {
+      } else {
 
         closeModal();
 
-        render("training");
+        render(
+          "training"
+        );
 
       }
 
     };
-
 }
 
 
@@ -3481,7 +4034,9 @@ async function start() {
 
       shell();
 
-      render("overview");
+      render(
+        "overview"
+      );
 
     }
 
