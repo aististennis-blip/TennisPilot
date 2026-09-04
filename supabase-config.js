@@ -4,7 +4,7 @@ const SUPABASE_URL =
 const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_9qx_stNnG48jRPIUPUva3Q_6w3MSDGx";
 
-const tennisPilotSupabase =
+window.tennisPilotSupabase =
   window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_PUBLISHABLE_KEY,
