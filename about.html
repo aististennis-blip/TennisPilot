@@ -1,1 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
 
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>How TennisPilot Works</title>
+
+<script>
+window.va = window.va || function () {
+  (window.vaq = window.vaq || []).push(arguments);
+};
+</script>
+
+<script defer src="/_vercel/insights/script.js"></script>
+
+<style>
+
+:root{
+--navy:#07111f;
+--blue:#2563eb;
+--sky:#eff6ff;
+--bg:#f5f7fb;
+--text:#0f172a;
+--muted:#64748b;
+--line:#e2e8f0
+}
+
+*{
+box-sizing:border-box
+}
+
+body{
+margin:0;
+font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;
+background:var(--bg);
+color:var(--text)
+}
+
+a{
+text-decoration:none;
+color:inherit
+}
+
+.container{
+width:min(1160px,92%);
+margin:auto
+}
+
+.nav{
+height:72px;
+background:rgba(7,17,31,.97);
+color:#fff;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 4%;
+position:sticky;
+top:0;
+z-index:20
+}
+
+.brand{
+font-weight:900;
+font-size:23px;
+letter-spacing:-1px
+}
+
+.brand span{
+color:#60a5fa
+}
+
+.navlinks{
+display:flex;
+gap:7px
+}
+
+.navlinks a{
+padding:10px 13px;
+border-radius:10px;
+color:#cbd5e1;
+font-weight:700;
+font-size:14px
+}
+
+.navlinks a:hover,
+.navlinks a.active{
+background:#ffffff14;
+color:#fff
+}
+
+.section{
+padding:60px 0 55px
+}
+
+.section-title{
+text-align:center;
+max-width:700px;
+margin:0 auto 30px
+}
+
+.section-title h2{
+font-size:42px;
+letter-spacing:-2px;
+margin:12px 0
+}
+
+.muted{
+color:var(--muted);
+line-height:1.6
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(12,1fr);
+gap:18px
+}
+
+.card{
+background:#fff;
+border:1px solid var(--line);
+border-radius:20px;
+padding:26px;
+box-shadow:0 10px 35px #0f172a09
+}
+
+.span6{
+grid-column:span 6
+}
+
+.span4{
+grid-column:span 4
+}
+
+.pill{
+display:inline-block;
+padding:6px 9px;
+border-radius:999px;
+background:#dbeafe;
+color:#1d4ed8;
+font-size:12px;
+font-weight:900
+}
+
+.icon{
+width:44px;
+height:44px;
+display:grid;
+place-items:center;
+border-radius:13px;
+background:var(--sky);
+font-size:22px;
+margin-bottom:15px
+}
+
+.step{
+display:flex;
+gap:15px;
+align-items:flex-start
+}
+
+.stepnum{
+width:38px;
+height:38px;
+border-radius:50%;
+display:grid;
+place-items:center;
+background:var(--navy);
+color:#fff;
+font-weight:900;
+flex:none
+}
+
+.btn{
+border:0;
+border-radius:12px;
+padding:13px 18px;
+font-weight:900;
+cursor:pointer;
+display:inline-block
+}
+
+.btn.blue{
+background:var(--blue);
+color:#fff
+}
+
+footer{
+text-align:center;
+color:#94a3b8;
+padding:40px 0 55px;
+font-size:13px
+}
+
+@media(max-width:800px){
+
+.navlinks{
+display:none
+}
+
+.span6,
+.span4{
+grid-column:span 12
+}
+
+.section-title h2{
+font-size:34px
+}
+
+}
+
+</style>
+</head>
+
+<body>
+
+<nav class="nav">
+
+<a class="brand" href="index.html">
+Tennis<span>Pilot</span>
+</a>
+
+<div class="navlinks">
+
+<a href="index.html">
+Home
+</a>
+
+<a class="active" href="about.html">
+How It Works
+</a>
+
+<a href="dashboard.html">
+Player Demo →
+</a>
+
+</div>
+
+</nav>
+
+
+<main class="container">
+
+
+<section class="section">
+
+<div class="section-title">
+
+<span class="pill">
+THE IDEA
+</span>
+
+<h2>
+A bridge between coaching sessions.
+</h2>
+
+<p class="muted">
+TennisPilot is designed to help players organize their
+development and give coaches better information to work with.
+</p>
+
+</div>
+
+
+<div class="grid">
+
+<div class="card span6">
+
+<div class="icon">
+⚠️
+</div>
+
+<h2>
+The problem
+</h2>
+
+<p class="muted">
+Players consume lots of tennis information, but often
+don't know what to practice this week, what matters most
+in matches, or how to turn a bad result into a useful
+training decision.
+</p>
+
+</div>
+
+
+<div class="card span6">
+
+<div class="icon">
+💡
+</div>
+
+<h2>
+The solution
+</h2>
+
+<p class="muted">
+TennisPilot creates a repeatable loop:
+assess → plan → train → play → review →
+discuss with coach → adjust.
+</p>
+
+</div>
+
+</div>
+
+</section>
+
+
+<section class="section">
+
+<div class="section-title">
+
+<h2>
+The six-step loop
+</h2>
+
+</div>
+
+
+<div class="grid">
+
+
+<div class="card span4">
+
+<div class="step">
+
+<div class="stepnum">
+1
+</div>
+
+<div>
+
+<h3>
+Assess
+</h3>
+
+<p class="muted">
+Create a simple snapshot of the player's game.
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="card span4">
+
+<div class="step">
+
+<div class="stepnum">
+2
+</div>
+
+<div>
+
+<h3>
+Plan
+</h3>
+
+<p class="muted">
+Choose one clear weekly priority with the coach.
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="card span4">
+
+<div class="step">
+
+<div class="stepnum">
+3
+</div>
+
+<div>
+
+<h3>
+Train
+</h3>
+
+<p class="muted">
+Track a few focused sessions instead of everything.
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="card span4">
+
+<div class="step">
+
+<div class="stepnum">
+4
+</div>
+
+<div>
+
+<h3>
+Play
+</h3>
+
+<p class="muted">
+Use matches as evidence, not just wins and losses.
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="card span4">
+
+<div class="step">
+
+<div class="stepnum">
+5
+</div>
+
+<div>
+
+<h3>
+Review
+</h3>
+
+<p class="muted">
+Record recurring problems and what worked.
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="card span4">
+
+<div class="step">
+
+<div class="stepnum">
+6
+</div>
+
+<div>
+
+<h3>
+Adjust
+</h3>
+
+<p class="muted">
+Bring the pattern to the coach and update the plan.
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+
+</div>
+
+</section>
+
+
+<section class="section">
+
+<div class="card">
+
+<h2>
+Why a coach could care
+</h2>
+
+<div class="grid" style="margin-top:15px">
+
+
+<div class="span4">
+
+<b>
+Better conversations
+</b>
+
+<p class="muted">
+Players arrive with specific observations instead
+of vague complaints.
+</p>
+
+</div>
+
+
+<div class="span4">
+
+<b>
+More continuity
+</b>
+
+<p class="muted">
+The plan between lessons stays connected to the
+coach's priorities.
+</p>
+
+</div>
+
+
+<div class="span4">
+
+<b>
+Clearer patterns
+</b>
+
+<p class="muted">
+Repeated match problems can become easier to notice
+over time.
+</p>
+
+</div>
+
+
+</div>
+
+</div>
+
+</section>
+
+
+<section class="section" style="text-align:center">
+
+<a class="btn blue" href="dashboard.html">
+Show me the player dashboard →
+</a>
+
+</section>
+
+
+</main>
+
+
+<footer>
+TennisPilot • A coaching-support prototype
+</footer>
+
+</body>
+</html>
