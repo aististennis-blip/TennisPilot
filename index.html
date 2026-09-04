@@ -3,1461 +3,506 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TennisPilot</title>
-
-<!-- Vercel Analytics -->
-<script>
-  window.va = window.va || function () {
-    (window.vaq = window.vaq || []).push(arguments);
-  };
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
+<title>TennisPilot — Train Smarter. Play Better.</title>
 
 <style>
-:root{
-  --navy:#07111f;
-  --blue:#2563eb;
-  --cyan:#22d3ee;
-  --bg:#f4f7fb;
-  --text:#0f172a;
-  --muted:#64748b;
-  --line:#e2e8f0
-}
-
 *{box-sizing:border-box}
-
 body{
   margin:0;
-  font-family:Arial,sans-serif;
-  background:var(--bg);
-  color:var(--text)
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:#f5f7fb;
+  color:#0b1220
 }
+a{text-decoration:none;color:inherit}
 
-header{
-  height:70px;
-  background:var(--navy);
+.nav{
+  height:76px;
+  background:#07111f;
   color:white;
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:0 6%
+  padding:0 7%;
+  position:sticky;
+  top:0;
+  z-index:10
 }
 
 .logo{
   font-size:25px;
-  font-weight:900
+  font-weight:900;
+  letter-spacing:-1px
 }
 
-.logo span{
-  color:#60a5fa
+.logo span{color:#4d8dff}
+
+.navlinks{
+  display:flex;
+  gap:10px;
+  align-items:center
 }
 
-main{
-  width:88%;
-  max-width:1150px;
-  margin:auto
+.navlinks a{
+  padding:10px 15px;
+  border-radius:10px;
+  color:#cbd5e1;
+  font-weight:700;
+  font-size:14px
+}
+
+.navlinks a:hover{
+  background:#142238;
+  color:#fff
+}
+
+.navcta{
+  background:#fff!important;
+  color:#081221!important
 }
 
 .hero{
-  margin:30px 0 22px;
-  min-height:300px;
-  border-radius:26px;
-  overflow:hidden;
-  position:relative;
-  background:linear-gradient(125deg,#07111f,#123968 55%,#2563eb);
-  color:white
+  padding:72px 7% 40px
 }
 
-.hero:before{
+.heroBox{
+  max-width:1250px;
+  margin:auto;
+  border-radius:30px;
+  padding:68px;
+  min-height:535px;
+  background:linear-gradient(120deg,#071827,#123768 60%,#2866dd);
+  color:white;
+  position:relative;
+  overflow:hidden
+}
+
+.heroBox:after{
   content:"";
   position:absolute;
-  width:330px;
-  height:330px;
-  border:65px solid rgba(255,255,255,.08);
+  width:520px;
+  height:520px;
+  border:80px solid rgba(255,255,255,.08);
   border-radius:50%;
-  right:-70px;
-  top:-100px
-}
-
-.hero:after{
-  content:"🎾";
-  position:absolute;
-  font-size:150px;
-  right:9%;
-  bottom:25px;
-  filter:drop-shadow(0 15px 15px rgba(0,0,0,.2))
-}
-
-.hero-content{
-  position:relative;
-  z-index:2;
-  padding:45px;
-  max-width:700px
+  right:-150px;
+  top:-180px
 }
 
 .eyebrow{
-  font-size:13px;
-  font-weight:800;
-  background:#ffffff1f;
-  padding:8px 12px;
-  border-radius:99px;
-  display:inline-block
+  display:inline-flex;
+  padding:8px 13px;
+  border-radius:999px;
+  background:rgba(255,255,255,.12);
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.6px
 }
 
-h1{
-  font-size:clamp(38px,6vw,62px);
-  line-height:1;
-  letter-spacing:-3px;
-  margin:18px 0 14px
-}
-
-p{
-  line-height:1.55;
-  color:var(--muted)
+.hero h1{
+  font-size:clamp(48px,6vw,78px);
+  line-height:.98;
+  max-width:760px;
+  letter-spacing:-4px;
+  margin:25px 0 20px
 }
 
 .hero p{
-  color:#dbeafe;
-  font-size:18px
+  font-size:19px;
+  line-height:1.6;
+  color:#dce8fa;
+  max-width:700px
 }
 
 .buttons{
   display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  margin-top:22px
+  gap:12px;
+  margin-top:28px;
+  flex-wrap:wrap
 }
 
-button{
-  cursor:pointer;
+.btn{
   border:0;
-  border-radius:11px;
-  padding:11px 16px;
-  font-weight:800
+  padding:14px 20px;
+  border-radius:12px;
+  font-weight:900;
+  font-size:15px;
+  cursor:pointer
 }
 
 .primary{
-  background:var(--blue);
-  color:white
-}
-
-.white{
   background:white;
-  color:#0f172a
+  color:#07111f
 }
 
-.dark{
-  background:#172033;
-  color:white
-}
-
-.tabs{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  margin-bottom:20px
-}
-
-.tab{
-  background:white;
-  border:1px solid var(--line)
-}
-
-.tab.active{
-  background:var(--blue);
+.secondary{
+  background:#14253e;
   color:white;
-  border-color:var(--blue)
+  border:1px solid rgba(255,255,255,.14)
+}
+
+.court{
+  position:absolute;
+  right:7%;
+  bottom:25px;
+  width:300px;
+  height:190px;
+  border:4px solid rgba(255,255,255,.75);
+  transform:skewY(-4deg);
+  opacity:.8
+}
+
+.court:before,
+.court:after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:0;
+  height:100%;
+  border-left:2px solid rgba(255,255,255,.65)
+}
+
+.court:after{
+  left:0;
+  right:0;
+  top:50%;
+  height:0;
+  border-left:0;
+  border-top:2px solid rgba(255,255,255,.65)
 }
 
 .section{
-  display:none
+  max-width:1250px;
+  margin:auto;
+  padding:55px 7%
 }
 
-.section.active{
-  display:block
+.sectionHead{
+  display:flex;
+  justify-content:space-between;
+  gap:30px;
+  align-items:end;
+  margin-bottom:24px
 }
 
-.grid{
-  display:grid;
-  grid-template-columns:repeat(12,1fr);
-  gap:17px
-}
-
-.card{
-  grid-column:span 12;
-  background:white;
-  border:1px solid var(--line);
-  border-radius:19px;
-  padding:23px;
-  box-shadow:0 7px 25px #0f172a0a
-}
-
-.half{
-  grid-column:span 6
-}
-
-.third{
-  grid-column:span 4
-}
-
-.card h2{
-  margin:0 0 6px
+.section h2{
+  font-size:36px;
+  letter-spacing:-1.5px;
+  margin:0
 }
 
 .muted{
-  color:var(--muted)
+  color:#64748b;
+  line-height:1.6
 }
 
-.stats{
+.features{
   display:grid;
   grid-template-columns:repeat(3,1fr);
-  gap:12px
+  gap:16px
 }
 
-.stat{
-  background:#f8fafc;
-  border:1px solid var(--line);
-  border-radius:14px;
-  padding:17px
+.card{
+  background:white;
+  border:1px solid #e4e9f1;
+  border-radius:20px;
+  padding:25px;
+  box-shadow:0 8px 30px rgba(15,23,42,.04)
 }
 
-.stat b{
-  font-size:28px;
-  display:block;
-  margin-bottom:5px
-}
-
-.focus{
-  background:linear-gradient(135deg,#eff6ff,#ecfeff);
-  padding:17px;
-  border-radius:14px;
-  border:1px solid #bfdbfe
-}
-
-.list{
+.icon{
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  background:#eaf1ff;
   display:grid;
+  place-items:center;
+  font-size:21px;
+  margin-bottom:20px
+}
+
+.card h3{
+  margin:0 0 9px;
+  font-size:19px
+}
+
+.workflow{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
   gap:10px
 }
 
-.item{
-  padding:13px;
-  border:1px solid var(--line);
-  border-radius:12px;
-  display:flex;
-  gap:10px;
-  align-items:flex-start
+.step{
+  background:#0b1727;
+  color:white;
+  border-radius:16px;
+  padding:18px;
+  min-height:145px
 }
 
-.dot{
-  width:9px;
-  height:9px;
-  background:var(--blue);
-  border-radius:50%;
-  margin-top:6px;
-  flex:none
-}
-
-label{
+.step b{
   display:block;
-  font-size:13px;
-  font-weight:800;
-  margin:12px 0 6px
+  color:#76a8ff;
+  margin-bottom:18px
 }
 
-input,
-select,
-textarea{
-  width:100%;
-  padding:11px;
-  border:1px solid #cbd5e1;
-  border-radius:10px;
-  font:inherit
-}
-
-textarea{
-  min-height:95px;
-  resize:vertical
-}
-
-.rating{
+.demo{
+  background:#0a1423;
+  border-radius:28px;
+  padding:35px;
+  color:white;
   display:grid;
-  grid-template-columns:145px 1fr 30px;
-  align-items:center;
-  gap:10px;
-  margin:13px 0
+  grid-template-columns:1.2fr .8fr;
+  gap:30px
 }
 
-.rating button{
-  padding:7px;
-  width:35px;
-  background:white;
-  border:1px solid #cbd5e1
+.demo h2{
+  font-size:38px;
+  letter-spacing:-1.5px;
+  margin:0 0 12px
 }
 
-.rating button.selected{
-  background:var(--blue);
-  color:white
-}
-
-.rating-buttons{
-  display:flex;
-  gap:5px
-}
-
-.week{
+.mini{
   display:grid;
-  grid-template-columns:95px 1fr auto;
-  align-items:center;
-  border-bottom:1px solid var(--line);
-  padding:12px 0
+  grid-template-columns:repeat(2,1fr);
+  gap:12px
 }
 
-.check{
-  width:20px;
-  height:20px;
-  accent-color:var(--blue)
+.miniCard{
+  background:#121f32;
+  border:1px solid #20324d;
+  padding:18px;
+  border-radius:16px
 }
 
-.notice{
-  display:none;
-  margin-top:12px;
-  padding:11px;
-  background:#ecfdf5;
-  color:#166534;
-  border-radius:10px;
-  font-weight:700
+.miniCard small{color:#94a3b8}
+
+.miniCard strong{
+  display:block;
+  font-size:25px;
+  margin-top:5px
 }
 
-.chart{
-  height:140px;
+.footer{
+  padding:40px 7%;
+  border-top:1px solid #e5e7eb;
+  color:#64748b;
   display:flex;
-  align-items:end;
-  gap:10px;
-  padding:20px 5px
+  justify-content:space-between
 }
 
-.bar{
-  width:35px;
-  border-radius:7px 7px 2px 2px;
-  background:linear-gradient(#22d3ee,#2563eb)
-}
-
-footer{
-  text-align:center;
-  color:#94a3b8;
-  padding:35px
-}
-
-@media(max-width:750px){
-
-  .half,
-  .third{
-    grid-column:span 12
-  }
-
-  .hero-content{
-    padding:30px 25px
-  }
-
-  .hero:after{
-    opacity:.18
-  }
-
-  .stats{
-    grid-template-columns:1fr
-  }
-
-  .rating{
-    grid-template-columns:1fr
-  }
-
-  .week{
-    grid-template-columns:75px 1fr auto
-  }
-
-  main{
-    width:94%
-  }
+@media(max-width:850px){
+  .navlinks a:not(.navcta){display:none}
+  .heroBox{padding:40px 28px}
+  .court{opacity:.18;right:-60px}
+  .features,.workflow{grid-template-columns:1fr}
+  .demo{grid-template-columns:1fr}
+  .sectionHead{display:block}
 }
 </style>
 </head>
 
 <body>
 
-<header>
-  <div class="logo">Tennis<span>Pilot</span></div>
-  <small>Train smarter. Play better.</small>
-</header>
+<nav class="nav">
+  <a class="logo" href="index.html">
+    Tennis<span>Pilot</span>
+  </a>
+
+  <div class="navlinks">
+    <a href="#how">How it works</a>
+    <a href="#coach">For coaches</a>
+    <a class="navcta" href="dashboard.html">Open demo →</a>
+  </div>
+</nav>
 
 <main>
 
 <section class="hero">
-  <div class="hero-content">
+  <div class="heroBox">
 
-    <span class="eyebrow">
-      🎾 COACHING • TRAINING • PROGRESS
-    </span>
+    <div class="eyebrow">
+      🎾 TRAINING • MATCHES • PROGRESS
+    </div>
 
-    <h1>Turn your tennis into a plan.</h1>
+    <h1>
+      Stop guessing what to train next.
+    </h1>
 
     <p>
-      Track matches, find patterns, follow your coach's priorities,
-      and build better training habits between lessons.
+      TennisPilot turns your assessment, match results and coach priorities
+      into a simple training plan you can actually follow.
     </p>
 
     <div class="buttons">
-      <button class="white" onclick="show('assessment')">
-        Start assessment →
-      </button>
+      <a class="btn primary" href="dashboard.html">
+        Try the player demo →
+      </a>
 
-      <button class="dark" onclick="show('training')">
-        View training plan
-      </button>
+      <a class="btn secondary" href="about.html">
+        See how it works
+      </a>
+    </div>
+
+    <div class="court"></div>
+
+  </div>
+</section>
+
+<section class="section" id="how">
+
+  <div class="sectionHead">
+    <div>
+      <h2>Everything connects.</h2>
+      <p class="muted">
+        One place for the work that happens between coaching sessions.
+      </p>
+    </div>
+  </div>
+
+  <div class="features">
+
+    <div class="card">
+      <div class="icon">🎯</div>
+      <h3>Know your priorities</h3>
+      <p class="muted">
+        Rate your game, identify weak areas and turn them into clear
+        weekly objectives.
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="icon">📅</div>
+      <h3>Train with purpose</h3>
+      <p class="muted">
+        Build a practical weekly plan with short sessions, point tests
+        and specific targets.
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="icon">📈</div>
+      <h3>Learn from matches</h3>
+      <p class="muted">
+        Review patterns after matches so the next training week responds
+        to what actually happened.
+      </p>
     </div>
 
   </div>
 </section>
 
-<nav class="tabs">
-
-  <button class="tab active" data-id="dashboard">
-    Dashboard
-  </button>
-
-  <button class="tab" data-id="assessment">
-    Assessment
-  </button>
-
-  <button class="tab" data-id="training">
-    Training Plan
-  </button>
-
-  <button class="tab" data-id="match">
-    Match Review
-  </button>
-
-  <button class="tab" data-id="progress">
-    Progress
-  </button>
-
-</nav>
-
-
-<!-- DASHBOARD -->
-
-<section id="dashboard" class="section active">
-
-<div class="grid">
-
-<div class="card half">
-
-<h2>Player Dashboard</h2>
-
-<p>
-Everything important at a glance.
-</p>
-
-<div class="stats">
-
-<div class="stat">
-<b id="goalOut">—</b>
-Main goal
-</div>
-
-<div class="stat">
-<b id="priorityOut">—</b>
-Priority
-</div>
-
-<div class="stat">
-<b id="matchesOut">0</b>
-Matches
-</div>
-
-</div>
-
-</div>
-
-
-<div class="card half">
-
-<h2>Coach Focus</h2>
-
-<p>
-Your coach remains the expert.
-TennisPilot organizes the information.
-</p>
-
-<div class="focus">
-
-<b id="coachFocus">
-Complete your assessment
-</b>
-
-<br>
-
-<span id="coachText" class="muted">
-Use the results as a starting point for your next coaching conversation.
-</span>
-
-</div>
-
-</div>
-
-
-<div class="card half">
-
-<h2>This Week</h2>
-
-<div class="list">
-
-<div class="item">
-<input class="dashcheck" type="checkbox">
-
-<div>
-<b>Technical practice</b>
-<br>
-<span class="muted">
-Work on your coach's priority.
-</span>
-</div>
-
-</div>
-
-
-<div class="item">
-
-<input class="dashcheck" type="checkbox">
-
-<div>
-<b>Point play</b>
-<br>
-<span class="muted">
-Test the skill under pressure.
-</span>
-</div>
-
-</div>
-
-
-<div class="item">
-
-<input class="dashcheck" type="checkbox">
-
-<div>
-<b>Match review</b>
-<br>
-<span class="muted">
-Record one thing to discuss.
-</span>
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-
-<div class="card half">
-
-<h2>How it works</h2>
-
-<div class="list">
-
-<div class="item">
-<div class="dot"></div>
-
-<div>
-<b>Assess</b>
-<br>
-<span class="muted">
-Record your current game.
-</span>
-</div>
-
-</div>
-
-
-<div class="item">
-<div class="dot"></div>
-
-<div>
-<b>Play</b>
-<br>
-<span class="muted">
-Capture what happens in matches.
-</span>
-</div>
-
-</div>
-
-
-<div class="item">
-<div class="dot"></div>
-
-<div>
-<b>Coach</b>
-<br>
-<span class="muted">
-Use the evidence to choose priorities.
-</span>
-</div>
-
-</div>
-
-
-<div class="item">
-<div class="dot"></div>
-
-<div>
-<b>Improve</b>
-<br>
-<span class="muted">
-Train, review, repeat.
-</span>
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
+<section class="section">
+
+  <div class="sectionHead">
+    <div>
+      <h2>The coaching loop.</h2>
+      <p class="muted">
+        Assessment → Plan → Train → Play → Review → Adjust.
+      </p>
+    </div>
+  </div>
+
+  <div class="workflow">
+
+    <div class="step">
+      <b>01</b>
+      <strong>Assess</strong>
+      <p>Find priorities.</p>
+    </div>
+
+    <div class="step">
+      <b>02</b>
+      <strong>Plan</strong>
+      <p>Choose the week.</p>
+    </div>
+
+    <div class="step">
+      <b>03</b>
+      <strong>Train</strong>
+      <p>Do focused work.</p>
+    </div>
+
+    <div class="step">
+      <b>04</b>
+      <strong>Play</strong>
+      <p>Test under pressure.</p>
+    </div>
+
+    <div class="step">
+      <b>05</b>
+      <strong>Review</strong>
+      <p>Spot patterns.</p>
+    </div>
+
+    <div class="step">
+      <b>06</b>
+      <strong>Adjust</strong>
+      <p>Set the next priority.</p>
+    </div>
+
+  </div>
 </section>
 
+<section class="section" id="coach">
 
-<!-- ASSESSMENT -->
+  <div class="demo">
 
-<section id="assessment" class="section">
+    <div>
+      <h2>
+        A coach can finally see the whole picture.
+      </h2>
 
-<div class="card">
+      <p style="color:#aebed4;line-height:1.7">
+        Instead of sending another generic practice list, a coach can use
+        a player's assessment, training completion and match notes to
+        guide the next conversation.
+      </p>
 
-<h2>Player Assessment</h2>
+      <a class="btn primary" href="dashboard.html">
+        Open coach demo →
+      </a>
+    </div>
 
-<p>
-Rate each area 1–5.
-These ratings are a starting point, not a diagnosis.
-</p>
+    <div class="mini">
 
-<div id="ratings"></div>
+      <div class="miniCard">
+        <small>Training completion</small>
+        <strong>78%</strong>
+      </div>
 
+      <div class="miniCard">
+        <small>Current priority</small>
+        <strong>Serve +1</strong>
+      </div>
 
-<div class="grid">
+      <div class="miniCard">
+        <small>Matches reviewed</small>
+        <strong>12</strong>
+      </div>
 
-<div class="half">
+      <div class="miniCard">
+        <small>Next check-in</small>
+        <strong>Friday</strong>
+      </div>
 
-<label>Main goal</label>
+    </div>
 
-<input
-id="goal"
-placeholder="e.g. Become more consistent in matches">
-
-</div>
-
-
-<div class="half">
-
-<label>Biggest challenge</label>
-
-<input
-id="struggle"
-placeholder="e.g. Second-serve returns">
-
-</div>
-
-</div>
-
-
-<label>
-Notes for your coach
-</label>
-
-<textarea
-id="assessmentNotes"
-placeholder="Anything important about your recent matches or training...">
-</textarea>
-
-
-<button
-class="primary"
-onclick="saveAssessment()">
-
-Save assessment
-
-</button>
-
-
-<div id="assessmentMsg" class="notice">
-Assessment saved ✓
-</div>
-
-</div>
-
+  </div>
 </section>
-
-
-<!-- TRAINING -->
-
-<section id="training" class="section">
-
-<div class="grid">
-
-<div class="card half">
-
-<h2>Weekly Training Plan</h2>
-
-<p>
-Build this around the priorities your coach gives you.
-</p>
-
-
-<label>
-Weekly focus
-</label>
-
-<input
-id="focus"
-placeholder="e.g. Return of serve">
-
-
-<label>
-Weekly target
-</label>
-
-<input
-id="target"
-placeholder="e.g. 100 quality returns">
-
-
-<label>
-Coach's instruction
-</label>
-
-<textarea
-id="instruction"
-placeholder="Key instruction from your coach...">
-</textarea>
-
-
-<button
-class="primary"
-onclick="saveTraining()">
-
-Save plan
-
-</button>
-
-
-<div id="trainingMsg" class="notice">
-Training plan saved ✓
-</div>
-
-</div>
-
-
-<div class="card half">
-
-<h2>Sessions</h2>
-
-<p>
-Check sessions as you complete them.
-</p>
-
-<div id="weeks"></div>
-
-<h3 id="completion">
-0% complete
-</h3>
-
-</div>
-
-</div>
-
-</section>
-
-
-<!-- MATCH REVIEW -->
-
-<section id="match" class="section">
-
-<div class="card">
-
-<h2>Match Review</h2>
-
-<p>
-Capture what happened so you and your coach can spot patterns.
-</p>
-
-
-<div class="grid">
-
-
-<div class="third">
-
-<label>
-Result
-</label>
-
-<select id="result">
-
-<option>Win</option>
-<option>Loss</option>
-
-</select>
-
-</div>
-
-
-<div class="third">
-
-<label>
-Score
-</label>
-
-<input
-id="score"
-placeholder="6-4, 3-6, 10-7">
-
-</div>
-
-
-<div class="third">
-
-<label>
-Surface
-</label>
-
-<select id="surface">
-
-<option>Hard</option>
-<option>Clay</option>
-<option>Grass</option>
-<option>Indoor</option>
-
-</select>
-
-</div>
-
-</div>
-
-
-<div class="grid">
-
-
-<div class="half">
-
-<label>
-Biggest problem
-</label>
-
-<select id="problem">
-
-<option>Serve</option>
-<option>Return</option>
-<option>Forehand</option>
-<option>Backhand</option>
-<option>Movement</option>
-<option>Consistency</option>
-<option>Decision making</option>
-<option>Mental game</option>
-
-</select>
-
-</div>
-
-
-<div class="half">
-
-<label>
-What went well?
-</label>
-
-<input
-id="good"
-placeholder="e.g. Forehand was consistent">
-
-</div>
-
-</div>
-
-
-<label>
-What happened?
-</label>
-
-<textarea
-id="notes"
-placeholder="Describe the key pattern you noticed...">
-</textarea>
-
-
-<label>
-What should I ask my coach?
-</label>
-
-<textarea
-id="question"
-placeholder="e.g. How can I handle this return position?">
-</textarea>
-
-
-<button
-class="primary"
-onclick="saveMatch()">
-
-Save match review
-
-</button>
-
-
-<div id="matchMsg" class="notice">
-Match review saved ✓
-</div>
-
-</div>
-
-</section>
-
-
-<!-- PROGRESS -->
-
-<section id="progress" class="section">
-
-<div class="grid">
-
-<div class="card half">
-
-<h2>Progress Overview</h2>
-
-<p>
-Look for patterns across several matches,
-not one result.
-</p>
-
-
-<div class="stats">
-
-<div class="stat">
-<b id="total">0</b>
-Matches
-</div>
-
-
-<div class="stat">
-<b id="wins">0</b>
-Wins
-</div>
-
-
-<div class="stat">
-<b id="rate">0%</b>
-Win rate
-</div>
-
-</div>
-
-
-<div id="chart" class="chart"></div>
-
-</div>
-
-
-<div class="card half">
-
-<h2>Recurring Problems</h2>
-
-<p>
-Areas selected most often in match reviews.
-</p>
-
-<div id="patterns" class="list">
-
-<span class="muted">
-No matches recorded yet.
-</span>
-
-</div>
-
-</div>
-
-</div>
-
-</section>
-
-
-<footer>
-TennisPilot • Built to support better coaching
-</footer>
 
 </main>
 
+<footer class="footer">
+  <span>© 2026 TennisPilot</span>
+  <span>Train smarter. Play better.</span>
+</footer>
 
 <script>
-
-const areas = [
-  "Serve",
-  "Return",
-  "Forehand",
-  "Backhand",
-  "Movement",
-  "Consistency",
-  "Decision Making",
-  "Mental Game"
-];
-
-
-let d =
-JSON.parse(localStorage.getItem("tp")) ||
-{
-  ratings:{},
-  goal:"",
-  struggle:"",
-  notes:"",
-  matches:[],
-  training:[false,false,false,false,false],
-  focus:"",
-  target:"",
-  instruction:""
+window.va=window.va||function(){
+  (window.vaq=window.vaq||[]).push(arguments)
 };
-
-
-const $ = id => document.getElementById(id);
-
-
-function save(){
-
-  localStorage.setItem(
-    "tp",
-    JSON.stringify(d)
-  );
-
-}
-
-
-function show(id){
-
-  document
-    .querySelectorAll(".section")
-    .forEach(x =>
-      x.classList.toggle(
-        "active",
-        x.id === id
-      )
-    );
-
-
-  document
-    .querySelectorAll(".tab")
-    .forEach(x =>
-      x.classList.toggle(
-        "active",
-        x.dataset.id === id
-      )
-    );
-
-
-  update();
-
-}
-
-
-document
-.querySelectorAll(".tab")
-.forEach(x =>
-  x.onclick = () =>
-    show(x.dataset.id)
-);
-
-
-function renderRatings(){
-
-  let box = $("ratings");
-
-  box.innerHTML = "";
-
-
-  areas.forEach(a => {
-
-    let r = document.createElement("div");
-
-    r.className = "rating";
-
-
-    let n = document.createElement("b");
-
-    n.textContent = a;
-
-
-    let bs = document.createElement("div");
-
-    bs.className = "rating-buttons";
-
-
-    for(let i=1;i<=5;i++){
-
-      let b = document.createElement("button");
-
-      b.textContent = i;
-
-
-      if(d.ratings[a] === i){
-
-        b.className = "selected";
-
-      }
-
-
-      b.onclick = () => {
-
-        d.ratings[a] = i;
-
-        save();
-
-        renderRatings();
-
-        update();
-
-      };
-
-
-      bs.appendChild(b);
-
-    }
-
-
-    let v = document.createElement("b");
-
-    v.textContent =
-      d.ratings[a] || "—";
-
-
-    r.append(
-      n,
-      bs,
-      v
-    );
-
-
-    box.appendChild(r);
-
-  });
-
-
-  $("goal").value = d.goal;
-
-  $("struggle").value = d.struggle;
-
-  $("assessmentNotes").value = d.notes;
-
-}
-
-
-function saveAssessment(){
-
-  d.goal = $("goal").value;
-
-  d.struggle = $("struggle").value;
-
-  d.notes = $("assessmentNotes").value;
-
-  save();
-
-  msg("assessmentMsg");
-
-  update();
-
-}
-
-
-function saveTraining(){
-
-  d.focus = $("focus").value;
-
-  d.target = $("target").value;
-
-  d.instruction = $("instruction").value;
-
-  save();
-
-  msg("trainingMsg");
-
-}
-
-
-function renderWeeks(){
-
-  let box = $("weeks");
-
-  box.innerHTML = "";
-
-
-  [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday"
-  ].forEach((day,i) => {
-
-    let r =
-      document.createElement("div");
-
-    r.className = "week";
-
-
-    r.innerHTML =
-      "<b>"+day+"</b>" +
-      "<span>"+
-      [
-        "Technical practice",
-        "Movement + footwork",
-        "Serve + return",
-        "Point play",
-        "Coach priority"
-      ][i]+
-      "</span>";
-
-
-    let c =
-      document.createElement("input");
-
-    c.type = "checkbox";
-
-    c.className = "check";
-
-    c.checked = d.training[i];
-
-
-    c.onchange = () => {
-
-      d.training[i] = c.checked;
-
-      save();
-
-      updateCompletion();
-
-    };
-
-
-    r.appendChild(c);
-
-    box.appendChild(r);
-
-  });
-
-}
-
-
-function updateCompletion(){
-
-  let n =
-    d.training.filter(Boolean).length;
-
-
-  $("completion").textContent =
-    Math.round(n/5*100) +
-    "% complete";
-
-}
-
-
-function saveMatch(){
-
-  d.matches.push({
-
-    result:$("result").value,
-
-    score:$("score").value,
-
-    problem:$("problem").value,
-
-    good:$("good").value,
-
-    notes:$("notes").value,
-
-    question:$("question").value,
-
-    date:new Date().toLocaleDateString()
-
-  });
-
-
-  save();
-
-
-  [
-    "score",
-    "good",
-    "notes",
-    "question"
-  ].forEach(x =>
-    $(x).value = ""
-  );
-
-
-  msg("matchMsg");
-
-  update();
-
-}
-
-
-function msg(id){
-
-  $(id).style.display = "block";
-
-
-  setTimeout(
-    () =>
-      $(id).style.display = "none",
-    1800
-  );
-
-}
-
-
-function update(){
-
-  let low = null;
-
-  let s = 6;
-
-
-  areas.forEach(a => {
-
-    if(
-      d.ratings[a] &&
-      d.ratings[a] < s
-    ){
-
-      s = d.ratings[a];
-
-      low = a;
-
-    }
-
-  });
-
-
-  $("goalOut").textContent =
-    d.goal || "—";
-
-
-  $("priorityOut").textContent =
-    low || "—";
-
-
-  $("matchesOut").textContent =
-    d.matches.length;
-
-
-  $("coachFocus").textContent =
-    low
-      ? "Potential priority: " + low
-      : "Complete your assessment";
-
-
-  $("coachText").textContent =
-    low
-      ? "Discuss this area with your coach before deciding what to train."
-      : "Use your results as a starting point for your next coaching conversation";
-
-
-  $("total").textContent =
-    d.matches.length;
-
-
-  let w =
-    d.matches.filter(
-      x => x.result === "Win"
-    ).length;
-
-
-  $("wins").textContent = w;
-
-
-  $("rate").textContent =
-    d.matches.length
-      ? Math.round(
-          w / d.matches.length * 100
-        ) + "%"
-      : "0%";
-
-
-  let c = {};
-
-
-  d.matches.forEach(x => {
-
-    c[x.problem] =
-      (c[x.problem] || 0) + 1;
-
-  });
-
-
-  $("patterns").innerHTML =
-    Object.entries(c)
-      .sort((a,b) => b[1] - a[1])
-      .map(x =>
-        "<div class='item'>" +
-        "<div class='dot'></div>" +
-        "<div>" +
-        "<b>"+x[0]+"</b><br>" +
-        "<span class='muted'>" +
-        "Selected in " +
-        x[1] +
-        " match" +
-        (x[1] > 1 ? "es" : "") +
-        "</span>" +
-        "</div>" +
-        "</div>"
-      )
-      .join("")
-      ||
-      "<span class='muted'>" +
-      "No matches recorded yet." +
-      "</span>";
-
-
-  $("chart").innerHTML =
-    d.matches
-      .slice(-7)
-      .map(x =>
-        "<div class='bar' " +
-        "style='height:" +
-        (x.result === "Win"
-          ? "100%"
-          : "45%") +
-        "' title='" +
-        x.result +
-        "'></div>"
-      )
-      .join("");
-
-
-  $("focus").value = d.focus;
-
-  $("target").value = d.target;
-
-  $("instruction").value =
-    d.instruction;
-
-
-  updateCompletion();
-
-}
-
-
-renderRatings();
-
-renderWeeks();
-
-update();
-
 </script>
+
+<script defer src="/_vercel/insights/script.js"></script>
 
 </body>
 </html>
