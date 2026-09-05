@@ -906,7 +906,7 @@ async function viewPlayer(id) {
               <div class="muted">${esc(s.session_date || "No date")} · ${esc(s.focus || "No focus")}${s.duration_minutes ? ` · ${esc(s.duration_minutes)} min` : ""}</div>
             </div>
             <span class="pill" style="background:${s.completed ? "#dcfce7" : "#fef3c7"};color:${s.completed ? "#15803d" : "#a16207"};">${s.completed ? "Completed" : "Planned"}</span>
-            <button class="btn small ${s.completed ? "ghost" : ""}" onclick="toggleTrainingSession('${s.id}', ${s.completed ? "false" : "true"}, '${id}')">${s.completed ? "Mark Planned" : "Mark Complete"}</button>
+            <button class="btn small ${s.completed ? "ghost" : ""}" onclick="toggleTrainingSession('${s.id}', ${s.completed ? "false" : "true"}, '${id}')">${s.completed ? "Undo Complete" : "Mark Complete"}</button>
           </div>`).join("")
       : `<div class="empty">No training sessions yet.</div>`;
 
@@ -1173,9 +1173,9 @@ async function renderPlayer(page) {
                 ${s.notes ? `<p style="margin:12px 0 0;">${esc(s.notes)}</p>` : ""}
                 <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                   <button class="btn small ${s.completed ? "ghost" : ""}" onclick="toggleTrainingSession('${s.id}', ${s.completed ? "false" : "true"})">
-                    ${s.completed ? "Mark as Planned" : "✓ Mark Complete"}
+                    ${s.completed ? "Undo Complete" : "✓ Mark Complete"}
                   </button>
-                  <span class="muted">${s.completed ? "Counts toward your progress." : "Complete this session when you're done training."}</span>
+                  <span class="muted">${s.completed ? "Counts toward your progress. Click Undo Complete if needed." : "Complete this session when you're done training."}</span>
                 </div>
               </div>
             `).join("")
@@ -1227,6 +1227,9 @@ async function renderPlayer(page) {
     });
     const completedFocus = Object.entries(focusCounts).sort((a, b) => b[1] - a[1]);
     const mainTrainingFocus = completedFocus.length ? completedFocus[0][0] : "No completed focus yet";
+    const priorityTrainingSessions = currentPriority !== "Not enough data"
+      ? completedSessions.filter(session => String(session.focus || "").trim().toLowerCase() === currentPriority.toLowerCase())
+      : [];
     const recentCompleted = completedSessions.slice(0, 5);
 
     $("app").innerHTML = `
@@ -1241,13 +1244,25 @@ async function renderPlayer(page) {
       <div class="grid">
         <div class="card"><span class="muted">Training completion</span><div class="stat">${completion}%</div><p class="muted" style="margin-bottom:0;">${completedSessions.length} of ${allSessions.length} sessions completed.</p></div>
         <div class="card"><span class="muted">Current priority</span><div class="stat" style="font-size:28px;">${esc(currentPriority)}</div><p class="muted" style="margin-bottom:0;">${sortedProblems.length ? `${priorityCount} of ${recentMatches.length} recent matches` : "Log more match reviews to find a pattern."}</p></div>
-        <div class="card"><span class="muted">Main training focus</span><div class="stat" style="font-size:28px;">${esc(mainTrainingFocus)}</div><p class="muted" style="margin-bottom:0;">Based on completed sessions.</p></div>
+        <div class="card"><span class="muted">Training toward priority</span><div class="stat">${priorityTrainingSessions.length}</div><p class="muted" style="margin-bottom:0;">Completed ${esc(currentPriority)} session${priorityTrainingSessions.length === 1 ? "" : "s"}.</p></div>
+      </div>
+
+      <div class="card" style="margin-top:18px;border:1px solid #dbe7ff;background:#f8fbff;">
+        <span class="eyebrow" style="color:#2563eb">WHAT YOUR TRAINING IS DOING</span>
+        <h2 style="margin:5px 0 8px;">${esc(currentPriority)}</h2>
+        <p class="muted" style="line-height:1.6;margin:0;">
+          ${currentPriority === "Not enough data"
+            ? "Log more match reviews and TennisPilot will identify a recurring priority."
+            : priorityTrainingSessions.length
+              ? `You have completed <b>${priorityTrainingSessions.length}</b> training session${priorityTrainingSessions.length === 1 ? "" : "s"} focused on ${esc(currentPriority)}. Your next match review will show whether this problem is still appearing.`
+              : `Your current match priority is ${esc(currentPriority)}, but you have not completed a training session focused on it yet.`}
+        </p>
       </div>
 
       <div class="card" style="margin-top:18px;border:1px solid #dbe7ff;">
         <span class="eyebrow" style="color:#2563eb">DEVELOPMENT LOOP</span>
         <h2 style="margin:5px 0 8px;">Match → Review → Priority → Train</h2>
-        <p class="muted" style="line-height:1.6;margin-bottom:18px;">Completing a session now updates your training progress. Your next match review can then show whether the same problem is still appearing.</p>
+        <p class="muted" style="line-height:1.6;margin-bottom:18px;">Completing training now records that work against your current priority. Your next match review is the feedback check: did the same problem appear again?</p>
         <div style="width:100%;height:10px;background:#e5e7eb;border-radius:99px;overflow:hidden;"><div style="width:${completion}%;height:100%;background:#2563eb;border-radius:99px;"></div></div>
       </div>
 
