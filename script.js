@@ -297,8 +297,8 @@ function shell() {
           My Dashboard
         </button>
 
-        <button class="nav-item" data-page="logmatch">
-          Log Match
+        <button class="nav-item" data-page="matches">
+          Match History
         </button>
 
         <button class="nav-item" data-page="coach">
@@ -992,6 +992,78 @@ async function viewPlayer(id) {
 }
 
 /* =========================
+   PLAYER MATCH HISTORY
+========================= */
+
+async function renderPlayerMatchHistory() {
+  const matches = await playerMatches();
+  const wins = matches.filter(m => m.result === "win").length;
+  const losses = matches.filter(m => m.result === "loss").length;
+  const winRate = matches.length ? Math.round((wins / matches.length) * 100) : 0;
+
+  const grouped = {};
+  matches.forEach(m => {
+    const year = String(m.match_date || "").slice(0, 4) || "Unknown";
+    if (!grouped[year]) grouped[year] = [];
+    grouped[year].push(m);
+  });
+
+  const years = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+  $("app").innerHTML = `
+    <div class="dash-head">
+      <div>
+        <span class="eyebrow">MATCH HISTORY</span>
+        <h1>My Matches</h1>
+        <p class="muted">Your permanent match history and reviews.</p>
+      </div>
+      <button class="btn" onclick="openMatch()">+ Add Match</button>
+    </div>
+
+    <div class="grid">
+      <div class="card"><span class="muted">Matches</span><div class="stat">${matches.length}</div></div>
+      <div class="card"><span class="muted">Wins</span><div class="stat">${wins}</div></div>
+      <div class="card"><span class="muted">Losses</span><div class="stat">${losses}</div></div>
+      <div class="card"><span class="muted">Win Rate</span><div class="stat">${winRate}%</div></div>
+    </div>
+
+    <div style="margin-top:22px;">
+      ${matches.length ? years.map(year => `
+        <div style="margin-bottom:28px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <h2 style="margin:0;">${esc(year)}</h2>
+            <span class="muted">${grouped[year].length} ${grouped[year].length === 1 ? "match" : "matches"}</span>
+          </div>
+          <div style="display:grid;gap:12px;">
+            ${grouped[year].map(m => `
+              <div class="card">
+                <div style="display:flex;justify-content:space-between;gap:15px;align-items:flex-start;flex-wrap:wrap;">
+                  <div>
+                    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;">
+                      <span class="pill" style="${m.result === "win" ? "background:#dcfce7;color:#15803d;" : "background:#fee2e2;color:#b91c1c;"}">${m.result === "win" ? "WIN" : "LOSS"}</span>
+                      <span class="muted">${esc(m.match_date)}</span>
+                    </div>
+                    <h3 style="margin:9px 0 4px;">vs ${esc(m.opponent)}</h3>
+                    <div class="muted">${esc(m.score || "No score recorded")}${m.surface ? ` · ${esc(m.surface)}` : ""}</div>
+                  </div>
+                </div>
+                <div style="margin-top:16px;padding-top:14px;border-top:1px solid #e5e7eb;display:grid;gap:7px;">
+                  <div><b>Biggest problem:</b> ${esc(m.biggest_problem || "None")}</div>
+                  <div><b>Biggest positive:</b> ${esc(m.biggest_positive || "None")}</div>
+                  ${m.notes ? `<div><b>Notes:</b> ${esc(m.notes)}</div>` : ""}
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `).join("") : `
+        <div class="card"><div class="empty"><h3>No matches yet</h3><p>Add your first match to start building your permanent match history.</p><button class="btn" onclick="openMatch()">+ Add Match</button></div></div>
+      `}
+    </div>
+  `;
+}
+
+/* =========================
    PLAYER DASHBOARD
 ========================= */
 
@@ -1114,7 +1186,7 @@ async function renderPlayer(page) {
 
   else if (page === "logmatch") {
 
-    await renderLogMatchHistory();
+    openMatch();
 
   }
 
@@ -1147,11 +1219,7 @@ async function renderPlayer(page) {
           <h1>My Training</h1>
         </div>
 
-        <button
-          class="btn"
-          onclick="openSession()">
-          + Add Session
-        </button>
+        <span class="muted" style="align-self:center;">Training is assigned by your coach</span>
 
       </div>
 
@@ -1184,7 +1252,7 @@ async function renderPlayer(page) {
               No training sessions yet.
             </div>
           `
-      }      }
+      }
     `;
   }
 
@@ -2241,106 +2309,6 @@ async function disconnectCoach() {
 }
 
 /* =========================
-   LOG MATCH / MATCH HISTORY
-========================= */
-
-async function renderLogMatchHistory() {
-  const matches = await playerMatches();
-
-  const grouped = {};
-  matches.forEach(match => {
-    const year = String(match.match_date || "").slice(0, 4) || "Unknown year";
-    if (!grouped[year]) grouped[year] = [];
-    grouped[year].push(match);
-  });
-
-  const years = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
-
-  $("app").innerHTML = `
-    <div class="dash-head">
-      <div>
-        <span class="eyebrow">MATCH HISTORY</span>
-        <h1>Log Match</h1>
-        <p class="muted">Review your previous matches and add a new match whenever you play.</p>
-      </div>
-
-      <button class="btn" onclick="openMatch()">
-        + Add Match
-      </button>
-    </div>
-
-    ${
-      matches.length
-        ? years.map(year => `
-            <div style="margin-bottom:28px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
-                <h2 style="margin:0;">${esc(year)}</h2>
-                <span class="muted">
-                  ${grouped[year].length} ${grouped[year].length === 1 ? "match" : "matches"}
-                </span>
-              </div>
-
-              <div style="display:grid;gap:12px;">
-                ${grouped[year].map(m => `
-                  <div class="card">
-                    <div style="display:flex;justify-content:space-between;gap:15px;align-items:flex-start;flex-wrap:wrap;">
-                      <div>
-                        <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;">
-                          <span class="pill" style="${m.result === "win" ? "background:#dcfce7;color:#15803d;" : "background:#fee2e2;color:#b91c1c;"}">
-                            ${m.result === "win" ? "WIN" : "LOSS"}
-                          </span>
-                          <span class="muted">${esc(m.match_date || "No date")}</span>
-                        </div>
-
-                        <h3 style="margin:9px 0 4px;">
-                          vs ${esc(m.opponent)}
-                        </h3>
-
-                        <div class="muted">
-                          ${esc(m.score || "No score recorded")}
-                          ${m.surface ? ` · ${esc(m.surface)}` : ""}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style="margin-top:16px;padding-top:14px;border-top:1px solid #e5e7eb;display:grid;gap:7px;">
-                      <div>
-                        <b>Biggest problem:</b>
-                        ${esc(m.biggest_problem || "None")}
-                      </div>
-
-                      <div>
-                        <b>Biggest positive:</b>
-                        ${esc(m.biggest_positive || "None")}
-                      </div>
-
-                      ${
-                        m.notes
-                          ? `<div><b>Notes:</b> ${esc(m.notes)}</div>`
-                          : ""
-                      }
-                    </div>
-                  </div>
-                `).join("")}
-              </div>
-            </div>
-          `).join("")
-        : `
-            <div class="card">
-              <div class="empty">
-                <h3>No matches yet</h3>
-                <p>Add your first match to start building your permanent match history.</p>
-                <button class="btn" onclick="openMatch()">
-                  + Add Match
-                </button>
-              </div>
-            </div>
-          `
-    }
-  `;
-}
-
-/* =========================
    MATCH MODAL
 ========================= */
 
@@ -2535,7 +2503,7 @@ function openMatch() {
       } else {
 
         closeModal();
-        await renderLogMatchHistory();
+        await renderPlayerMatchHistory();
 
       }
     };
@@ -2644,10 +2612,21 @@ function openSession(targetPlayerId = currentUser.id, defaultFocus = "None", def
 
 async function toggleTrainingSession(sessionId, completed, returnPlayerId = null) {
   try {
-    const { error } = await sb
-      .from("training_sessions")
-      .update({ completed })
-      .eq("id", sessionId);
+    let error = null;
+
+    if (profile?.role === "coach") {
+      const result = await sb
+        .from("training_sessions")
+        .update({ completed })
+        .eq("id", sessionId);
+      error = result.error;
+    } else {
+      const result = await sb.rpc("toggle_training_completion", {
+        session_id: sessionId,
+        completed_input: completed
+      });
+      error = result.error;
+    }
 
     if (error) throw error;
 
