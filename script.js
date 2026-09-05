@@ -345,7 +345,7 @@ async function connectedPlayers() {
 async function playerMatches(id = currentUser.id) {
   const { data, error } =
     await sb.from("matches")
-      .select("*")
+      .select("id, player_id, opponent, match_date, result, score, biggest_problem, biggest_positive, notes, created_at, surface")
       .eq("player_id", id)
       .order("match_date", {
         ascending: false
@@ -996,8 +996,9 @@ async function viewPlayer(id) {
 ========================= */
 
 async function renderPlayerMatchHistory() {
-  const matches = await playerMatches();
-  const wins = matches.filter(m => m.result === "win").length;
+  try {
+    const matches = await playerMatches();
+    const wins = matches.filter(m => m.result === "win").length;
   const losses = matches.filter(m => m.result === "loss").length;
   const winRate = matches.length ? Math.round((wins / matches.length) * 100) : 0;
 
@@ -1061,6 +1062,18 @@ async function renderPlayerMatchHistory() {
       `}
     </div>
   `;
+  } catch (err) {
+    console.error("Match history error:", err);
+    $("app").innerHTML = `
+      <div class="card">
+        <div class="empty">
+          <h3>Could not load Match History</h3>
+          <p>${esc(err?.message || "Unknown database error")}</p>
+          <button class="btn" onclick="renderPlayerMatchHistory()">Try Again</button>
+        </div>
+      </div>
+    `;
+  }
 }
 
 /* =========================
@@ -2488,6 +2501,11 @@ function openMatch() {
           biggest_positive:
             $("positive")
               .value,
+
+          surface:
+            $("surface")
+              ? $("surface").value
+              : null,
 
           notes:
             $("notes")
