@@ -194,6 +194,11 @@ async function handleAuth(e) {
       coachId = c[0].id;
     }
 
+    /*
+      Profile is created automatically
+      by the Supabase auth trigger.
+    */
+
     if (role === "player" && coachId) {
       const { error: re } =
         await sb.from("connection_requests").insert({
@@ -683,11 +688,6 @@ async function renderCoachMatches(players) {
                   ${esc(m.match_date)}
                   ·
                   ${esc(m.score || "No score")}
-                  ·
-                  ${esc(
-                    m.surface ||
-                    "Surface not recorded"
-                  )}
                 </div>
 
                 <p>
@@ -723,110 +723,63 @@ async function renderCoachMatches(players) {
 
 async function viewPlayer(id) {
 
-  const players =
-    await connectedPlayers();
-
-  const player =
-    players.find(p => p.id === id);
+  const players = await connectedPlayers();
+  const player = players.find(p => p.id === id);
 
   if (!player) {
     alert("Player not found.");
     return;
   }
 
-  const matches =
-    await playerMatches(id);
+  const matches = await playerMatches(id);
 
-  const {
-    data: training,
-    error: trainingError
-  } = await sb.from("training_sessions")
+  const { data: training, error: trainingError } = await sb
+    .from("training_sessions")
     .select("*")
     .eq("player_id", id)
-    .order("session_date", {
-      ascending: false
-    });
+    .order("session_date", { ascending: false });
 
-  if (trainingError) {
-    throw trainingError;
-  }
+  if (trainingError) throw trainingError;
 
   const sessions = training || [];
 
-  /* =========================
-     MATCH STATS
-  ========================= */
+  const wins = matches.filter(m => m.result === "win").length;
+  const losses = matches.filter(m => m.result === "loss").length;
 
-  const wins =
-    matches.filter(
-      m => m.result === "win"
-    ).length;
+  const winRate = matches.length
+    ? Math.round((wins / matches.length) * 100)
+    : 0;
 
-  const losses =
-    matches.filter(
-      m => m.result === "loss"
-    ).length;
-
-  const winRate =
-    matches.length
-      ? Math.round(
-          (wins / matches.length) * 100
-        )
-      : 0;
-
-  /* =========================
-     LAST 6 MATCHES
-  ========================= */
-
-  const recentMatches =
-    matches.slice(0, 6);
-
-  /* =========================
-     PROBLEM ANALYSIS
-  ========================= */
+  const recentMatches = matches.slice(0, 6);
 
   const problemCounts = {};
+  const problemLastIndex = {};
 
-  recentMatches.forEach(match => {
+  recentMatches.forEach((match, index) => {
 
     const problem =
-      String(
-        match.biggest_problem || ""
-      ).trim();
+      String(match.biggest_problem || "").trim();
 
-    if (
-      !problem ||
-      problem.toLowerCase() === "none"
-    ) {
+    if (!problem || problem.toLowerCase() === "none")
       return;
-    }
 
     problemCounts[problem] =
       (problemCounts[problem] || 0) + 1;
+
+    if (problemLastIndex[problem] === undefined) {
+      problemLastIndex[problem] = index;
+    }
   });
 
   const sortedProblems =
-    Object.entries(problemCounts)
-      .sort((a, b) => {
+    Object.entries(problemCounts).sort((a, b) => {
 
-        if (b[1] !== a[1]) {
-          return b[1] - a[1];
-        }
+      if (b[1] !== a[1])
+        return b[1] - a[1];
 
-        const aIndex =
-          recentMatches.findIndex(
-            m =>
-              m.biggest_problem === a[0]
-          );
-
-        const bIndex =
-          recentMatches.findIndex(
-            m =>
-              m.biggest_problem === b[0]
-          );
-
-        return aIndex - bIndex;
-      });
+      return problemLastIndex[a[0]]
+        - problemLastIndex[b[0]];
+    });
 
   const topProblem =
     sortedProblems.length
@@ -838,184 +791,130 @@ async function viewPlayer(id) {
       ? sortedProblems[0][1]
       : 0;
 
-  const lastProblemMatch =
-    topProblem
-      ? recentMatches.find(
-          m =>
-            m.biggest_problem ===
-            topProblem
-        )
-      : null;
+  const topProblemMatch = topProblem
+    ? recentMatches.find(
+        m =>
+          String(m.biggest_problem || "").trim()
+          === topProblem
+      )
+    : null;
 
-  /* =========================
-     PROBLEM BREAKDOWN
-  ========================= */
+  const problemHTML = sortedProblems.length
+    ? sortedProblems.slice(0, 5).map(([problem, count]) => {
 
-  const problemHTML =
-    sortedProblems.length
-      ? sortedProblems
-          .slice(0, 5)
-          .map(([problem, count]) => {
+        const percentage = recentMatches.length
+          ? Math.round(
+              (count / recentMatches.length) * 100
+            )
+          : 0;
 
-            const percentage =
-              recentMatches.length
-                ? Math.round(
-                    (count /
-                      recentMatches.length) *
-                    100
-                  )
-                : 0;
+        return `
+          <div style="margin-bottom:16px;">
 
-            return `
-              <div
-                style="
-                  margin-bottom:16px;
-                ">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
 
-                <div
-                  style="
-                    display:flex;
-                    justify-content:space-between;
-                    margin-bottom:6px;
-                  ">
+              <b>${esc(problem)}</b>
 
-                  <b>
-                    ${esc(problem)}
-                  </b>
+              <span class="muted">
+                ${count} match${count === 1 ? "" : "es"}
+              </span>
 
-                  <span class="muted">
-                    ${count}
-                    match${count === 1 ? "" : "es"}
-                  </span>
+            </div>
 
-                </div>
+            <div style="
+              width:100%;
+              height:8px;
+              background:#e5e7eb;
+              border-radius:99px;
+              overflow:hidden;
+            ">
 
-                <div
-                  style="
-                    width:100%;
-                    height:8px;
-                    background:#e5e7eb;
-                    border-radius:99px;
-                    overflow:hidden;
-                  ">
+              <div style="
+                width:${percentage}%;
+                height:100%;
+                background:#2563eb;
+                border-radius:99px;
+              "></div>
 
-                  <div
-                    style="
-                      width:${percentage}%;
-                      height:100%;
-                      background:#2563eb;
-                      border-radius:99px;
-                    ">
-                  </div>
+            </div>
 
-                </div>
-
-              </div>
-            `;
-
-          }).join("")
-      : `
-          <div class="empty">
-            No recurring problems identified yet.
           </div>
         `;
 
-  /* =========================
-     RECOMMENDED PRIORITY
-  ========================= */
+      }).join("")
+    : `
+      <div class="empty">
+        Not enough match-review data yet.
+      </div>
+    `;
 
-  let priorityHTML;
+  const priorityHTML = topProblem
+    ? `
+      <div style="
+        display:flex;
+        gap:18px;
+        align-items:flex-start;
+      ">
 
-  if (topProblem) {
-
-    priorityHTML = `
-
-      <div
-        style="
+        <div style="
+          width:54px;
+          height:54px;
+          border-radius:14px;
+          background:#e8f0ff;
           display:flex;
-          gap:18px;
-          align-items:flex-start;
+          align-items:center;
+          justify-content:center;
+          font-size:25px;
+          flex-shrink:0;
         ">
-
-        <div
-          style="
-            width:54px;
-            height:54px;
-            border-radius:14px;
-            background:#e8f0ff;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:25px;
-            flex-shrink:0;
-          ">
-
           🎯
-
         </div>
 
-        <div style="flex:1">
+        <div style="flex:1;">
 
           <span
             class="eyebrow"
             style="color:#2563eb">
-
             RECOMMENDED PRIORITY
-
           </span>
 
-          <h2
-            style="
-              margin:5px 0 8px;
-            ">
-
+          <h2 style="
+            margin:5px 0 8px;
+          ">
             ${esc(topProblem)}
-
           </h2>
 
-          <p
-            class="muted"
-            style="
-              margin:0;
-              line-height:1.6;
-            ">
+          <p class="muted" style="
+            margin:0;
+            line-height:1.6;
+          ">
 
             ${esc(topProblem)}
             has been reported as a problem in
-
             <b>
               ${topProblemCount}
-              of ${recentMatches.length}
+              of
+              ${recentMatches.length}
             </b>
-
             of the player's last
             ${recentMatches.length}
-            reviewed matches.
+            match${recentMatches.length === 1 ? "" : "es"}.
 
           </p>
 
           ${
-            lastProblemMatch
+            topProblemMatch
               ? `
-                <p
-                  class="muted"
-                  style="
-                    margin-top:10px;
-                  ">
-
-                  Most recently reported:
+                <p class="muted" style="margin-top:10px;">
+                  Most recently reported vs
                   <b>
-                    vs
-                    ${esc(
-                      lastProblemMatch.opponent
-                    )}
+                    ${esc(topProblemMatch.opponent)}
                   </b>
-
                   on
                   ${esc(
-                    lastProblemMatch.match_date
-                  )}
-
+                    topProblemMatch.match_date
+                    || "No date"
+                  )}.
                 </p>
               `
               : ""
@@ -1024,34 +923,25 @@ async function viewPlayer(id) {
         </div>
 
       </div>
+    `
+    : `
+      <div style="
+        display:flex;
+        gap:18px;
+        align-items:center;
+      ">
 
-    `;
-
-  } else {
-
-    priorityHTML = `
-
-      <div
-        style="
+        <div style="
+          width:54px;
+          height:54px;
+          border-radius:14px;
+          background:#f1f5f9;
           display:flex;
-          gap:18px;
           align-items:center;
+          justify-content:center;
+          font-size:25px;
         ">
-
-        <div
-          style="
-            width:54px;
-            height:54px;
-            border-radius:14px;
-            background:#f1f5f9;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:25px;
-          ">
-
           🎯
-
         </div>
 
         <div>
@@ -1060,226 +950,30 @@ async function viewPlayer(id) {
             RECOMMENDED PRIORITY
           </span>
 
-          <h3
-            style="
-              margin:5px 0;
-            ">
-
+          <h3 style="margin:5px 0;">
             Not enough data yet
-
           </h3>
 
-          <p
-            class="muted"
-            style="
-              margin:0;
-            ">
-
+          <p class="muted" style="margin:0;">
             Have the player complete more
             match reviews to identify
             recurring patterns.
-
           </p>
 
         </div>
 
       </div>
-
     `;
-  }
-
-  /* =========================
-     TRAINING SUMMARY
-  ========================= */
 
   const completedSessions =
-    sessions.filter(
-      s => s.completed
-    ).length;
+    sessions.filter(s => s.completed).length;
 
   const trainingCompletion =
     sessions.length
       ? Math.round(
-          (completedSessions /
-            sessions.length) *
-          100
+          (completedSessions / sessions.length) * 100
         )
       : 0;
-
-  /* =========================
-     RECENT MATCHES
-  ========================= */
-
-  const recentMatchesHTML =
-    recentMatches.length
-      ? recentMatches.map(m => `
-
-          <div
-            class="match"
-            style="
-              margin-bottom:10px;
-            ">
-
-            <div
-              style="
-                display:flex;
-                justify-content:space-between;
-                gap:15px;
-                flex-wrap:wrap;
-              ">
-
-              <div>
-
-                <span
-                  class="pill"
-                  style="
-                    background:${
-                      m.result === "win"
-                        ? "#dcfce7"
-                        : "#fee2e2"
-                    };
-                    color:${
-                      m.result === "win"
-                        ? "#15803d"
-                        : "#b91c1c"
-                    };
-                  ">
-
-                  ${esc(
-                    m.result
-                  ).toUpperCase()}
-
-                </span>
-
-                <h3
-                  style="
-                    margin:8px 0 4px;
-                  ">
-
-                  vs
-                  ${esc(m.opponent)}
-
-                </h3>
-
-                <span class="muted">
-
-                  ${esc(
-                    m.match_date ||
-                    "No date"
-                  )}
-
-                  ·
-
-                  ${esc(
-                    m.surface ||
-                    "Surface not recorded"
-                  )}
-
-                </span>
-
-              </div>
-
-              <div
-                style="
-                  font-weight:800;
-                  font-size:18px;
-                ">
-
-                ${esc(
-                  m.score || "—"
-                )}
-
-              </div>
-
-            </div>
-
-            <div
-              style="
-                display:grid;
-                grid-template-columns:
-                  repeat(
-                    auto-fit,
-                    minmax(180px, 1fr)
-                  );
-                gap:10px;
-                margin-top:14px;
-              ">
-
-              <div
-                style="
-                  background:#f8fafc;
-                  padding:11px;
-                  border-radius:9px;
-                ">
-
-                <span class="muted">
-                  Problem
-                </span>
-
-                <br>
-
-                <b>
-                  ${esc(
-                    m.biggest_problem ||
-                    "None"
-                  )}
-                </b>
-
-              </div>
-
-              <div
-                style="
-                  background:#f8fafc;
-                  padding:11px;
-                  border-radius:9px;
-                ">
-
-                <span class="muted">
-                  Positive
-                </span>
-
-                <br>
-
-                <b>
-                  ${esc(
-                    m.biggest_positive ||
-                    "None"
-                  )}
-                </b>
-
-              </div>
-
-            </div>
-
-            ${
-              m.notes
-                ? `
-                  <p
-                    class="muted"
-                    style="
-                      margin-bottom:0;
-                    ">
-
-                    ${esc(m.notes)}
-
-                  </p>
-                `
-                : ""
-            }
-
-          </div>
-
-        `).join("")
-      : `
-          <div class="empty">
-            This player has not logged
-            any matches yet.
-          </div>
-        `;
-
-  /* =========================
-     TRAINING
-  ========================= */
 
   const recentTraining =
     sessions.slice(0, 5);
@@ -1287,12 +981,9 @@ async function viewPlayer(id) {
   const trainingHTML =
     recentTraining.length
       ? recentTraining.map(s => `
-
           <div
             class="list-item"
-            style="
-              padding:15px 0;
-            ">
+            style="padding:15px 0;">
 
             <div>
 
@@ -1301,21 +992,23 @@ async function viewPlayer(id) {
               </b>
 
               <div class="muted">
+
                 ${esc(
-                  s.session_date
+                  s.session_date || "No date"
                 )}
                 ·
                 ${esc(
-                  s.focus ||
-                  "No focus"
+                  s.focus || "No focus"
                 )}
+
                 ${
                   s.duration_minutes
-                    ? `· ${esc(
+                    ? ` · ${esc(
                         s.duration_minutes
                       )} min`
                     : ""
                 }
+
               </div>
 
             </div>
@@ -1323,16 +1016,12 @@ async function viewPlayer(id) {
             <span
               class="pill"
               style="
-                background:${
-                  s.completed
-                    ? "#dcfce7"
-                    : "#fef3c7"
-                };
-                color:${
-                  s.completed
-                    ? "#15803d"
-                    : "#a16207"
-                };
+                background:${s.completed
+                  ? "#dcfce7"
+                  : "#fef3c7"};
+                color:${s.completed
+                  ? "#15803d"
+                  : "#a16207"};
               ">
 
               ${
@@ -1344,17 +1033,137 @@ async function viewPlayer(id) {
             </span>
 
           </div>
-
         `).join("")
       : `
-          <div class="empty">
-            No training sessions yet.
-          </div>
-        `;
+        <div class="empty">
+          No training sessions yet.
+        </div>
+      `;
 
-  /* =========================
-     PAGE
-  ========================= */
+  const recentMatchesHTML =
+    recentMatches.length
+      ? recentMatches.map(m => `
+          <div
+            class="match"
+            style="margin-bottom:10px;">
+
+            <div style="
+              display:flex;
+              justify-content:space-between;
+              gap:15px;
+              flex-wrap:wrap;
+            ">
+
+              <div>
+
+                <span
+                  class="pill"
+                  style="
+                    background:${m.result === "win"
+                      ? "#dcfce7"
+                      : "#fee2e2"};
+                    color:${m.result === "win"
+                      ? "#15803d"
+                      : "#b91c1c"};
+                  ">
+
+                  ${esc(
+                    m.result
+                  ).toUpperCase()}
+
+                </span>
+
+                <h3 style="
+                  margin:8px 0 4px;
+                ">
+                  vs ${esc(m.opponent)}
+                </h3>
+
+                <span class="muted">
+
+                  ${esc(
+                    m.match_date || "No date"
+                  )}
+                  ·
+                  ${esc(
+                    m.surface ||
+                    "Surface not recorded"
+                  )}
+
+                </span>
+
+              </div>
+
+              <div style="
+                font-weight:800;
+                font-size:18px;
+              ">
+                ${esc(m.score || "—")}
+              </div>
+
+            </div>
+
+            <div style="
+              display:grid;
+              grid-template-columns:
+                repeat(
+                  auto-fit,
+                  minmax(180px,1fr)
+                );
+              gap:10px;
+              margin-top:14px;
+            ">
+
+              <div style="
+                background:#f8fafc;
+                padding:11px;
+                border-radius:9px;
+              ">
+
+                <span class="muted">
+                  Problem
+                </span>
+
+                <br>
+
+                <b>
+                  ${esc(
+                    m.biggest_problem || "None"
+                  )}
+                </b>
+
+              </div>
+
+              <div style="
+                background:#f8fafc;
+                padding:11px;
+                border-radius:9px;
+              ">
+
+                <span class="muted">
+                  Positive
+                </span>
+
+                <br>
+
+                <b>
+                  ${esc(
+                    m.biggest_positive || "None"
+                  )}
+                </b>
+
+              </div>
+
+            </div>
+
+          </div>
+        `).join("")
+      : `
+        <div class="empty">
+          This player has not logged any
+          matches yet.
+        </div>
+      `;
 
   $("app").innerHTML = `
 
@@ -1379,19 +1188,14 @@ async function viewPlayer(id) {
       <button
         class="btn ghost"
         onclick="render('players')">
-
         ← Players
-
       </button>
 
     </div>
 
-    <!-- STATS -->
-
     <div class="grid">
 
       <div class="card">
-
         <span class="muted">
           Matches
         </span>
@@ -1399,11 +1203,9 @@ async function viewPlayer(id) {
         <div class="stat">
           ${matches.length}
         </div>
-
       </div>
 
       <div class="card">
-
         <span class="muted">
           Wins
         </span>
@@ -1411,11 +1213,9 @@ async function viewPlayer(id) {
         <div class="stat">
           ${wins}
         </div>
-
       </div>
 
       <div class="card">
-
         <span class="muted">
           Losses
         </span>
@@ -1423,11 +1223,9 @@ async function viewPlayer(id) {
         <div class="stat">
           ${losses}
         </div>
-
       </div>
 
       <div class="card">
-
         <span class="muted">
           Win Rate
         </span>
@@ -1435,12 +1233,9 @@ async function viewPlayer(id) {
         <div class="stat">
           ${winRate}%
         </div>
-
       </div>
 
     </div>
-
-    <!-- DEVELOPMENT PRIORITY -->
 
     <div
       class="card"
@@ -1453,22 +1248,17 @@ async function viewPlayer(id) {
 
     </div>
 
-    <!-- PROBLEM PATTERNS -->
-
     <div
       class="card"
-      style="
-        margin-top:18px;
-      ">
+      style="margin-top:18px;">
 
-      <div
-        style="
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          gap:15px;
-          margin-bottom:20px;
-        ">
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:15px;
+        margin-bottom:20px;
+      ">
 
         <div>
 
@@ -1476,20 +1266,18 @@ async function viewPlayer(id) {
             MATCH PATTERNS
           </span>
 
-          <h2
-            style="
-              margin:5px 0 0;
-            ">
-
+          <h2 style="
+            margin:5px 0 0;
+          ">
             Recurring Problems
-
           </h2>
 
         </div>
 
         <span class="muted">
-          Last ${recentMatches.length}
-          reviewed matches
+          Based on last
+          ${recentMatches.length}
+          match${recentMatches.length === 1 ? "" : "es"}
         </span>
 
       </div>
@@ -1498,22 +1286,17 @@ async function viewPlayer(id) {
 
     </div>
 
-    <!-- TRAINING -->
-
     <div
       class="card"
-      style="
-        margin-top:18px;
-      ">
+      style="margin-top:18px;">
 
-      <div
-        style="
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          gap:15px;
-          margin-bottom:18px;
-        ">
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:15px;
+        margin-bottom:18px;
+      ">
 
         <div>
 
@@ -1521,30 +1304,23 @@ async function viewPlayer(id) {
             TRAINING
           </span>
 
-          <h2
-            style="
-              margin:5px 0 0;
-            ">
-
+          <h2 style="
+            margin:5px 0 0;
+          ">
             Training Progress
-
           </h2>
 
         </div>
 
-        <div
-          style="
-            text-align:right;
+        <div style="
+          text-align:right;
+        ">
+
+          <div style="
+            font-size:24px;
+            font-weight:800;
           ">
-
-          <div
-            style="
-              font-size:24px;
-              font-weight:800;
-            ">
-
             ${trainingCompletion}%
-
           </div>
 
           <span class="muted">
@@ -1555,24 +1331,21 @@ async function viewPlayer(id) {
 
       </div>
 
-      <div
-        style="
-          width:100%;
-          height:10px;
-          background:#e5e7eb;
-          border-radius:99px;
-          overflow:hidden;
-          margin-bottom:20px;
-        ">
+      <div style="
+        width:100%;
+        height:10px;
+        background:#e5e7eb;
+        border-radius:99px;
+        overflow:hidden;
+        margin-bottom:20px;
+      ">
 
-        <div
-          style="
-            width:${trainingCompletion}%;
-            height:100%;
-            background:#2563eb;
-            border-radius:99px;
-          ">
-        </div>
+        <div style="
+          width:${trainingCompletion}%;
+          height:100%;
+          background:#2563eb;
+          border-radius:99px;
+        "></div>
 
       </div>
 
@@ -1593,22 +1366,17 @@ async function viewPlayer(id) {
 
     </div>
 
-    <!-- RECENT MATCHES -->
-
     <div
       class="card"
-      style="
-        margin-top:18px;
-      ">
+      style="margin-top:18px;">
 
-      <div
-        style="
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          gap:15px;
-          margin-bottom:18px;
-        ">
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:15px;
+        margin-bottom:18px;
+      ">
 
         <div>
 
@@ -1616,20 +1384,16 @@ async function viewPlayer(id) {
             MATCH HISTORY
           </span>
 
-          <h2
-            style="
-              margin:5px 0 0;
-            ">
-
+          <h2 style="
+            margin:5px 0 0;
+          ">
             Recent Matches
-
           </h2>
 
         </div>
 
         <span class="muted">
-          ${matches.length}
-          total
+          ${matches.length} total
         </span>
 
       </div>
@@ -1637,8 +1401,6 @@ async function viewPlayer(id) {
       ${recentMatchesHTML}
 
     </div>
-
-    <!-- DEVELOPMENT LOOP -->
 
     <div
       class="card"
@@ -1651,92 +1413,67 @@ async function viewPlayer(id) {
         TENNISPILOT DEVELOPMENT LOOP
       </span>
 
-      <div
-        style="
-          display:grid;
-          grid-template-columns:
-            repeat(
-              auto-fit,
-              minmax(150px, 1fr)
-            );
-          gap:12px;
-          margin-top:18px;
+      <div style="
+        display:grid;
+        grid-template-columns:
+          repeat(
+            auto-fit,
+            minmax(150px,1fr)
+          );
+        gap:12px;
+        margin-top:18px;
+      ">
+
+        <div style="
+          padding:15px;
+          background:white;
+          border-radius:12px;
         ">
-
-        <div
-          style="
-            padding:15px;
-            background:white;
-            border-radius:12px;
-          ">
-
           <b>1. Match</b>
-
           <p
             class="muted"
-            style="margin-bottom:0">
-
+            style="margin-bottom:0;">
             Player competes.
-
           </p>
-
         </div>
 
-        <div
-          style="
-            padding:15px;
-            background:white;
-            border-radius:12px;
-          ">
-
+        <div style="
+          padding:15px;
+          background:white;
+          border-radius:12px;
+        ">
           <b>2. Review</b>
-
           <p
             class="muted"
-            style="margin-bottom:0">
-
+            style="margin-bottom:0;">
             Player records what happened.
-
           </p>
-
         </div>
 
-        <div
-          style="
-            padding:15px;
-            background:white;
-            border-radius:12px;
-          ">
-
+        <div style="
+          padding:15px;
+          background:white;
+          border-radius:12px;
+        ">
           <b>3. Priority</b>
-
           <p
             class="muted"
-            style="margin-bottom:0">
-
+            style="margin-bottom:0;">
             TennisPilot identifies patterns.
-
           </p>
-
         </div>
 
-        <div
-          style="
-            padding:15px;
-            background:white;
-            border-radius:12px;
-          ">
-
+        <div style="
+          padding:15px;
+          background:white;
+          border-radius:12px;
+        ">
           <b>4. Train</b>
-
           <p
             class="muted"
-            style="margin-bottom:0">
-
+            style="margin-bottom:0;">
             Coach builds the next training focus.
-
           </p>
-
         </div>
 
       </div>
@@ -1758,9 +1495,11 @@ async function renderPlayer(page) {
       await playerMatches();
 
     $("app").innerHTML = `
+
       <div class="dash-head">
 
         <div>
+
           <span class="eyebrow">
             PLAYER DASHBOARD
           </span>
@@ -1772,11 +1511,12 @@ async function renderPlayer(page) {
                 .split(" ")[0]
             )}
           </h1>
+
         </div>
 
         <button
           class="btn"
-          onclick="render('logmatch')">
+          onclick="openMatch()">
           + Log Match
         </button>
 
@@ -1850,16 +1590,29 @@ async function renderPlayer(page) {
         }
 
       </div>
+
     `;
   }
+
+  /* =========================
+     MY COACH — UPDATED
+  ========================= */
 
   else if (page === "coach") {
     await renderMyCoach();
   }
 
+  /* =========================
+     LOG MATCH
+  ========================= */
+
   else if (page === "logmatch") {
-    await renderMatchHistory();
+    openMatch();
   }
+
+  /* =========================
+     TRAINING
+  ========================= */
 
   else if (page === "training") {
 
@@ -1876,14 +1629,17 @@ async function renderPlayer(page) {
     if (error) throw error;
 
     $("app").innerHTML = `
+
       <div class="dash-head">
 
         <div>
+
           <span class="eyebrow">
             TRAINING
           </span>
 
           <h1>My Training</h1>
+
         </div>
 
         <button
@@ -1897,6 +1653,7 @@ async function renderPlayer(page) {
       ${
         data?.length
           ? data.map(s => `
+
               <div class="match">
 
                 <b>
@@ -1937,6 +1694,7 @@ async function renderPlayer(page) {
                 </p>
 
               </div>
+
             `).join("")
           : `
             <div class="empty">
@@ -1944,355 +1702,9 @@ async function renderPlayer(page) {
             </div>
           `
       }
+
     `;
   }
-}
-
-/* =========================
-   MATCH HISTORY
-========================= */
-
-async function renderMatchHistory() {
-
-  const matches =
-    await playerMatches();
-
-  const wins =
-    matches.filter(
-      m => m.result === "win"
-    ).length;
-
-  const losses =
-    matches.filter(
-      m => m.result === "loss"
-    ).length;
-
-  const winRate =
-    matches.length
-      ? Math.round(
-          (wins / matches.length) * 100
-        )
-      : 0;
-
-  const grouped = {};
-
-  matches.forEach(m => {
-
-    const year =
-      m.match_date
-        ? String(m.match_date).slice(0, 4)
-        : "Unknown";
-
-    if (!grouped[year]) {
-      grouped[year] = [];
-    }
-
-    grouped[year].push(m);
-  });
-
-  const years =
-    Object.keys(grouped)
-      .sort((a, b) => b.localeCompare(a));
-
-  $("app").innerHTML = `
-
-    <div class="dash-head">
-
-      <div>
-
-        <span class="eyebrow">
-          MATCH HISTORY
-        </span>
-
-        <h1>My Matches</h1>
-
-        <p class="muted">
-          Your complete match history.
-        </p>
-
-      </div>
-
-      <button
-        class="btn"
-        onclick="openMatch()">
-
-        + Add Match
-
-      </button>
-
-    </div>
-
-    <div class="grid">
-
-      <div class="card">
-
-        <span class="muted">
-          Total Matches
-        </span>
-
-        <div class="stat">
-          ${matches.length}
-        </div>
-
-      </div>
-
-      <div class="card">
-
-        <span class="muted">
-          Wins
-        </span>
-
-        <div class="stat">
-          ${wins}
-        </div>
-
-      </div>
-
-      <div class="card">
-
-        <span class="muted">
-          Losses
-        </span>
-
-        <div class="stat">
-          ${losses}
-        </div>
-
-      </div>
-
-      <div class="card">
-
-        <span class="muted">
-          Win Rate
-        </span>
-
-        <div class="stat">
-          ${winRate}%
-        </div>
-
-      </div>
-
-    </div>
-
-    ${
-      years.length
-        ? years.map(year => `
-
-            <div
-              class="card"
-              style="
-                margin-top:18px;
-              ">
-
-              <div
-                style="
-                  display:flex;
-                  justify-content:space-between;
-                  align-items:center;
-                  margin-bottom:18px;
-                ">
-
-                <h2
-                  style="
-                    margin:0;
-                  ">
-
-                  ${esc(year)}
-
-                </h2>
-
-                <span class="muted">
-
-                  ${grouped[year].length}
-                  match${
-                    grouped[year].length === 1
-                      ? ""
-                      : "es"
-                  }
-
-                </span>
-
-              </div>
-
-              ${grouped[year].map(m => `
-
-                <details
-                  class="match"
-                  style="
-                    margin-bottom:12px;
-                  ">
-
-                  <summary
-                    style="
-                      cursor:pointer;
-                      list-style:none;
-                    ">
-
-                    <div
-                      style="
-                        display:flex;
-                        justify-content:space-between;
-                        align-items:center;
-                        gap:15px;
-                        flex-wrap:wrap;
-                      ">
-
-                      <div>
-
-                        <span
-                          class="pill"
-                          style="
-                            background:${
-                              m.result === "win"
-                                ? "#dcfce7"
-                                : "#fee2e2"
-                            };
-                            color:${
-                              m.result === "win"
-                                ? "#15803d"
-                                : "#b91c1c"
-                            };
-                          ">
-
-                          ${esc(
-                            m.result
-                          ).toUpperCase()}
-
-                        </span>
-
-                        <b
-                          style="
-                            margin-left:8px;
-                          ">
-
-                          vs
-                          ${esc(
-                            m.opponent
-                          )}
-
-                        </b>
-
-                      </div>
-
-                      <div class="muted">
-
-                        ${esc(
-                          m.match_date ||
-                          "No date"
-                        )}
-
-                        ·
-
-                        ${esc(
-                          m.surface ||
-                          "Surface not recorded"
-                        )}
-
-                        ·
-
-                        ${esc(
-                          m.score ||
-                          "No score"
-                        )}
-
-                      </div>
-
-                    </div>
-
-                  </summary>
-
-                  <div
-                    style="
-                      margin-top:16px;
-                      padding-top:16px;
-                      border-top:1px solid #e5e7eb;
-                    ">
-
-                    <p>
-
-                      <b>
-                        Biggest Problem:
-                      </b>
-
-                      ${esc(
-                        m.biggest_problem ||
-                        "None"
-                      )}
-
-                    </p>
-
-                    <p>
-
-                      <b>
-                        Biggest Positive:
-                      </b>
-
-                      ${esc(
-                        m.biggest_positive ||
-                        "None"
-                      )}
-
-                    </p>
-
-                    ${
-                      m.notes
-                        ? `
-                          <p>
-
-                            <b>
-                              Notes:
-                            </b>
-
-                            ${esc(m.notes)}
-
-                          </p>
-                        `
-                        : ""
-                    }
-
-                  </div>
-
-                </details>
-
-              `).join("")}
-
-            </div>
-
-          `).join("")
-        : `
-
-            <div
-              class="card"
-              style="
-                margin-top:18px;
-              ">
-
-              <div class="empty">
-
-                <h3>
-                  No matches yet
-                </h3>
-
-                <p>
-                  Start building your match history.
-                </p>
-
-                <button
-                  class="btn"
-                  onclick="openMatch()">
-
-                  + Add Match
-
-                </button>
-
-              </div>
-
-            </div>
-
-          `
-    }
-
-  `;
 }
 
 /* =========================
@@ -2302,6 +1714,8 @@ async function renderMatchHistory() {
 async function renderMyCoach() {
 
   let coach = null;
+
+  /* Check if player is already connected */
 
   if (profile.connected_coach_id) {
 
@@ -2322,6 +1736,8 @@ async function renderMyCoach() {
 
     coach = data;
   }
+
+  /* Check for pending request */
 
   const {
     data: pendingRequests,
@@ -2349,6 +1765,10 @@ async function renderMyCoach() {
   const pending =
     pendingRequests &&
     pendingRequests.length > 0;
+
+  /* =========================
+     CONNECTED STATE
+  ========================= */
 
   if (coach) {
 
@@ -2539,6 +1959,10 @@ async function renderMyCoach() {
     return;
   }
 
+  /* =========================
+     PENDING STATE
+  ========================= */
+
   if (pending) {
 
     const request =
@@ -2656,6 +2080,10 @@ async function renderMyCoach() {
 
     return;
   }
+
+  /* =========================
+     NO COACH
+  ========================= */
 
   $("app").innerHTML = `
 
@@ -2816,6 +2244,7 @@ async function renderMyCoach() {
 
       }
     );
+
   }
 }
 
@@ -3047,6 +2476,8 @@ async function sendCoachRequest(
 
   try {
 
+    /* Prevent connecting to yourself */
+
     if (coachId === currentUser.id) {
 
       alert(
@@ -3055,6 +2486,8 @@ async function sendCoachRequest(
 
       return;
     }
+
+    /* Check if request already exists */
 
     const {
       data: existing,
@@ -3116,6 +2549,835 @@ async function sendCoachRequest(
 
   }
 }
+/* =========================
+   MY COACH PAGE
+========================= */
+
+async function renderMyCoach() {
+
+  let coach = null;
+
+  /* Check if player is already connected */
+  if (profile.connected_coach_id) {
+
+    const {
+      data,
+      error
+    } = await sb.from("profiles")
+      .select(
+        "id,full_name,role,coach_code"
+      )
+      .eq(
+        "id",
+        profile.connected_coach_id
+      )
+      .single();
+
+    if (error) throw error;
+
+    coach = data;
+  }
+
+  /* Check for pending request */
+  const {
+    data: pendingRequests,
+    error: pendingError
+  } = await sb.from("connection_requests")
+    .select(
+      "id,coach_id,status,created_at"
+    )
+    .eq(
+      "player_id",
+      currentUser.id
+    )
+    .eq(
+      "status",
+      "pending"
+    )
+    .order("created_at", {
+      ascending: false
+    });
+
+  if (pendingError) {
+    throw pendingError;
+  }
+
+  const pending =
+    pendingRequests &&
+    pendingRequests.length > 0;
+
+  /* =========================
+     CONNECTED STATE
+  ========================= */
+
+  if (coach) {
+
+    const initials =
+      coach.full_name
+        .split(" ")
+        .map(x => x[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
+
+    $("app").innerHTML = `
+
+      <div class="dash-head">
+
+        <div>
+
+          <span class="eyebrow">
+            CONNECTION
+          </span>
+
+          <h1>
+            My Coach
+          </h1>
+
+        </div>
+
+      </div>
+
+      <div class="card"
+        style="
+          padding:28px;
+          margin-bottom:18px;
+        ">
+
+        <div
+          style="
+            display:flex;
+            align-items:center;
+            gap:22px;
+            flex-wrap:wrap;
+          ">
+
+          <div
+            style="
+              width:82px;
+              height:82px;
+              border-radius:50%;
+              background:#e5edff;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              font-size:28px;
+              font-weight:800;
+              color:#132c47;
+            ">
+
+            ${esc(initials)}
+
+          </div>
+
+          <div style="flex:1">
+
+            <span
+              class="muted"
+              style="
+                text-transform:uppercase;
+                font-size:12px;
+                font-weight:800;
+                letter-spacing:1px;
+              ">
+
+              YOUR COACH
+
+            </span>
+
+            <h2
+              style="
+                margin:5px 0 3px;
+              ">
+
+              ${esc(coach.full_name)}
+
+            </h2>
+
+            <p
+              class="muted"
+              style="margin:0">
+
+              Tennis Coach
+
+            </p>
+
+            <div style="margin-top:12px">
+
+              <span
+                class="pill"
+                style="
+                  background:#dcfce7;
+                  color:#15803d;
+                ">
+
+                ● Connected
+
+              </span>
+
+            </div>
+
+          </div>
+
+          <div
+            style="
+              min-width:190px;
+              padding-left:20px;
+              border-left:1px solid #e5e7eb;
+            ">
+
+            <span class="muted">
+              Coach Code
+            </span>
+
+            <div
+              style="
+                font-size:22px;
+                font-weight:800;
+                margin-top:5px;
+                letter-spacing:1px;
+              ">
+
+              ${esc(
+                coach.coach_code || "—"
+              )}
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div
+          style="
+            display:flex;
+            gap:10px;
+            margin-top:25px;
+            flex-wrap:wrap;
+          ">
+
+          <button
+            class="btn"
+            onclick="viewCoachProfile()">
+
+            View Coach Profile
+
+          </button>
+
+          <button
+            class="btn ghost"
+            onclick="disconnectCoach()"
+            style="color:#b91c1c">
+
+            Disconnect Coach
+
+          </button>
+
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <h3>
+          Your TennisPilot connection
+        </h3>
+
+        <p class="muted">
+          Your coach can see the information
+          connected to your player account,
+          including your match reviews and
+          training progress.
+        </p>
+
+      </div>
+
+    `;
+
+    return;
+  }
+
+  /* =========================
+     PENDING STATE
+  ========================= */
+
+  if (pending) {
+
+    const request =
+      pendingRequests[0];
+
+    let pendingCoach = null;
+
+    const {
+      data: coachData
+    } = await sb.from("profiles")
+      .select(
+        "full_name,role,coach_code"
+      )
+      .eq(
+        "id",
+        request.coach_id
+      )
+      .single();
+
+    pendingCoach = coachData;
+
+    $("app").innerHTML = `
+
+      <div class="dash-head">
+
+        <div>
+
+          <span class="eyebrow">
+            CONNECTION
+          </span>
+
+          <h1>
+            My Coach
+          </h1>
+
+        </div>
+
+      </div>
+
+      <div class="card"
+        style="padding:30px">
+
+        <div
+          style="
+            width:64px;
+            height:64px;
+            border-radius:50%;
+            background:#fff7ed;
+            color:#c2410c;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:26px;
+            margin-bottom:18px;
+          ">
+
+          ⏳
+
+        </div>
+
+        <span
+          class="eyebrow"
+          style="color:#c2410c">
+
+          REQUEST SENT
+
+        </span>
+
+        <h2 style="margin:6px 0">
+
+          ${
+            esc(
+              pendingCoach?.full_name ||
+              "Your coach"
+            )
+          }
+
+        </h2>
+
+        <p class="muted">
+
+          Your connection request is waiting
+          for your coach to accept it.
+
+        </p>
+
+        <div
+          style="
+            background:#f8fafc;
+            border-radius:12px;
+            padding:16px;
+            margin-top:20px;
+          ">
+
+          <b>
+            What happens next?
+          </b>
+
+          <p
+            class="muted"
+            style="margin-bottom:0">
+
+            Your coach will see your request
+            in their Requests section.
+            Once they accept, their profile
+            will appear here.
+
+          </p>
+
+        </div>
+
+      </div>
+
+    `;
+
+    return;
+  }
+
+  /* =========================
+     NO COACH
+  ========================= */
+
+  $("app").innerHTML = `
+
+    <div class="dash-head">
+
+      <div>
+
+        <span class="eyebrow">
+          CONNECTION
+        </span>
+
+        <h1>
+          My Coach
+        </h1>
+
+      </div>
+
+    </div>
+
+    <div class="card"
+      style="
+        padding:30px;
+        margin-bottom:18px;
+      ">
+
+      <span class="eyebrow">
+        NO COACH CONNECTED
+      </span>
+
+      <h2
+        style="
+          margin:7px 0;
+        ">
+
+        Add Your Coach
+
+      </h2>
+
+      <p class="muted">
+
+        Connect your TennisPilot account
+        to your coach using their
+        3 letters + 3 numbers code.
+
+      </p>
+
+      <div
+        style="
+          display:flex;
+          gap:12px;
+          max-width:700px;
+          margin-top:24px;
+          flex-wrap:wrap;
+        ">
+
+        <div style="flex:1;min-width:220px">
+
+          <label
+            style="
+              display:block;
+              font-weight:700;
+              margin-bottom:7px;
+            ">
+
+            Coach Code
+
+          </label>
+
+          <input
+            id="coachSearchCode"
+            maxlength="6"
+            placeholder="e.g. ABC123"
+            autocomplete="off"
+            style="
+              width:100%;
+              box-sizing:border-box;
+              text-transform:uppercase;
+            "
+          >
+
+        </div>
+
+        <div
+          style="
+            display:flex;
+            align-items:flex-end;
+          ">
+
+          <button
+            class="btn"
+            onclick="findCoach()">
+
+            Find Coach
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="card">
+
+      <h3>
+        Why connect with a coach?
+      </h3>
+
+      <div
+        style="
+          display:grid;
+          gap:14px;
+          margin-top:15px;
+        ">
+
+        <div>
+          ✓ Share your match history
+        </div>
+
+        <div>
+          ✓ Get personalized feedback
+        </div>
+
+        <div>
+          ✓ Track your development together
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+
+  const input =
+    $("coachSearchCode");
+
+  if (input) {
+
+    input.addEventListener(
+      "input",
+      () => {
+        input.value =
+          input.value
+            .replace(/[^a-zA-Z0-9]/g, "")
+            .toUpperCase();
+      }
+    );
+
+    input.addEventListener(
+      "keydown",
+      e => {
+        if (e.key === "Enter") {
+          findCoach();
+        }
+      }
+    );
+  }
+}
+
+/* =========================
+   FIND COACH
+========================= */
+
+async function findCoach() {
+
+  const input =
+    $("coachSearchCode");
+
+  if (!input) return;
+
+  const code =
+    input.value
+      .trim()
+      .toUpperCase();
+
+  if (!/^[A-Z]{3}[0-9]{3}$/.test(code)) {
+
+    alert(
+      "Enter a valid coach code with 3 letters and 3 numbers, for example ABC123."
+    );
+
+    return;
+  }
+
+  try {
+
+    const {
+      data,
+      error
+    } = await sb.rpc(
+      "find_coach_by_code",
+      {
+        code_input: code
+      }
+    );
+
+    if (error) throw error;
+
+    if (!data || !data.length) {
+
+      alert(
+        "No coach was found with that code."
+      );
+
+      return;
+    }
+
+    const coach = data[0];
+
+    if (coach.role !== "coach") {
+
+      alert(
+        "That code does not belong to a coach."
+      );
+
+      return;
+    }
+
+    openCoachConfirmation(coach);
+
+  } catch (err) {
+
+    alert(
+      err.message ||
+      "Could not find coach."
+    );
+  }
+}
+
+/* =========================
+   COACH CONFIRMATION
+========================= */
+
+function openCoachConfirmation(coach) {
+
+  const initials =
+    coach.full_name
+      .split(" ")
+      .map(x => x[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
+  $("modalRoot").innerHTML = `
+
+    <div class="modal-back">
+
+      <div
+        class="modal"
+        style="
+          max-width:620px;
+        ">
+
+        <button
+          type="button"
+          onclick="closeModal()"
+          style="
+            float:right;
+            border:0;
+            background:none;
+            font-size:26px;
+            cursor:pointer;
+            color:#64748b;
+          ">
+
+          ×
+
+        </button>
+
+        <span class="eyebrow">
+          COACH FOUND
+        </span>
+
+        <h2>
+          ${esc(coach.full_name)}
+        </h2>
+
+        <p class="muted">
+
+          We found a coach with this code.
+          Send them a connection request?
+
+        </p>
+
+        <div
+          style="
+            display:flex;
+            align-items:center;
+            gap:18px;
+            background:#f8fafc;
+            border-radius:14px;
+            padding:18px;
+            margin:22px 0;
+          ">
+
+          <div
+            style="
+              width:64px;
+              height:64px;
+              border-radius:50%;
+              background:#e5edff;
+              color:#132c47;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              font-weight:800;
+              font-size:22px;
+            ">
+
+            ${esc(initials)}
+
+          </div>
+
+          <div>
+
+            <h3
+              style="
+                margin:0 0 4px;
+              ">
+
+              ${esc(coach.full_name)}
+
+            </h3>
+
+            <p
+              class="muted"
+              style="margin:0">
+
+              Tennis Coach
+
+            </p>
+
+            <p
+              class="muted"
+              style="margin:4px 0 0">
+
+              Code:
+              <b>
+                ${esc(coach.coach_code)}
+              </b>
+
+            </p>
+
+          </div>
+
+        </div>
+
+        <div class="modal-actions">
+
+          <button
+            type="button"
+            class="btn ghost"
+            onclick="closeModal()">
+
+            Cancel
+
+          </button>
+
+          <button
+            type="button"
+            class="btn"
+            onclick="sendCoachRequest('${coach.id}')">
+
+            Send Connection Request
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+}
+
+/* =========================
+   SEND COACH REQUEST
+========================= */
+
+async function sendCoachRequest(
+  coachId
+) {
+
+  try {
+
+    /* Prevent connecting to yourself */
+    if (coachId === currentUser.id) {
+
+      alert(
+        "You cannot connect to yourself."
+      );
+
+      return;
+    }
+
+    /* Check if request already exists */
+    const {
+      data: existing,
+      error: existingError
+    } = await sb.from("connection_requests")
+      .select("id,status")
+      .eq(
+        "player_id",
+        currentUser.id
+      )
+      .eq(
+        "coach_id",
+        coachId
+      )
+      .maybeSingle();
+
+    if (existingError) {
+      throw existingError;
+    }
+
+    if (existing?.status === "pending") {
+
+      closeModal();
+
+      await render("coach");
+
+      return;
+    }
+
+    const {
+      error
+    } = await sb.from(
+      "connection_requests"
+    ).insert({
+
+      player_id:
+        currentUser.id,
+
+      coach_id:
+        coachId,
+
+      status:
+        "pending"
+
+    });
+
+    if (error) throw error;
+
+    closeModal();
+
+    await render("coach");
+
+  } catch (err) {
+
+    alert(
+      err.message ||
+      "Could not send connection request."
+    );
+  }
+}
 
 /* =========================
    VIEW COACH PROFILE
@@ -3142,8 +3404,8 @@ async function viewCoachProfile() {
   if (error) {
 
     alert(error.message);
-
     return;
+
   }
 
   $("modalRoot").innerHTML = `
@@ -3219,15 +3481,16 @@ async function disconnectCoach() {
 
   try {
 
-    const { error } =
-      await sb.from("profiles")
-        .update({
-          connected_coach_id: null
-        })
-        .eq(
-          "id",
-          currentUser.id
-        );
+    const {
+      error
+    } = await sb.from("profiles")
+      .update({
+        connected_coach_id: null
+      })
+      .eq(
+        "id",
+        currentUser.id
+      );
 
     if (error) throw error;
 
@@ -3241,7 +3504,6 @@ async function disconnectCoach() {
       err.message ||
       "Could not disconnect coach."
     );
-
   }
 }
 
@@ -3313,21 +3575,6 @@ function openMatch() {
           </label>
 
           <label>
-            Surface
-
-            <select id="surface">
-
-              <option>Hard</option>
-              <option>Clay</option>
-              <option>Grass</option>
-              <option>Carpet</option>
-              <option>Other</option>
-
-            </select>
-
-          </label>
-
-          <label>
             Biggest problem
 
             <select id="problem">
@@ -3380,10 +3627,7 @@ function openMatch() {
             <button
               type="button"
               class="btn ghost"
-              onclick="
-                closeModal();
-                render('logmatch');
-              ">
+              onclick="closeModal()">
 
               Cancel
 
@@ -3436,10 +3680,6 @@ function openMatch() {
               .value
               .trim(),
 
-          surface:
-            $("surface")
-              .value,
-
           biggest_problem:
             $("problem")
               .value,
@@ -3462,8 +3702,7 @@ function openMatch() {
       } else {
 
         closeModal();
-
-        render("logmatch");
+        render("overview");
 
       }
     };
@@ -3473,7 +3712,7 @@ function openMatch() {
    TRAINING MODAL
 ========================= */
 
-function openSession() {
+function openSession(targetPlayerId = currentUser.id, defaultFocus = "None") {
 
   $("modalRoot").innerHTML = `
 
@@ -3578,6 +3817,26 @@ function openSession() {
 
   `;
 
+  if ($("focus") && defaultFocus) {
+
+    const options =
+      Array.from(
+        $("focus").options
+      );
+
+    const matching =
+      options.find(
+        o =>
+          o.value.toLowerCase() ===
+          String(defaultFocus).toLowerCase()
+      );
+
+    if (matching) {
+      $("focus").value =
+        matching.value;
+    }
+  }
+
   $("sessionForm").onsubmit =
     async e => {
 
@@ -3590,7 +3849,7 @@ function openSession() {
       ).insert({
 
         player_id:
-          currentUser.id,
+          targetPlayerId,
 
         session_name:
           $("sessionName")
@@ -3625,7 +3884,6 @@ function openSession() {
       } else {
 
         closeModal();
-
         render("training");
 
       }
@@ -3653,8 +3911,8 @@ async function start() {
   ) {
 
     setupAuth();
-
     return;
+
   }
 
   if (
@@ -3666,10 +3924,10 @@ async function start() {
     if (await loadProfile()) {
 
       shell();
-
       render("overview");
 
     }
+
   }
 }
 
