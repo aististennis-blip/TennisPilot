@@ -2453,7 +2453,14 @@ function openSession(targetPlayerId = currentUser.id, defaultFocus = "None", def
 
           <label>
             Duration (minutes)
-            <input id="duration" type="number" min="1" value="">
+            <input
+              id="duration"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="e.g. 60"
+              maxlength="4"
+            >
           </label>
 
           <label>
@@ -2477,14 +2484,26 @@ function openSession(targetPlayerId = currentUser.id, defaultFocus = "None", def
     </div>
   `;
 
+  $("duration").addEventListener("input", e => {
+    e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4);
+  });
+
   $("sessionForm").onsubmit = async e => {
     e.preventDefault();
+
+    const durationValue = $("duration").value.trim();
+    const duration = durationValue ? Number(durationValue) : null;
+
+    if (duration !== null && (!Number.isInteger(duration) || duration < 1)) {
+      alert("Duration must be a whole number of minutes.");
+      return;
+    }
 
     const { error } = await sb.from("training_sessions").insert({
       player_id: targetPlayerId,
       session_name: $("sessionName").value.trim(),
       session_date: $("sessionDate").value,
-      duration_minutes: Number($("duration").value) || null,
+      duration_minutes: duration,
       focus: $("focus").value,
       notes: $("sessionNotes").value.trim()
     });
