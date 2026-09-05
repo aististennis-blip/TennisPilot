@@ -308,6 +308,10 @@ function shell() {
         <button class="nav-item" data-page="training">
           Training
         </button>
+
+        <button class="nav-item" data-page="progress">
+          Progress
+        </button>
       `;
 
   document
@@ -902,6 +906,7 @@ async function viewPlayer(id) {
               <div class="muted">${esc(s.session_date || "No date")} · ${esc(s.focus || "No focus")}${s.duration_minutes ? ` · ${esc(s.duration_minutes)} min` : ""}</div>
             </div>
             <span class="pill" style="background:${s.completed ? "#dcfce7" : "#fef3c7"};color:${s.completed ? "#15803d" : "#a16207"};">${s.completed ? "Completed" : "Planned"}</span>
+            <button class="btn small ${s.completed ? "ghost" : ""}" onclick="toggleTrainingSession('${s.id}', ${s.completed ? "false" : "true"}, '${id}')">${s.completed ? "Mark Planned" : "Mark Complete"}</button>
           </div>`).join("")
       : `<div class="empty">No training sessions yet.</div>`;
 
@@ -1153,45 +1158,25 @@ async function renderPlayer(page) {
       ${
         data?.length
           ? data.map(s => `
-              <div class="match">
-
-                <b>
-                  ${esc(s.session_name)}
-                </b>
-
-                <span
-                  class="pill"
-                  style="float:right">
-
-                  ${
-                    s.completed
-                      ? "Completed"
-                      : "Planned"
-                  }
-
-                </span>
-
-                <p class="muted">
-
-                  ${esc(s.session_date)}
-                  ·
-                  ${esc(
-                    s.duration_minutes ||
-                    "—"
-                  )}
-                  min
-                  ·
-                  ${esc(
-                    s.focus ||
-                    "No focus"
-                  )}
-
-                </p>
-
-                <p>
-                  ${esc(s.notes || "")}
-                </p>
-
+              <div class="match" style="margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+                  <div>
+                    <b>${esc(s.session_name)}</b>
+                    <p class="muted" style="margin:7px 0 0;">
+                      ${esc(s.session_date)} · ${esc(s.duration_minutes || "—")} min · ${esc(s.focus || "No focus")}
+                    </p>
+                  </div>
+                  <span class="pill" style="background:${s.completed ? "#dcfce7" : "#fef3c7"};color:${s.completed ? "#15803d" : "#a16207"};">
+                    ${s.completed ? "Completed" : "Planned"}
+                  </span>
+                </div>
+                ${s.notes ? `<p style="margin:12px 0 0;">${esc(s.notes)}</p>` : ""}
+                <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                  <button class="btn small ${s.completed ? "ghost" : ""}" onclick="toggleTrainingSession('${s.id}', ${s.completed ? "false" : "true"})">
+                    ${s.completed ? "Mark as Planned" : "✓ Mark Complete"}
+                  </button>
+                  <span class="muted">${s.completed ? "Counts toward your progress." : "Complete this session when you're done training."}</span>
+                </div>
               </div>
             `).join("")
           : `
@@ -1199,7 +1184,85 @@ async function renderPlayer(page) {
               No training sessions yet.
             </div>
           `
-      }
+      }      }
+    `;
+  }
+
+  /* =========================
+     PROGRESS
+  ========================= */
+  else if (page === "progress") {
+    const { data: sessions, error: trainingError } = await sb
+      .from("training_sessions")
+      .select("*")
+      .eq("player_id", currentUser.id)
+      .order("session_date", { ascending: false });
+
+    if (trainingError) throw trainingError;
+
+    const allSessions = sessions || [];
+    const completedSessions = allSessions.filter(s => s.completed);
+    const completion = allSessions.length
+      ? Math.round((completedSessions.length / allSessions.length) * 100)
+      : 0;
+
+    const matches = await playerMatches();
+    const recentMatches = matches.slice(0, 6);
+    const problemCounts = {};
+    recentMatches.forEach(match => {
+      const problem = String(match.biggest_problem || "").trim();
+      if (!problem || problem.toLowerCase() === "none") return;
+      problemCounts[problem] = (problemCounts[problem] || 0) + 1;
+    });
+
+    const sortedProblems = Object.entries(problemCounts).sort((a, b) => b[1] - a[1]);
+    const currentPriority = sortedProblems.length ? sortedProblems[0][0] : "Not enough data";
+    const priorityCount = sortedProblems.length ? sortedProblems[0][1] : 0;
+
+    const focusCounts = {};
+    completedSessions.forEach(session => {
+      const focus = String(session.focus || "").trim();
+      if (!focus || focus.toLowerCase() === "none") return;
+      focusCounts[focus] = (focusCounts[focus] || 0) + 1;
+    });
+    const completedFocus = Object.entries(focusCounts).sort((a, b) => b[1] - a[1]);
+    const mainTrainingFocus = completedFocus.length ? completedFocus[0][0] : "No completed focus yet";
+    const recentCompleted = completedSessions.slice(0, 5);
+
+    $("app").innerHTML = `
+      <div class="dash-head">
+        <div>
+          <span class="eyebrow">PLAYER DEVELOPMENT</span>
+          <h1>Progress</h1>
+          <p class="muted">Track completed training and see how it connects to your match priorities.</p>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card"><span class="muted">Training completion</span><div class="stat">${completion}%</div><p class="muted" style="margin-bottom:0;">${completedSessions.length} of ${allSessions.length} sessions completed.</p></div>
+        <div class="card"><span class="muted">Current priority</span><div class="stat" style="font-size:28px;">${esc(currentPriority)}</div><p class="muted" style="margin-bottom:0;">${sortedProblems.length ? `${priorityCount} of ${recentMatches.length} recent matches` : "Log more match reviews to find a pattern."}</p></div>
+        <div class="card"><span class="muted">Main training focus</span><div class="stat" style="font-size:28px;">${esc(mainTrainingFocus)}</div><p class="muted" style="margin-bottom:0;">Based on completed sessions.</p></div>
+      </div>
+
+      <div class="card" style="margin-top:18px;border:1px solid #dbe7ff;">
+        <span class="eyebrow" style="color:#2563eb">DEVELOPMENT LOOP</span>
+        <h2 style="margin:5px 0 8px;">Match → Review → Priority → Train</h2>
+        <p class="muted" style="line-height:1.6;margin-bottom:18px;">Completing a session now updates your training progress. Your next match review can then show whether the same problem is still appearing.</p>
+        <div style="width:100%;height:10px;background:#e5e7eb;border-radius:99px;overflow:hidden;"><div style="width:${completion}%;height:100%;background:#2563eb;border-radius:99px;"></div></div>
+      </div>
+
+      <div class="card" style="margin-top:18px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;">
+          <div><span class="eyebrow">COMPLETED TRAINING</span><h2 style="margin:5px 0 0;">Recent sessions</h2></div>
+          <button class="btn small" onclick="render('training')">View Training</button>
+        </div>
+        ${recentCompleted.length ? recentCompleted.map(s => `
+          <div class="list-item">
+            <div><b>${esc(s.session_name)}</b><div class="muted">${esc(s.session_date)} · ${esc(s.focus || "No focus")}${s.duration_minutes ? ` · ${esc(s.duration_minutes)} min` : ""}</div></div>
+            <span class="pill" style="background:#dcfce7;color:#15803d;">Completed</span>
+          </div>
+        `).join("") : `<div class="empty">Complete your first training session and it will appear here.</div>`}
+      </div>
     `;
   }
 }
@@ -2439,6 +2502,29 @@ function openSession(targetPlayerId = currentUser.id, defaultFocus = "None", def
       await render("training");
     }
   };
+}
+
+/* =========================
+   TRAINING COMPLETION
+========================= */
+
+async function toggleTrainingSession(sessionId, completed, returnPlayerId = null) {
+  try {
+    const { error } = await sb
+      .from("training_sessions")
+      .update({ completed })
+      .eq("id", sessionId);
+
+    if (error) throw error;
+
+    if (returnPlayerId && profile?.role === "coach") {
+      await viewPlayer(returnPlayerId);
+    } else {
+      await render("training");
+    }
+  } catch (err) {
+    alert(err.message || "Could not update training session.");
+  }
 }
 
 /* =========================
