@@ -357,6 +357,7 @@ async function playerMatches(id = currentUser.id) {
 ========================= */
 
 async function render(page = "overview") {
+
   document
     .querySelectorAll(".nav-item")
     .forEach(b =>
@@ -367,20 +368,25 @@ async function render(page = "overview") {
     );
 
   const app = $("app");
-
-  app.innerHTML =
-    "<div class='empty'>Loading…</div>";
+  if (!app) return;
 
   try {
     if (profile.role === "coach") {
+      app.innerHTML = "<div class='empty'>Loading…</div>";
       await renderCoach(page);
     } else {
-      await renderPlayer(page);
+      if (page === "logmatch") {
+        await renderMatchHistory();
+      } else {
+        app.innerHTML = "<div class='empty'>Loading…</div>";
+        await renderPlayer(page);
+      }
     }
   } catch (e) {
+    console.error(e);
     app.innerHTML =
       `<div class="card">
-        <b>Error:</b> ${esc(e.message)}
+        <b>Error:</b> ${esc(e.message || "Something went wrong.")}
       </div>`;
   }
 }
@@ -687,6 +693,8 @@ async function renderCoachMatches(players) {
                 <div class="muted">
                   ${esc(m.match_date)}
                   ·
+                  ${esc(m.surface || "Surface not recorded")}
+                  ·
                   ${esc(m.score || "No score")}
                 </div>
 
@@ -815,6 +823,8 @@ async function viewPlayer(id) {
                 <br>
 
                 <span class="muted">
+                  ${esc(m.surface || "Surface not recorded")}
+                  ·
                   ${esc(m.score || "")}
                 </span>
 
@@ -877,7 +887,7 @@ async function renderPlayer(page) {
 
         <button
           class="btn"
-          onclick="openMatch()">
+          onclick="render('logmatch')">
           + Log Match
         </button>
 
@@ -954,29 +964,11 @@ async function renderPlayer(page) {
     `;
   }
 
-  /* =========================
-     MY COACH — UPDATED
-  ========================= */
-
   else if (page === "coach") {
 
     await renderMyCoach();
 
   }
-
-  /* =========================
-     LOG MATCH
-  ========================= */
-
-  else if (page === "logmatch") {
-
-    openMatch();
-
-  }
-
-  /* =========================
-     TRAINING
-  ========================= */
 
   else if (page === "training") {
 
@@ -1073,7 +1065,6 @@ async function renderMyCoach() {
 
   let coach = null;
 
-  /* Check if player is already connected */
   if (profile.connected_coach_id) {
 
     const {
@@ -1094,7 +1085,6 @@ async function renderMyCoach() {
     coach = data;
   }
 
-  /* Check for pending request */
   const {
     data: pendingRequests,
     error: pendingError
@@ -1121,10 +1111,6 @@ async function renderMyCoach() {
   const pending =
     pendingRequests &&
     pendingRequests.length > 0;
-
-  /* =========================
-     CONNECTED STATE
-  ========================= */
 
   if (coach) {
 
@@ -1313,10 +1299,6 @@ async function renderMyCoach() {
     return;
   }
 
-  /* =========================
-     PENDING STATE
-  ========================= */
-
   if (pending) {
 
     const request =
@@ -1434,10 +1416,6 @@ async function renderMyCoach() {
 
     return;
   }
-
-  /* =========================
-     NO COACH
-  ========================= */
 
   $("app").innerHTML = `
 
@@ -1824,7 +1802,6 @@ async function sendCoachRequest(
 
   try {
 
-    /* Prevent connecting to yourself */
     if (coachId === currentUser.id) {
 
       alert(
@@ -1834,7 +1811,6 @@ async function sendCoachRequest(
       return;
     }
 
-    /* Check if request already exists */
     const {
       data: existing,
       error: existingError
@@ -2024,6 +2000,353 @@ async function disconnectCoach() {
 }
 
 /* =========================
+   PLAYER MATCH HISTORY
+========================= */
+
+async function renderMatchHistory() {
+
+  const matches = await playerMatches();
+
+  const years = {};
+
+  matches.forEach(m => {
+
+    const year = m.match_date
+      ? String(m.match_date).slice(0, 4)
+      : "Unknown";
+
+    if (!years[year]) {
+      years[year] = [];
+    }
+
+    years[year].push(m);
+  });
+
+  const sortedYears =
+    Object.keys(years).sort(
+      (a, b) => b.localeCompare(a)
+    );
+
+  const wins =
+    matches.filter(
+      m => m.result === "win"
+    ).length;
+
+  const losses =
+    matches.filter(
+      m => m.result === "loss"
+    ).length;
+
+  const winRate =
+    matches.length
+      ? Math.round(
+          (wins / matches.length) * 100
+        )
+      : 0;
+
+  let historyHTML = "";
+
+  if (!matches.length) {
+
+    historyHTML = `
+      <div class="empty">
+
+        <h3 style="margin-top:0">
+          No matches yet
+        </h3>
+
+        <p>
+          Log your first match to start
+          building your match history.
+        </p>
+
+        <button
+          class="btn"
+          onclick="openMatch()">
+
+          + Add Match
+
+        </button>
+
+      </div>
+    `;
+
+  } else {
+
+    historyHTML =
+      sortedYears.map(year => `
+
+        <section style="margin-top:28px">
+
+          <div
+            style="
+              display:flex;
+              align-items:center;
+              gap:12px;
+              margin-bottom:12px;
+            ">
+
+            <h2 style="margin:0">
+              ${esc(year)}
+            </h2>
+
+            <span class="pill">
+              ${years[year].length}
+              match${years[year].length === 1 ? "" : "es"}
+            </span>
+
+          </div>
+
+          ${years[year].map(m => `
+
+            <div
+              class="match"
+              style="margin-bottom:12px">
+
+              <div
+                style="
+                  display:flex;
+                  justify-content:space-between;
+                  gap:15px;
+                  flex-wrap:wrap;
+                ">
+
+                <div>
+
+                  <span
+                    class="pill"
+                    style="
+                      background:${
+                        m.result === "win"
+                          ? "#dcfce7"
+                          : "#fee2e2"
+                      };
+                      color:${
+                        m.result === "win"
+                          ? "#15803d"
+                          : "#b91c1c"
+                      };
+                    ">
+
+                    ${esc(m.result).toUpperCase()}
+
+                  </span>
+
+                  <h3
+                    style="
+                      margin:10px 0 4px;
+                    ">
+
+                    vs ${esc(m.opponent)}
+
+                  </h3>
+
+                  <div class="muted">
+
+                    ${esc(
+                      m.match_date ||
+                      "Date not recorded"
+                    )}
+
+                    ·
+
+                    ${esc(
+                      m.surface ||
+                      "Surface not recorded"
+                    )}
+
+                  </div>
+
+                </div>
+
+                <div
+                  style="
+                    text-align:right;
+                    min-width:120px;
+                  ">
+
+                  <span class="muted">
+                    Score
+                  </span>
+
+                  <div
+                    style="
+                      font-size:20px;
+                      font-weight:800;
+                      margin-top:4px;
+                    ">
+
+                    ${esc(m.score || "—")}
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              <details
+                style="margin-top:16px">
+
+                <summary
+                  style="
+                    cursor:pointer;
+                    font-weight:700;
+                  ">
+
+                  View match review
+
+                </summary>
+
+                <div
+                  style="
+                    margin-top:14px;
+                    display:grid;
+                    gap:9px;
+                  ">
+
+                  <div>
+
+                    <b>
+                      Biggest problem:
+                    </b>
+
+                    ${esc(
+                      m.biggest_problem ||
+                      "None"
+                    )}
+
+                  </div>
+
+                  <div>
+
+                    <b>
+                      Biggest positive:
+                    </b>
+
+                    ${esc(
+                      m.biggest_positive ||
+                      "None"
+                    )}
+
+                  </div>
+
+                  ${
+                    m.notes
+                      ? `
+                        <div>
+                          <b>Notes:</b>
+                          ${esc(m.notes)}
+                        </div>
+                      `
+                      : ""
+                  }
+
+                </div>
+
+              </details>
+
+            </div>
+
+          `).join("")}
+
+        </section>
+
+      `).join("");
+  }
+
+  $("app").innerHTML = `
+
+    <div class="dash-head">
+
+      <div>
+
+        <span class="eyebrow">
+          MATCH HISTORY
+        </span>
+
+        <h1>
+          My Matches
+        </h1>
+
+        <p
+          class="muted"
+          style="margin-top:5px">
+
+          Your complete match history stays
+          saved and organized by year.
+
+        </p>
+
+      </div>
+
+      <button
+        class="btn"
+        onclick="openMatch()">
+
+        + Add Match
+
+      </button>
+
+    </div>
+
+    <div class="grid">
+
+      <div class="card">
+
+        <span class="muted">
+          Total Matches
+        </span>
+
+        <div class="stat">
+          ${matches.length}
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <span class="muted">
+          Wins
+        </span>
+
+        <div class="stat">
+          ${wins}
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <span class="muted">
+          Losses
+        </span>
+
+        <div class="stat">
+          ${losses}
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <span class="muted">
+          Win Rate
+        </span>
+
+        <div class="stat">
+          ${winRate}%
+        </div>
+
+      </div>
+
+    </div>
+
+    ${historyHTML}
+
+  `;
+}
+
+/* =========================
    MATCH MODAL
 ========================= */
 
@@ -2036,21 +2359,24 @@ function openMatch() {
       <div class="modal">
 
         <h2>
-          Log Match
+          Add Match
         </h2>
 
         <form id="matchForm">
 
           <label>
             Opponent
+
             <input
               id="opponent"
               required
             >
+
           </label>
 
           <label>
             Date
+
             <input
               id="matchDate"
               type="date"
@@ -2061,6 +2387,22 @@ function openMatch() {
               }"
               required
             >
+
+          </label>
+
+          <label>
+            Surface
+
+            <select id="surface">
+
+              <option>Hard</option>
+              <option>Clay</option>
+              <option>Grass</option>
+              <option>Carpet</option>
+              <option>Other</option>
+
+            </select>
+
           </label>
 
           <label>
@@ -2143,7 +2485,7 @@ function openMatch() {
             <button
               type="button"
               class="btn ghost"
-              onclick="closeModal()">
+              onclick="closeModal(); render('logmatch')">
 
               Cancel
 
@@ -2191,6 +2533,10 @@ function openMatch() {
             $("result")
               .value,
 
+          surface:
+            $("surface")
+              .value,
+
           score:
             $("score")
               .value
@@ -2218,7 +2564,7 @@ function openMatch() {
       } else {
 
         closeModal();
-        render("overview");
+        render("logmatch");
 
       }
     };
