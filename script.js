@@ -1114,7 +1114,7 @@ async function renderPlayer(page) {
 
   else if (page === "logmatch") {
 
-    openMatch();
+    await renderLogMatchHistory();
 
   }
 
@@ -2241,6 +2241,106 @@ async function disconnectCoach() {
 }
 
 /* =========================
+   LOG MATCH / MATCH HISTORY
+========================= */
+
+async function renderLogMatchHistory() {
+  const matches = await playerMatches();
+
+  const grouped = {};
+  matches.forEach(match => {
+    const year = String(match.match_date || "").slice(0, 4) || "Unknown year";
+    if (!grouped[year]) grouped[year] = [];
+    grouped[year].push(match);
+  });
+
+  const years = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+  $("app").innerHTML = `
+    <div class="dash-head">
+      <div>
+        <span class="eyebrow">MATCH HISTORY</span>
+        <h1>Log Match</h1>
+        <p class="muted">Review your previous matches and add a new match whenever you play.</p>
+      </div>
+
+      <button class="btn" onclick="openMatch()">
+        + Add Match
+      </button>
+    </div>
+
+    ${
+      matches.length
+        ? years.map(year => `
+            <div style="margin-bottom:28px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
+                <h2 style="margin:0;">${esc(year)}</h2>
+                <span class="muted">
+                  ${grouped[year].length} ${grouped[year].length === 1 ? "match" : "matches"}
+                </span>
+              </div>
+
+              <div style="display:grid;gap:12px;">
+                ${grouped[year].map(m => `
+                  <div class="card">
+                    <div style="display:flex;justify-content:space-between;gap:15px;align-items:flex-start;flex-wrap:wrap;">
+                      <div>
+                        <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;">
+                          <span class="pill" style="${m.result === "win" ? "background:#dcfce7;color:#15803d;" : "background:#fee2e2;color:#b91c1c;"}">
+                            ${m.result === "win" ? "WIN" : "LOSS"}
+                          </span>
+                          <span class="muted">${esc(m.match_date || "No date")}</span>
+                        </div>
+
+                        <h3 style="margin:9px 0 4px;">
+                          vs ${esc(m.opponent)}
+                        </h3>
+
+                        <div class="muted">
+                          ${esc(m.score || "No score recorded")}
+                          ${m.surface ? ` · ${esc(m.surface)}` : ""}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style="margin-top:16px;padding-top:14px;border-top:1px solid #e5e7eb;display:grid;gap:7px;">
+                      <div>
+                        <b>Biggest problem:</b>
+                        ${esc(m.biggest_problem || "None")}
+                      </div>
+
+                      <div>
+                        <b>Biggest positive:</b>
+                        ${esc(m.biggest_positive || "None")}
+                      </div>
+
+                      ${
+                        m.notes
+                          ? `<div><b>Notes:</b> ${esc(m.notes)}</div>`
+                          : ""
+                      }
+                    </div>
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+          `).join("")
+        : `
+            <div class="card">
+              <div class="empty">
+                <h3>No matches yet</h3>
+                <p>Add your first match to start building your permanent match history.</p>
+                <button class="btn" onclick="openMatch()">
+                  + Add Match
+                </button>
+              </div>
+            </div>
+          `
+    }
+  `;
+}
+
+/* =========================
    MATCH MODAL
 ========================= */
 
@@ -2435,7 +2535,7 @@ function openMatch() {
       } else {
 
         closeModal();
-        render("overview");
+        await renderLogMatchHistory();
 
       }
     };
