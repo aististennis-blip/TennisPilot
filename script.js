@@ -397,102 +397,277 @@ async function renderCoach(page) {
   const players = await connectedPlayers();
 
   if (page === "overview") {
+    const playerStats = await Promise.all(
+      players.map(async (p) => {
+        const [matches, trainingResult] = await Promise.all([
+          playerMatches(p.id),
+          sb.from("training_sessions")
+            .select("id, player_id, session_date, session_name, duration_minutes, focus, completed")
+            .eq("player_id", p.id)
+            .order("session_date", { ascending: false })
+        ]);
+
+        if (trainingResult.error) throw trainingResult.error;
+
+        const sessions = trainingResult.data || [];
+        const wins = matches.filter(m => m.result === "win").length;
+        const losses = matches.filter(m => m.result === "loss").length;
+        const completed = sessions.filter(s => s.completed).length;
+        const completion = sessions.length
+          ? Math.round((completed / sessions.length) * 100)
+          : 0;
+
+        const recent = matches.slice(0, 6);
+        const problemCounts = {};
+
+        recent.forEach(m => {
+          const problem = String(m.biggest_problem || "").trim();
+          if (!problem || problem.toLowerCase() === "none") return;
+          problemCounts[problem] = (problemCounts[problem] || 0) + 1;
+        });
+
+        const topProblem = Object.entries(problemCounts)
+          .sort((a, b) => b[1] - a[1])[0];
+
+        return {
+          ...p,
+          matches,
+          sessions,
+          wins,
+          losses,
+          completion,
+          topProblem: topProblem ? topProblem[0] : null,
+          topProblemCount: topProblem ? topProblem[1] : 0,
+          recentMatch: matches[0] || null
+        };
+      })
+    );
+
+    const needsAttention = playerStats.filter(p =>
+      p.matches.length === 0 ||
+      (p.topProblemCount >= 2) ||
+      (p.sessions.length > 0 && p.completion < 50)
+    );
 
     $("app").innerHTML = `
       <div class="dash-head">
         <div>
           <span class="eyebrow">COACH DASHBOARD</span>
           <h1>Overview</h1>
+          <p class="muted">See who needs attention and what each player should work on next.</p>
         </div>
 
-        <button class="btn"
-          onclick="render('players')">
+        <button class="btn" onclick="render('players')">
           View players
         </button>
       </div>
 
       <div class="grid">
-
         <div class="card">
           <span class="muted">Players</span>
-          <div class="stat">
-            ${players.length}
-          </div>
+          <div class="stat">${players.length}</div>
         </div>
 
         <div class="card">
-          <span class="muted">
-            Connection code
-          </span>
-
-          <div class="stat">
-            ${esc(profile.coach_code || "—")}
-          </div>
+          <span class="muted">Total Matches</span>
+          <div class="stat">${playerStats.reduce((sum, p) => sum + p.matches.length, 0)}</div>
         </div>
 
         <div class="card">
-          <span class="muted">System</span>
-          <div class="stat">Live</div>
+          <span class="muted">Training Sessions</span>
+          <div class="stat">${playerStats.reduce((sum, p) => sum + p.sessions.length, 0)}</div>
         </div>
 
+        <div class="card">
+          <span class="muted">Connection Code</span>
+          <div class="stat" style="font-size:22px;">${esc(profile.coach_code || "—")}</div>
+        </div>
       </div>
 
-      <div class="card"
-        style="margin-top:18px">
-
-        <h3>Players</h3>
+      <div class="card" style="margin-top:18px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:18px;">
+          <div>
+            <span class="eyebrow">COACH ATTENTION</span>
+            <h2 style="margin:5px 0 0;">Players to check</h2>
+          </div>
+          <span class="muted">${needsAttention.length} need${needsAttention.length === 1 ? "s" : ""} attention</span>
+        </div>
 
         ${
-          players.length
-            ? players.map(p => `
-                <div class="list-item">
-                  <b>${esc(p.full_name)}</b>
-                  <span class="pill"
-                    style="float:right">
-                    Connected
-                  </span>
-                </div>
-              `).join("")
-            : "<div class='empty'>No players connected yet.</div>"
-        }
+          needsAttention.length
+            ? needsAttention.map(p => {
+                let reason = "Review their development.";
+                if (!p.matches.length) {
+                  reason = "No match history yet.";
+                } else if (p.sessions.length > 0 && p.completion < 50) {
+                  reason = `Training completion is ${p.completion}%.`;
+                } else if (p.topProblem) {
+                  reason = `${esc(p.topProblem)} has appeared ${p.topProblemCount} times in recent match reviews.`;
+                }
 
+                return `
+                  <div style="border:1px solid #e5e7eb;border-radius:14px;padding:16px;margin-bottom:10px;">
+                    <div style="display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap;">
+                      <div>
+                        <h3 style="margin:0 0 5px;">${esc(p.full_name)}</h3>
+                        <span class="muted">${reason}</span>
+                      </div>
+                      <button class="btn small" onclick="viewPlayer('${p.id}')">View Player</button>
+                    </div>
+                  </div>
+                `;
+              }).join("")
+            : `<div class="empty">Everyone looks on track. Open a player to review their development.</div>`
+        }
+      </div>
+
+      <div class="card" style="margin-top:18px;">
+        <div style="margin-bottom:18px;">
+          <span class="eyebrow">PLAYER SNAPSHOT</span>
+          <h2 style="margin:5px 0 0;">Your Players</h2>
+        </div>
+
+        ${
+          playerStats.length
+            ? `
+              <div style="display:grid;gap:12px;">
+                ${playerStats.map(p => `
+                  <div style="border:1px solid #e5e7eb;border-radius:14px;padding:16px;">
+                    <div style="display:flex;justify-content:space-between;gap:15px;align-items:flex-start;flex-wrap:wrap;">
+                      <div>
+                        <h3 style="margin:0 0 5px;">${esc(p.full_name)}</h3>
+                        <span class="muted">
+                          ${p.matches.length} matches · ${p.wins} wins · ${p.losses} losses
+                        </span>
+                      </div>
+
+                      <button class="btn small" onclick="viewPlayer('${p.id}')">
+                        Open
+                      </button>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:15px;">
+                      <div style="background:#f8fafc;padding:12px;border-radius:10px;">
+                        <span class="muted">Current Priority</span>
+                        <div style="font-weight:800;margin-top:4px;">
+                          ${esc(p.topProblem || "Not enough data")}
+                        </div>
+                      </div>
+
+                      <div style="background:#f8fafc;padding:12px;border-radius:10px;">
+                        <span class="muted">Training</span>
+                        <div style="font-weight:800;margin-top:4px;">
+                          ${p.sessions.length ? `${p.completion}% complete` : "No sessions"}
+                        </div>
+                      </div>
+
+                      <div style="background:#f8fafc;padding:12px;border-radius:10px;">
+                        <span class="muted">Last Match</span>
+                        <div style="font-weight:800;margin-top:4px;">
+                          ${p.recentMatch
+                            ? `${p.recentMatch.result === "win" ? "Win" : "Loss"} vs ${esc(p.recentMatch.opponent)}`
+                            : "No matches"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                `).join("")}
+              </div>
+            `
+            : `<div class="empty">No players connected yet. Give a player your connection code.</div>`
+        }
+      </div>
+
+      <div class="card" style="margin-top:18px;background:#f8fafc;">
+        <span class="eyebrow">TENNISPILOT DEVELOPMENT LOOP</span>
+        <h2 style="margin:5px 0 4px;">From match data to the next training session</h2>
+        <p class="muted" style="margin-top:0;">
+          Review the player's match patterns, identify the recurring priority, then assign training around it.
+        </p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:18px;">
+          <div style="padding:15px;background:white;border-radius:12px;"><b>1. Match</b><p class="muted" style="margin-bottom:0;">Player competes.</p></div>
+          <div style="padding:15px;background:white;border-radius:12px;"><b>2. Review</b><p class="muted" style="margin-bottom:0;">Player records what happened.</p></div>
+          <div style="padding:15px;background:white;border-radius:12px;"><b>3. Priority</b><p class="muted" style="margin-bottom:0;">Patterns become visible.</p></div>
+          <div style="padding:15px;background:white;border-radius:12px;"><b>4. Train</b><p class="muted" style="margin-bottom:0;">Coach assigns the next focus.</p></div>
+          <div style="padding:15px;background:white;border-radius:12px;"><b>5. Review again</b><p class="muted" style="margin-bottom:0;">The next match updates the plan.</p></div>
+        </div>
       </div>
     `;
   }
 
   else if (page === "players") {
+    const playerStats = await Promise.all(
+      players.map(async (p) => {
+        const [matches, trainingResult] = await Promise.all([
+          playerMatches(p.id),
+          sb.from("training_sessions")
+            .select("id, completed")
+            .eq("player_id", p.id)
+        ]);
+
+        if (trainingResult.error) throw trainingResult.error;
+
+        const sessions = trainingResult.data || [];
+        const completed = sessions.filter(s => s.completed).length;
+
+        const problemCounts = {};
+        matches.slice(0, 6).forEach(m => {
+          const problem = String(m.biggest_problem || "").trim();
+          if (!problem || problem.toLowerCase() === "none") return;
+          problemCounts[problem] = (problemCounts[problem] || 0) + 1;
+        });
+
+        const topProblem = Object.entries(problemCounts)
+          .sort((a, b) => b[1] - a[1])[0];
+
+        return {
+          ...p,
+          matches,
+          sessions,
+          completion: sessions.length ? Math.round((completed / sessions.length) * 100) : 0,
+          topProblem: topProblem ? topProblem[0] : null
+        };
+      })
+    );
 
     $("app").innerHTML = `
       <div class="dash-head">
         <div>
-          <span class="eyebrow">
-            YOUR PLAYERS
-          </span>
+          <span class="eyebrow">YOUR PLAYERS</span>
           <h1>Players</h1>
+          <p class="muted">Open a player to see their match patterns, training, and current priority.</p>
         </div>
       </div>
 
       ${
-        players.length
+        playerStats.length
           ? `
             <div class="grid">
-              ${players.map(p => `
+              ${playerStats.map(p => `
                 <div class="card">
+                  <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+                    <div>
+                      <h3 style="margin:0 0 5px;">${esc(p.full_name)}</h3>
+                      <p class="muted" style="margin:0;">${p.matches.length} matches</p>
+                    </div>
+                    <span class="pill">Connected</span>
+                  </div>
 
-                  <h3>
-                    ${esc(p.full_name)}
-                  </h3>
+                  <div style="display:grid;gap:9px;margin:18px 0;">
+                    <div style="display:flex;justify-content:space-between;gap:10px;">
+                      <span class="muted">Current priority</span>
+                      <b>${esc(p.topProblem || "Not enough data")}</b>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;gap:10px;">
+                      <span class="muted">Training</span>
+                      <b>${p.sessions.length ? `${p.completion}%` : "None assigned"}</b>
+                    </div>
+                  </div>
 
-                  <p class="muted">
-                    Player account
-                  </p>
-
-                  <button
-                    class="btn small"
-                    onclick="viewPlayer('${p.id}')">
+                  <button class="btn small" onclick="viewPlayer('${p.id}')">
                     Open player
                   </button>
-
                 </div>
               `).join("")}
             </div>
