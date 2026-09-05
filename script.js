@@ -1184,6 +1184,16 @@ async function renderPlayer(page) {
   }
 
   /* =========================
+     MATCH HISTORY
+  ========================= */
+
+  else if (page === "matches") {
+
+    await renderPlayerMatchHistory();
+
+  }
+
+  /* =========================
      MY COACH — UPDATED
   ========================= */
 
