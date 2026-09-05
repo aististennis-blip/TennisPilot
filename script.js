@@ -194,11 +194,6 @@ async function handleAuth(e) {
       coachId = c[0].id;
     }
 
-    /*
-      Profile is created automatically
-      by the Supabase auth trigger.
-    */
-
     if (role === "player" && coachId) {
       const { error: re } =
         await sb.from("connection_requests").insert({
@@ -357,7 +352,6 @@ async function playerMatches(id = currentUser.id) {
 ========================= */
 
 async function render(page = "overview") {
-
   document
     .querySelectorAll(".nav-item")
     .forEach(b =>
@@ -368,25 +362,20 @@ async function render(page = "overview") {
     );
 
   const app = $("app");
-  if (!app) return;
+
+  app.innerHTML =
+    "<div class='empty'>Loading…</div>";
 
   try {
     if (profile.role === "coach") {
-      app.innerHTML = "<div class='empty'>Loading…</div>";
       await renderCoach(page);
     } else {
-      if (page === "logmatch") {
-        await renderMatchHistory();
-      } else {
-        app.innerHTML = "<div class='empty'>Loading…</div>";
-        await renderPlayer(page);
-      }
+      await renderPlayer(page);
     }
   } catch (e) {
-    console.error(e);
     app.innerHTML =
       `<div class="card">
-        <b>Error:</b> ${esc(e.message || "Something went wrong.")}
+        <b>Error:</b> ${esc(e.message)}
       </div>`;
   }
 }
@@ -693,9 +682,12 @@ async function renderCoachMatches(players) {
                 <div class="muted">
                   ${esc(m.match_date)}
                   ·
-                  ${esc(m.surface || "Surface not recorded")}
-                  ·
                   ${esc(m.score || "No score")}
+                  ·
+                  ${esc(
+                    m.surface ||
+                    "Surface not recorded"
+                  )}
                 </div>
 
                 <p>
@@ -734,126 +726,1023 @@ async function viewPlayer(id) {
   const players =
     await connectedPlayers();
 
-  const p =
-    players.find(x => x.id === id);
+  const player =
+    players.find(p => p.id === id);
 
-  if (!p) return;
+  if (!player) {
+    alert("Player not found.");
+    return;
+  }
 
   const matches =
     await playerMatches(id);
 
+  const {
+    data: training,
+    error: trainingError
+  } = await sb.from("training_sessions")
+    .select("*")
+    .eq("player_id", id)
+    .order("session_date", {
+      ascending: false
+    });
+
+  if (trainingError) {
+    throw trainingError;
+  }
+
+  const sessions = training || [];
+
+  /* =========================
+     MATCH STATS
+  ========================= */
+
+  const wins =
+    matches.filter(
+      m => m.result === "win"
+    ).length;
+
+  const losses =
+    matches.filter(
+      m => m.result === "loss"
+    ).length;
+
+  const winRate =
+    matches.length
+      ? Math.round(
+          (wins / matches.length) * 100
+        )
+      : 0;
+
+  /* =========================
+     LAST 6 MATCHES
+  ========================= */
+
+  const recentMatches =
+    matches.slice(0, 6);
+
+  /* =========================
+     PROBLEM ANALYSIS
+  ========================= */
+
+  const problemCounts = {};
+
+  recentMatches.forEach(match => {
+
+    const problem =
+      String(
+        match.biggest_problem || ""
+      ).trim();
+
+    if (
+      !problem ||
+      problem.toLowerCase() === "none"
+    ) {
+      return;
+    }
+
+    problemCounts[problem] =
+      (problemCounts[problem] || 0) + 1;
+  });
+
+  const sortedProblems =
+    Object.entries(problemCounts)
+      .sort((a, b) => {
+
+        if (b[1] !== a[1]) {
+          return b[1] - a[1];
+        }
+
+        const aIndex =
+          recentMatches.findIndex(
+            m =>
+              m.biggest_problem === a[0]
+          );
+
+        const bIndex =
+          recentMatches.findIndex(
+            m =>
+              m.biggest_problem === b[0]
+          );
+
+        return aIndex - bIndex;
+      });
+
+  const topProblem =
+    sortedProblems.length
+      ? sortedProblems[0][0]
+      : null;
+
+  const topProblemCount =
+    sortedProblems.length
+      ? sortedProblems[0][1]
+      : 0;
+
+  const lastProblemMatch =
+    topProblem
+      ? recentMatches.find(
+          m =>
+            m.biggest_problem ===
+            topProblem
+        )
+      : null;
+
+  /* =========================
+     PROBLEM BREAKDOWN
+  ========================= */
+
+  const problemHTML =
+    sortedProblems.length
+      ? sortedProblems
+          .slice(0, 5)
+          .map(([problem, count]) => {
+
+            const percentage =
+              recentMatches.length
+                ? Math.round(
+                    (count /
+                      recentMatches.length) *
+                    100
+                  )
+                : 0;
+
+            return `
+              <div
+                style="
+                  margin-bottom:16px;
+                ">
+
+                <div
+                  style="
+                    display:flex;
+                    justify-content:space-between;
+                    margin-bottom:6px;
+                  ">
+
+                  <b>
+                    ${esc(problem)}
+                  </b>
+
+                  <span class="muted">
+                    ${count}
+                    match${count === 1 ? "" : "es"}
+                  </span>
+
+                </div>
+
+                <div
+                  style="
+                    width:100%;
+                    height:8px;
+                    background:#e5e7eb;
+                    border-radius:99px;
+                    overflow:hidden;
+                  ">
+
+                  <div
+                    style="
+                      width:${percentage}%;
+                      height:100%;
+                      background:#2563eb;
+                      border-radius:99px;
+                    ">
+                  </div>
+
+                </div>
+
+              </div>
+            `;
+
+          }).join("")
+      : `
+          <div class="empty">
+            No recurring problems identified yet.
+          </div>
+        `;
+
+  /* =========================
+     RECOMMENDED PRIORITY
+  ========================= */
+
+  let priorityHTML;
+
+  if (topProblem) {
+
+    priorityHTML = `
+
+      <div
+        style="
+          display:flex;
+          gap:18px;
+          align-items:flex-start;
+        ">
+
+        <div
+          style="
+            width:54px;
+            height:54px;
+            border-radius:14px;
+            background:#e8f0ff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:25px;
+            flex-shrink:0;
+          ">
+
+          🎯
+
+        </div>
+
+        <div style="flex:1">
+
+          <span
+            class="eyebrow"
+            style="color:#2563eb">
+
+            RECOMMENDED PRIORITY
+
+          </span>
+
+          <h2
+            style="
+              margin:5px 0 8px;
+            ">
+
+            ${esc(topProblem)}
+
+          </h2>
+
+          <p
+            class="muted"
+            style="
+              margin:0;
+              line-height:1.6;
+            ">
+
+            ${esc(topProblem)}
+            has been reported as a problem in
+
+            <b>
+              ${topProblemCount}
+              of ${recentMatches.length}
+            </b>
+
+            of the player's last
+            ${recentMatches.length}
+            reviewed matches.
+
+          </p>
+
+          ${
+            lastProblemMatch
+              ? `
+                <p
+                  class="muted"
+                  style="
+                    margin-top:10px;
+                  ">
+
+                  Most recently reported:
+                  <b>
+                    vs
+                    ${esc(
+                      lastProblemMatch.opponent
+                    )}
+                  </b>
+
+                  on
+                  ${esc(
+                    lastProblemMatch.match_date
+                  )}
+
+                </p>
+              `
+              : ""
+          }
+
+        </div>
+
+      </div>
+
+    `;
+
+  } else {
+
+    priorityHTML = `
+
+      <div
+        style="
+          display:flex;
+          gap:18px;
+          align-items:center;
+        ">
+
+        <div
+          style="
+            width:54px;
+            height:54px;
+            border-radius:14px;
+            background:#f1f5f9;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:25px;
+          ">
+
+          🎯
+
+        </div>
+
+        <div>
+
+          <span class="eyebrow">
+            RECOMMENDED PRIORITY
+          </span>
+
+          <h3
+            style="
+              margin:5px 0;
+            ">
+
+            Not enough data yet
+
+          </h3>
+
+          <p
+            class="muted"
+            style="
+              margin:0;
+            ">
+
+            Have the player complete more
+            match reviews to identify
+            recurring patterns.
+
+          </p>
+
+        </div>
+
+      </div>
+
+    `;
+  }
+
+  /* =========================
+     TRAINING SUMMARY
+  ========================= */
+
+  const completedSessions =
+    sessions.filter(
+      s => s.completed
+    ).length;
+
+  const trainingCompletion =
+    sessions.length
+      ? Math.round(
+          (completedSessions /
+            sessions.length) *
+          100
+        )
+      : 0;
+
+  /* =========================
+     RECENT MATCHES
+  ========================= */
+
+  const recentMatchesHTML =
+    recentMatches.length
+      ? recentMatches.map(m => `
+
+          <div
+            class="match"
+            style="
+              margin-bottom:10px;
+            ">
+
+            <div
+              style="
+                display:flex;
+                justify-content:space-between;
+                gap:15px;
+                flex-wrap:wrap;
+              ">
+
+              <div>
+
+                <span
+                  class="pill"
+                  style="
+                    background:${
+                      m.result === "win"
+                        ? "#dcfce7"
+                        : "#fee2e2"
+                    };
+                    color:${
+                      m.result === "win"
+                        ? "#15803d"
+                        : "#b91c1c"
+                    };
+                  ">
+
+                  ${esc(
+                    m.result
+                  ).toUpperCase()}
+
+                </span>
+
+                <h3
+                  style="
+                    margin:8px 0 4px;
+                  ">
+
+                  vs
+                  ${esc(m.opponent)}
+
+                </h3>
+
+                <span class="muted">
+
+                  ${esc(
+                    m.match_date ||
+                    "No date"
+                  )}
+
+                  ·
+
+                  ${esc(
+                    m.surface ||
+                    "Surface not recorded"
+                  )}
+
+                </span>
+
+              </div>
+
+              <div
+                style="
+                  font-weight:800;
+                  font-size:18px;
+                ">
+
+                ${esc(
+                  m.score || "—"
+                )}
+
+              </div>
+
+            </div>
+
+            <div
+              style="
+                display:grid;
+                grid-template-columns:
+                  repeat(
+                    auto-fit,
+                    minmax(180px, 1fr)
+                  );
+                gap:10px;
+                margin-top:14px;
+              ">
+
+              <div
+                style="
+                  background:#f8fafc;
+                  padding:11px;
+                  border-radius:9px;
+                ">
+
+                <span class="muted">
+                  Problem
+                </span>
+
+                <br>
+
+                <b>
+                  ${esc(
+                    m.biggest_problem ||
+                    "None"
+                  )}
+                </b>
+
+              </div>
+
+              <div
+                style="
+                  background:#f8fafc;
+                  padding:11px;
+                  border-radius:9px;
+                ">
+
+                <span class="muted">
+                  Positive
+                </span>
+
+                <br>
+
+                <b>
+                  ${esc(
+                    m.biggest_positive ||
+                    "None"
+                  )}
+                </b>
+
+              </div>
+
+            </div>
+
+            ${
+              m.notes
+                ? `
+                  <p
+                    class="muted"
+                    style="
+                      margin-bottom:0;
+                    ">
+
+                    ${esc(m.notes)}
+
+                  </p>
+                `
+                : ""
+            }
+
+          </div>
+
+        `).join("")
+      : `
+          <div class="empty">
+            This player has not logged
+            any matches yet.
+          </div>
+        `;
+
+  /* =========================
+     TRAINING
+  ========================= */
+
+  const recentTraining =
+    sessions.slice(0, 5);
+
+  const trainingHTML =
+    recentTraining.length
+      ? recentTraining.map(s => `
+
+          <div
+            class="list-item"
+            style="
+              padding:15px 0;
+            ">
+
+            <div>
+
+              <b>
+                ${esc(s.session_name)}
+              </b>
+
+              <div class="muted">
+                ${esc(
+                  s.session_date
+                )}
+                ·
+                ${esc(
+                  s.focus ||
+                  "No focus"
+                )}
+                ${
+                  s.duration_minutes
+                    ? `· ${esc(
+                        s.duration_minutes
+                      )} min`
+                    : ""
+                }
+              </div>
+
+            </div>
+
+            <span
+              class="pill"
+              style="
+                background:${
+                  s.completed
+                    ? "#dcfce7"
+                    : "#fef3c7"
+                };
+                color:${
+                  s.completed
+                    ? "#15803d"
+                    : "#a16207"
+                };
+              ">
+
+              ${
+                s.completed
+                  ? "Completed"
+                  : "Planned"
+              }
+
+            </span>
+
+          </div>
+
+        `).join("")
+      : `
+          <div class="empty">
+            No training sessions yet.
+          </div>
+        `;
+
+  /* =========================
+     PAGE
+  ========================= */
+
   $("app").innerHTML = `
+
     <div class="dash-head">
 
       <div>
+
         <span class="eyebrow">
-          PLAYER
+          PLAYER DEVELOPMENT
         </span>
 
         <h1>
-          ${esc(p.full_name)}
+          ${esc(player.full_name)}
         </h1>
+
+        <p class="muted">
+          Match → Review → Priority → Train
+        </p>
+
       </div>
 
       <button
         class="btn ghost"
         onclick="render('players')">
+
         ← Players
+
       </button>
 
     </div>
 
+    <!-- STATS -->
+
     <div class="grid">
 
       <div class="card">
+
         <span class="muted">
-          Matches reviewed
+          Matches
         </span>
 
         <div class="stat">
           ${matches.length}
         </div>
+
       </div>
 
       <div class="card">
+
         <span class="muted">
           Wins
         </span>
 
         <div class="stat">
-          ${matches.filter(
-            m => m.result === "win"
-          ).length}
+          ${wins}
         </div>
+
       </div>
 
       <div class="card">
+
         <span class="muted">
           Losses
         </span>
 
         <div class="stat">
-          ${matches.filter(
-            m => m.result === "loss"
-          ).length}
+          ${losses}
         </div>
+
+      </div>
+
+      <div class="card">
+
+        <span class="muted">
+          Win Rate
+        </span>
+
+        <div class="stat">
+          ${winRate}%
+        </div>
+
       </div>
 
     </div>
 
-    <div class="card"
-      style="margin-top:18px">
+    <!-- DEVELOPMENT PRIORITY -->
 
-      <h3>Match history</h3>
+    <div
+      class="card"
+      style="
+        margin-top:18px;
+        border:1px solid #dbe7ff;
+      ">
 
-      ${
-        matches.length
-          ? matches.map(m => `
-              <div class="match">
-
-                <b>
-                  ${esc(m.match_date)}
-                  —
-                  ${esc(m.result)}
-                </b>
-
-                vs
-                ${esc(m.opponent)}
-
-                <br>
-
-                <span class="muted">
-                  ${esc(m.surface || "Surface not recorded")}
-                  ·
-                  ${esc(m.score || "")}
-                </span>
-
-                <p>
-                  Problem:
-                  ${esc(
-                    m.biggest_problem ||
-                    "None"
-                  )}
-                </p>
-
-                <p>
-                  Positive:
-                  ${esc(
-                    m.biggest_positive ||
-                    "None"
-                  )}
-                </p>
-
-              </div>
-            `).join("")
-          : `
-            <p class="muted">
-              No matches yet.
-            </p>
-          `
-      }
+      ${priorityHTML}
 
     </div>
+
+    <!-- PROBLEM PATTERNS -->
+
+    <div
+      class="card"
+      style="
+        margin-top:18px;
+      ">
+
+      <div
+        style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:15px;
+          margin-bottom:20px;
+        ">
+
+        <div>
+
+          <span class="eyebrow">
+            MATCH PATTERNS
+          </span>
+
+          <h2
+            style="
+              margin:5px 0 0;
+            ">
+
+            Recurring Problems
+
+          </h2>
+
+        </div>
+
+        <span class="muted">
+          Last ${recentMatches.length}
+          reviewed matches
+        </span>
+
+      </div>
+
+      ${problemHTML}
+
+    </div>
+
+    <!-- TRAINING -->
+
+    <div
+      class="card"
+      style="
+        margin-top:18px;
+      ">
+
+      <div
+        style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:15px;
+          margin-bottom:18px;
+        ">
+
+        <div>
+
+          <span class="eyebrow">
+            TRAINING
+          </span>
+
+          <h2
+            style="
+              margin:5px 0 0;
+            ">
+
+            Training Progress
+
+          </h2>
+
+        </div>
+
+        <div
+          style="
+            text-align:right;
+          ">
+
+          <div
+            style="
+              font-size:24px;
+              font-weight:800;
+            ">
+
+            ${trainingCompletion}%
+
+          </div>
+
+          <span class="muted">
+            completion
+          </span>
+
+        </div>
+
+      </div>
+
+      <div
+        style="
+          width:100%;
+          height:10px;
+          background:#e5e7eb;
+          border-radius:99px;
+          overflow:hidden;
+          margin-bottom:20px;
+        ">
+
+        <div
+          style="
+            width:${trainingCompletion}%;
+            height:100%;
+            background:#2563eb;
+            border-radius:99px;
+          ">
+        </div>
+
+      </div>
+
+      ${
+        sessions.length
+          ? `
+            <p class="muted">
+              ${completedSessions}
+              of
+              ${sessions.length}
+              training sessions completed.
+            </p>
+          `
+          : ""
+      }
+
+      ${trainingHTML}
+
+    </div>
+
+    <!-- RECENT MATCHES -->
+
+    <div
+      class="card"
+      style="
+        margin-top:18px;
+      ">
+
+      <div
+        style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:15px;
+          margin-bottom:18px;
+        ">
+
+        <div>
+
+          <span class="eyebrow">
+            MATCH HISTORY
+          </span>
+
+          <h2
+            style="
+              margin:5px 0 0;
+            ">
+
+            Recent Matches
+
+          </h2>
+
+        </div>
+
+        <span class="muted">
+          ${matches.length}
+          total
+        </span>
+
+      </div>
+
+      ${recentMatchesHTML}
+
+    </div>
+
+    <!-- DEVELOPMENT LOOP -->
+
+    <div
+      class="card"
+      style="
+        margin-top:18px;
+        background:#f8fafc;
+      ">
+
+      <span class="eyebrow">
+        TENNISPILOT DEVELOPMENT LOOP
+      </span>
+
+      <div
+        style="
+          display:grid;
+          grid-template-columns:
+            repeat(
+              auto-fit,
+              minmax(150px, 1fr)
+            );
+          gap:12px;
+          margin-top:18px;
+        ">
+
+        <div
+          style="
+            padding:15px;
+            background:white;
+            border-radius:12px;
+          ">
+
+          <b>1. Match</b>
+
+          <p
+            class="muted"
+            style="margin-bottom:0">
+
+            Player competes.
+
+          </p>
+
+        </div>
+
+        <div
+          style="
+            padding:15px;
+            background:white;
+            border-radius:12px;
+          ">
+
+          <b>2. Review</b>
+
+          <p
+            class="muted"
+            style="margin-bottom:0">
+
+            Player records what happened.
+
+          </p>
+
+        </div>
+
+        <div
+          style="
+            padding:15px;
+            background:white;
+            border-radius:12px;
+          ">
+
+          <b>3. Priority</b>
+
+          <p
+            class="muted"
+            style="margin-bottom:0">
+
+            TennisPilot identifies patterns.
+
+          </p>
+
+        </div>
+
+        <div
+          style="
+            padding:15px;
+            background:white;
+            border-radius:12px;
+          ">
+
+          <b>4. Train</b>
+
+          <p
+            class="muted"
+            style="margin-bottom:0">
+
+            Coach builds the next training focus.
+
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
   `;
 }
 
@@ -965,9 +1854,11 @@ async function renderPlayer(page) {
   }
 
   else if (page === "coach") {
-
     await renderMyCoach();
+  }
 
+  else if (page === "logmatch") {
+    await renderMatchHistory();
   }
 
   else if (page === "training") {
@@ -1055,6 +1946,353 @@ async function renderPlayer(page) {
       }
     `;
   }
+}
+
+/* =========================
+   MATCH HISTORY
+========================= */
+
+async function renderMatchHistory() {
+
+  const matches =
+    await playerMatches();
+
+  const wins =
+    matches.filter(
+      m => m.result === "win"
+    ).length;
+
+  const losses =
+    matches.filter(
+      m => m.result === "loss"
+    ).length;
+
+  const winRate =
+    matches.length
+      ? Math.round(
+          (wins / matches.length) * 100
+        )
+      : 0;
+
+  const grouped = {};
+
+  matches.forEach(m => {
+
+    const year =
+      m.match_date
+        ? String(m.match_date).slice(0, 4)
+        : "Unknown";
+
+    if (!grouped[year]) {
+      grouped[year] = [];
+    }
+
+    grouped[year].push(m);
+  });
+
+  const years =
+    Object.keys(grouped)
+      .sort((a, b) => b.localeCompare(a));
+
+  $("app").innerHTML = `
+
+    <div class="dash-head">
+
+      <div>
+
+        <span class="eyebrow">
+          MATCH HISTORY
+        </span>
+
+        <h1>My Matches</h1>
+
+        <p class="muted">
+          Your complete match history.
+        </p>
+
+      </div>
+
+      <button
+        class="btn"
+        onclick="openMatch()">
+
+        + Add Match
+
+      </button>
+
+    </div>
+
+    <div class="grid">
+
+      <div class="card">
+
+        <span class="muted">
+          Total Matches
+        </span>
+
+        <div class="stat">
+          ${matches.length}
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <span class="muted">
+          Wins
+        </span>
+
+        <div class="stat">
+          ${wins}
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <span class="muted">
+          Losses
+        </span>
+
+        <div class="stat">
+          ${losses}
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <span class="muted">
+          Win Rate
+        </span>
+
+        <div class="stat">
+          ${winRate}%
+        </div>
+
+      </div>
+
+    </div>
+
+    ${
+      years.length
+        ? years.map(year => `
+
+            <div
+              class="card"
+              style="
+                margin-top:18px;
+              ">
+
+              <div
+                style="
+                  display:flex;
+                  justify-content:space-between;
+                  align-items:center;
+                  margin-bottom:18px;
+                ">
+
+                <h2
+                  style="
+                    margin:0;
+                  ">
+
+                  ${esc(year)}
+
+                </h2>
+
+                <span class="muted">
+
+                  ${grouped[year].length}
+                  match${
+                    grouped[year].length === 1
+                      ? ""
+                      : "es"
+                  }
+
+                </span>
+
+              </div>
+
+              ${grouped[year].map(m => `
+
+                <details
+                  class="match"
+                  style="
+                    margin-bottom:12px;
+                  ">
+
+                  <summary
+                    style="
+                      cursor:pointer;
+                      list-style:none;
+                    ">
+
+                    <div
+                      style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        gap:15px;
+                        flex-wrap:wrap;
+                      ">
+
+                      <div>
+
+                        <span
+                          class="pill"
+                          style="
+                            background:${
+                              m.result === "win"
+                                ? "#dcfce7"
+                                : "#fee2e2"
+                            };
+                            color:${
+                              m.result === "win"
+                                ? "#15803d"
+                                : "#b91c1c"
+                            };
+                          ">
+
+                          ${esc(
+                            m.result
+                          ).toUpperCase()}
+
+                        </span>
+
+                        <b
+                          style="
+                            margin-left:8px;
+                          ">
+
+                          vs
+                          ${esc(
+                            m.opponent
+                          )}
+
+                        </b>
+
+                      </div>
+
+                      <div class="muted">
+
+                        ${esc(
+                          m.match_date ||
+                          "No date"
+                        )}
+
+                        ·
+
+                        ${esc(
+                          m.surface ||
+                          "Surface not recorded"
+                        )}
+
+                        ·
+
+                        ${esc(
+                          m.score ||
+                          "No score"
+                        )}
+
+                      </div>
+
+                    </div>
+
+                  </summary>
+
+                  <div
+                    style="
+                      margin-top:16px;
+                      padding-top:16px;
+                      border-top:1px solid #e5e7eb;
+                    ">
+
+                    <p>
+
+                      <b>
+                        Biggest Problem:
+                      </b>
+
+                      ${esc(
+                        m.biggest_problem ||
+                        "None"
+                      )}
+
+                    </p>
+
+                    <p>
+
+                      <b>
+                        Biggest Positive:
+                      </b>
+
+                      ${esc(
+                        m.biggest_positive ||
+                        "None"
+                      )}
+
+                    </p>
+
+                    ${
+                      m.notes
+                        ? `
+                          <p>
+
+                            <b>
+                              Notes:
+                            </b>
+
+                            ${esc(m.notes)}
+
+                          </p>
+                        `
+                        : ""
+                    }
+
+                  </div>
+
+                </details>
+
+              `).join("")}
+
+            </div>
+
+          `).join("")
+        : `
+
+            <div
+              class="card"
+              style="
+                margin-top:18px;
+              ">
+
+              <div class="empty">
+
+                <h3>
+                  No matches yet
+                </h3>
+
+                <p>
+                  Start building your match history.
+                </p>
+
+                <button
+                  class="btn"
+                  onclick="openMatch()">
+
+                  + Add Match
+
+                </button>
+
+              </div>
+
+            </div>
+
+          `
+    }
+
+  `;
 }
 
 /* =========================
@@ -1286,10 +2524,12 @@ async function renderMyCoach() {
         </h3>
 
         <p class="muted">
+
           Your coach can see the information
           connected to your player account,
           including your match reviews and
           training progress.
+
         </p>
 
       </div>
@@ -1557,19 +2797,23 @@ async function renderMyCoach() {
     input.addEventListener(
       "input",
       () => {
+
         input.value =
           input.value
             .replace(/[^a-zA-Z0-9]/g, "")
             .toUpperCase();
+
       }
     );
 
     input.addEventListener(
       "keydown",
       e => {
+
         if (e.key === "Enter") {
           findCoach();
         }
+
       }
     );
   }
@@ -1642,6 +2886,7 @@ async function findCoach() {
       err.message ||
       "Could not find coach."
     );
+
   }
 }
 
@@ -1868,6 +3113,7 @@ async function sendCoachRequest(
       err.message ||
       "Could not send connection request."
     );
+
   }
 }
 
@@ -1896,8 +3142,8 @@ async function viewCoachProfile() {
   if (error) {
 
     alert(error.message);
-    return;
 
+    return;
   }
 
   $("modalRoot").innerHTML = `
@@ -1973,16 +3219,15 @@ async function disconnectCoach() {
 
   try {
 
-    const {
-      error
-    } = await sb.from("profiles")
-      .update({
-        connected_coach_id: null
-      })
-      .eq(
-        "id",
-        currentUser.id
-      );
+    const { error } =
+      await sb.from("profiles")
+        .update({
+          connected_coach_id: null
+        })
+        .eq(
+          "id",
+          currentUser.id
+        );
 
     if (error) throw error;
 
@@ -1996,354 +3241,8 @@ async function disconnectCoach() {
       err.message ||
       "Could not disconnect coach."
     );
+
   }
-}
-
-/* =========================
-   PLAYER MATCH HISTORY
-========================= */
-
-async function renderMatchHistory() {
-
-  const matches = await playerMatches();
-
-  const years = {};
-
-  matches.forEach(m => {
-
-    const year = m.match_date
-      ? String(m.match_date).slice(0, 4)
-      : "Unknown";
-
-    if (!years[year]) {
-      years[year] = [];
-    }
-
-    years[year].push(m);
-  });
-
-  const sortedYears =
-    Object.keys(years).sort(
-      (a, b) => b.localeCompare(a)
-    );
-
-  const wins =
-    matches.filter(
-      m => m.result === "win"
-    ).length;
-
-  const losses =
-    matches.filter(
-      m => m.result === "loss"
-    ).length;
-
-  const winRate =
-    matches.length
-      ? Math.round(
-          (wins / matches.length) * 100
-        )
-      : 0;
-
-  let historyHTML = "";
-
-  if (!matches.length) {
-
-    historyHTML = `
-      <div class="empty">
-
-        <h3 style="margin-top:0">
-          No matches yet
-        </h3>
-
-        <p>
-          Log your first match to start
-          building your match history.
-        </p>
-
-        <button
-          class="btn"
-          onclick="openMatch()">
-
-          + Add Match
-
-        </button>
-
-      </div>
-    `;
-
-  } else {
-
-    historyHTML =
-      sortedYears.map(year => `
-
-        <section style="margin-top:28px">
-
-          <div
-            style="
-              display:flex;
-              align-items:center;
-              gap:12px;
-              margin-bottom:12px;
-            ">
-
-            <h2 style="margin:0">
-              ${esc(year)}
-            </h2>
-
-            <span class="pill">
-              ${years[year].length}
-              match${years[year].length === 1 ? "" : "es"}
-            </span>
-
-          </div>
-
-          ${years[year].map(m => `
-
-            <div
-              class="match"
-              style="margin-bottom:12px">
-
-              <div
-                style="
-                  display:flex;
-                  justify-content:space-between;
-                  gap:15px;
-                  flex-wrap:wrap;
-                ">
-
-                <div>
-
-                  <span
-                    class="pill"
-                    style="
-                      background:${
-                        m.result === "win"
-                          ? "#dcfce7"
-                          : "#fee2e2"
-                      };
-                      color:${
-                        m.result === "win"
-                          ? "#15803d"
-                          : "#b91c1c"
-                      };
-                    ">
-
-                    ${esc(m.result).toUpperCase()}
-
-                  </span>
-
-                  <h3
-                    style="
-                      margin:10px 0 4px;
-                    ">
-
-                    vs ${esc(m.opponent)}
-
-                  </h3>
-
-                  <div class="muted">
-
-                    ${esc(
-                      m.match_date ||
-                      "Date not recorded"
-                    )}
-
-                    ·
-
-                    ${esc(
-                      m.surface ||
-                      "Surface not recorded"
-                    )}
-
-                  </div>
-
-                </div>
-
-                <div
-                  style="
-                    text-align:right;
-                    min-width:120px;
-                  ">
-
-                  <span class="muted">
-                    Score
-                  </span>
-
-                  <div
-                    style="
-                      font-size:20px;
-                      font-weight:800;
-                      margin-top:4px;
-                    ">
-
-                    ${esc(m.score || "—")}
-
-                  </div>
-
-                </div>
-
-              </div>
-
-              <details
-                style="margin-top:16px">
-
-                <summary
-                  style="
-                    cursor:pointer;
-                    font-weight:700;
-                  ">
-
-                  View match review
-
-                </summary>
-
-                <div
-                  style="
-                    margin-top:14px;
-                    display:grid;
-                    gap:9px;
-                  ">
-
-                  <div>
-
-                    <b>
-                      Biggest problem:
-                    </b>
-
-                    ${esc(
-                      m.biggest_problem ||
-                      "None"
-                    )}
-
-                  </div>
-
-                  <div>
-
-                    <b>
-                      Biggest positive:
-                    </b>
-
-                    ${esc(
-                      m.biggest_positive ||
-                      "None"
-                    )}
-
-                  </div>
-
-                  ${
-                    m.notes
-                      ? `
-                        <div>
-                          <b>Notes:</b>
-                          ${esc(m.notes)}
-                        </div>
-                      `
-                      : ""
-                  }
-
-                </div>
-
-              </details>
-
-            </div>
-
-          `).join("")}
-
-        </section>
-
-      `).join("");
-  }
-
-  $("app").innerHTML = `
-
-    <div class="dash-head">
-
-      <div>
-
-        <span class="eyebrow">
-          MATCH HISTORY
-        </span>
-
-        <h1>
-          My Matches
-        </h1>
-
-        <p
-          class="muted"
-          style="margin-top:5px">
-
-          Your complete match history stays
-          saved and organized by year.
-
-        </p>
-
-      </div>
-
-      <button
-        class="btn"
-        onclick="openMatch()">
-
-        + Add Match
-
-      </button>
-
-    </div>
-
-    <div class="grid">
-
-      <div class="card">
-
-        <span class="muted">
-          Total Matches
-        </span>
-
-        <div class="stat">
-          ${matches.length}
-        </div>
-
-      </div>
-
-      <div class="card">
-
-        <span class="muted">
-          Wins
-        </span>
-
-        <div class="stat">
-          ${wins}
-        </div>
-
-      </div>
-
-      <div class="card">
-
-        <span class="muted">
-          Losses
-        </span>
-
-        <div class="stat">
-          ${losses}
-        </div>
-
-      </div>
-
-      <div class="card">
-
-        <span class="muted">
-          Win Rate
-        </span>
-
-        <div class="stat">
-          ${winRate}%
-        </div>
-
-      </div>
-
-    </div>
-
-    ${historyHTML}
-
-  `;
 }
 
 /* =========================
@@ -2359,24 +3258,21 @@ function openMatch() {
       <div class="modal">
 
         <h2>
-          Add Match
+          Log Match
         </h2>
 
         <form id="matchForm">
 
           <label>
             Opponent
-
             <input
               id="opponent"
               required
             >
-
           </label>
 
           <label>
             Date
-
             <input
               id="matchDate"
               type="date"
@@ -2387,22 +3283,6 @@ function openMatch() {
               }"
               required
             >
-
-          </label>
-
-          <label>
-            Surface
-
-            <select id="surface">
-
-              <option>Hard</option>
-              <option>Clay</option>
-              <option>Grass</option>
-              <option>Carpet</option>
-              <option>Other</option>
-
-            </select>
-
           </label>
 
           <label>
@@ -2429,6 +3309,21 @@ function openMatch() {
               id="score"
               placeholder="6-4, 3-6, 10-8"
             >
+
+          </label>
+
+          <label>
+            Surface
+
+            <select id="surface">
+
+              <option>Hard</option>
+              <option>Clay</option>
+              <option>Grass</option>
+              <option>Carpet</option>
+              <option>Other</option>
+
+            </select>
 
           </label>
 
@@ -2485,7 +3380,10 @@ function openMatch() {
             <button
               type="button"
               class="btn ghost"
-              onclick="closeModal(); render('logmatch')">
+              onclick="
+                closeModal();
+                render('logmatch');
+              ">
 
               Cancel
 
@@ -2533,14 +3431,14 @@ function openMatch() {
             $("result")
               .value,
 
-          surface:
-            $("surface")
-              .value,
-
           score:
             $("score")
               .value
               .trim(),
+
+          surface:
+            $("surface")
+              .value,
 
           biggest_problem:
             $("problem")
@@ -2564,6 +3462,7 @@ function openMatch() {
       } else {
 
         closeModal();
+
         render("logmatch");
 
       }
@@ -2726,6 +3625,7 @@ function openSession() {
       } else {
 
         closeModal();
+
         render("training");
 
       }
@@ -2753,8 +3653,8 @@ async function start() {
   ) {
 
     setupAuth();
-    return;
 
+    return;
   }
 
   if (
@@ -2766,10 +3666,10 @@ async function start() {
     if (await loadProfile()) {
 
       shell();
+
       render("overview");
 
     }
-
   }
 }
 
