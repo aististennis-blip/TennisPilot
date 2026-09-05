@@ -3,16 +3,14 @@ let mode = "login", role = "coach", currentUser = null, profile = null;
 
 const $ = id => document.getElementById(id);
 
-const esc = s => String(s ?? "").replace(
-  /[&<>"']/g,
-  c => ({
+const esc = s =>
+  String(s ?? "").replace(/[&<>"']/g, c => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
     '"': "&quot;",
     "'": "&#39;"
-  }[c])
-);
+  }[c]));
 
 const msg = (text, bad = false) => {
   const e = $("authMessage");
@@ -21,7 +19,6 @@ const msg = (text, bad = false) => {
     e.className = "message " + (bad ? "danger" : "success");
   }
 };
-
 
 /* =========================
    AUTH
@@ -55,20 +52,8 @@ function setupAuth() {
 
   $("authForm").onsubmit = handleAuth;
 
-  const codeInput = $("coachCode");
-
-  if (codeInput) {
-    codeInput.addEventListener("input", () => {
-      codeInput.value = codeInput.value
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .slice(0, 6)
-        .toUpperCase();
-    });
-  }
-
   updateAuth();
 }
-
 
 function updateAuth() {
   $("name").parentElement.classList.toggle(
@@ -92,14 +77,11 @@ function updateAuth() {
   );
 
   $("submitBtn").textContent =
-    mode === "login"
-      ? "Log In"
-      : "Create Account";
+    mode === "login" ? "Log In" : "Create Account";
 
   $("name").required = mode === "signup";
   $("confirm").required = mode === "signup";
 }
-
 
 function validPassword(p) {
   return (
@@ -110,6 +92,29 @@ function validPassword(p) {
   );
 }
 
+function makeCode() {
+  return (
+    String.fromCharCode(65 + Math.floor(Math.random() * 26)) +
+    String.fromCharCode(65 + Math.floor(Math.random() * 26)) +
+    String.fromCharCode(65 + Math.floor(Math.random() * 26)) +
+    Math.floor(100 + Math.random() * 900)
+  );
+}
+
+async function uniqueCode() {
+  for (let i = 0; i < 30; i++) {
+    const c = makeCode();
+
+    const { data, error } =
+      await sb.rpc("find_coach_by_code", {
+        code_input: c
+      });
+
+    if (!error && !data?.length) return c;
+  }
+
+  throw Error("Could not create a unique coach code.");
+}
 
 async function handleAuth(e) {
   e.preventDefault();
@@ -119,11 +124,7 @@ async function handleAuth(e) {
   const password = $("password").value;
 
   try {
-
-    /* LOGIN */
-
     if (mode === "login") {
-
       const { error } =
         await sb.auth.signInWithPassword({
           email,
@@ -135,9 +136,6 @@ async function handleAuth(e) {
       location.href = "dashboard.html";
       return;
     }
-
-
-    /* SIGN UP */
 
     if (!validPassword(password)) {
       throw Error(
@@ -154,7 +152,6 @@ async function handleAuth(e) {
     if (!fullName) {
       throw Error("Enter your full name.");
     }
-
 
     const { data, error } =
       await sb.auth.signUp({
@@ -174,31 +171,19 @@ async function handleAuth(e) {
       throw Error("Account could not be created.");
     }
 
-
     let coachId = null;
-
-
-    /* FIND COACH */
 
     if (
       role === "player" &&
       $("coachCode").value.trim()
     ) {
-
-      const {
-        data: c,
-        error: ce
-      } =
-        await sb.rpc(
-          "find_coach_by_code",
-          {
-            code_input:
-              $("coachCode")
-                .value
-                .trim()
-                .toUpperCase()
-          }
-        );
+      const { data: c, error: ce } =
+        await sb.rpc("find_coach_by_code", {
+          code_input: $("coachCode")
+            .value
+            .trim()
+            .toUpperCase()
+        });
 
       if (ce) throw ce;
 
@@ -209,34 +194,21 @@ async function handleAuth(e) {
       coachId = c[0].id;
     }
 
-
     /*
       Profile is created automatically
       by the Supabase auth trigger.
     */
 
-
-    /* CONNECTION REQUEST */
-
-    if (
-      role === "player" &&
-      coachId
-    ) {
-
-      const {
-        error: re
-      } =
-        await sb
-          .from("connection_requests")
-          .insert({
-            player_id: data.user.id,
-            coach_id: coachId,
-            status: "pending"
-          });
+    if (role === "player" && coachId) {
+      const { error: re } =
+        await sb.from("connection_requests").insert({
+          player_id: data.user.id,
+          coach_id: coachId,
+          status: "pending"
+        });
 
       if (re) throw re;
     }
-
 
     if (data.session) {
       location.href = "dashboard.html";
@@ -247,23 +219,18 @@ async function handleAuth(e) {
     }
 
   } catch (err) {
-
     msg(
-      err.message ||
-      "Something went wrong.",
+      err.message || "Something went wrong.",
       true
     );
-
   }
 }
 
-
 /* =========================
-   LOAD PROFILE
+   PROFILE
 ========================= */
 
 async function loadProfile() {
-
   const {
     data: { user }
   } = await sb.auth.getUser();
@@ -275,12 +242,8 @@ async function loadProfile() {
 
   currentUser = user;
 
-  const {
-    data,
-    error
-  } =
-    await sb
-      .from("profiles")
+  const { data, error } =
+    await sb.from("profiles")
       .select("*")
       .eq("id", user.id)
       .single();
@@ -296,462 +259,240 @@ async function loadProfile() {
   return true;
 }
 
-
 /* =========================
-   DASHBOARD SHELL
+   APP SHELL
 ========================= */
 
 function shell() {
-
   $("profileBox").innerHTML =
     `<strong>${esc(profile.full_name)}</strong>
      <small>${esc(profile.role)}</small>` +
-
     (
       profile.role === "coach"
-        ? `<small>
-             Code:
-             <b>${esc(profile.coach_code || "")}</b>
-           </small>`
+        ? `<small>Code: <b>${esc(profile.coach_code || "")}</b></small>`
         : ""
     );
 
-
   $("sideNav").innerHTML =
     profile.role === "coach"
-
       ? `
-        <button
-          class="nav-item active"
-          data-page="overview">
+        <button class="nav-item active" data-page="overview">
           Overview
         </button>
 
-        <button
-          class="nav-item"
-          data-page="players">
+        <button class="nav-item" data-page="players">
           Players
         </button>
 
-        <button
-          class="nav-item"
-          data-page="requests">
+        <button class="nav-item" data-page="requests">
           Requests
         </button>
 
-        <button
-          class="nav-item"
-          data-page="matches">
+        <button class="nav-item" data-page="matches">
           Match Reviews
         </button>
       `
-
       : `
-        <button
-          class="nav-item active"
-          data-page="overview">
+        <button class="nav-item active" data-page="overview">
           My Dashboard
         </button>
 
-        <button
-          class="nav-item"
-          data-page="logmatch">
+        <button class="nav-item" data-page="logmatch">
           Log Match
         </button>
 
-        <button
-          class="nav-item"
-          data-page="coach">
+        <button class="nav-item" data-page="coach">
           My Coach
         </button>
 
-        <button
-          class="nav-item"
-          data-page="bio">
-          My Bio
-        </button>
-
-        <button
-          class="nav-item"
-          data-page="training">
+        <button class="nav-item" data-page="training">
           Training
         </button>
       `;
 
-
   document
     .querySelectorAll(".nav-item")
     .forEach(b => {
-      b.onclick = () =>
-        render(b.dataset.page);
+      b.onclick = () => render(b.dataset.page);
     });
 
-
-  $("logoutBtn").onclick =
-    async () => {
-      await sb.auth.signOut();
-      location.href = "index.html";
-    };
+  $("logoutBtn").onclick = async () => {
+    await sb.auth.signOut();
+    location.href = "index.html";
+  };
 }
 
-
 /* =========================
-   CONNECTED PLAYERS
+   DATA
 ========================= */
 
 async function connectedPlayers() {
-
-  const {
-    data,
-    error
-  } =
-    await sb
-      .from("profiles")
+  const { data, error } =
+    await sb.from("profiles")
       .select("*")
-      .eq(
-        "connected_coach_id",
-        currentUser.id
-      )
-      .eq(
-        "role",
-        "player"
-      );
+      .eq("connected_coach_id", currentUser.id)
+      .eq("role", "player");
 
   if (error) throw error;
 
   return data || [];
 }
 
-
-/* =========================
-   PLAYER MATCHES
-========================= */
-
-async function playerMatches(
-  id = currentUser.id
-) {
-
-  const {
-    data,
-    error
-  } =
-    await sb
-      .from("matches")
+async function playerMatches(id = currentUser.id) {
+  const { data, error } =
+    await sb.from("matches")
       .select("*")
       .eq("player_id", id)
-      .order(
-        "match_date",
-        {
-          ascending: false
-        }
-      );
+      .order("match_date", {
+        ascending: false
+      });
 
   if (error) throw error;
 
   return data || [];
 }
 
-
 /* =========================
-   PROFILE PHOTOS
+   PAGE RENDER
 ========================= */
 
-async function signedProfilePhoto(path) {
-
-  if (!path) return "";
-
-  const {
-    data,
-    error
-  } =
-    await sb
-      .storage
-      .from("profile-pictures")
-      .createSignedUrl(
-        path,
-        3600
-      );
-
-  if (error) return "";
-
-  return data?.signedUrl || "";
-}
-
-
-function photoHTML(
-  url,
-  name = "Player",
-  className = "avatar"
-) {
-
-  return url
-
-    ? `
-      <img
-        class="${className}"
-        src="${esc(url)}"
-        alt="${esc(name)} profile picture">
-      `
-
-    : `
-      <div
-        class="${className} avatar-placeholder">
-
-        ${esc(
-          (name || "P")
-            .trim()
-            .charAt(0)
-            .toUpperCase()
-        )}
-
-      </div>
-      `;
-}
-
-
-/* =========================
-   MAIN RENDER
-========================= */
-
-async function render(
-  page = "overview"
-) {
-
+async function render(page = "overview") {
   document
     .querySelectorAll(".nav-item")
-    .forEach(b => {
+    .forEach(b =>
       b.classList.toggle(
         "active",
         b.dataset.page === page
-      );
-    });
-
+      )
+    );
 
   const app = $("app");
 
   app.innerHTML =
     "<div class='empty'>Loading…</div>";
 
-
   try {
-
-    if (
-      profile.role === "coach"
-    ) {
-
+    if (profile.role === "coach") {
       await renderCoach(page);
-
     } else {
-
       await renderPlayer(page);
-
     }
-
   } catch (e) {
-
     app.innerHTML =
       `<div class="card">
-        <b>Error:</b>
-        ${esc(e.message)}
+        <b>Error:</b> ${esc(e.message)}
       </div>`;
   }
 }
 
-
 /* =========================
-   COACH
+   COACH DASHBOARD
 ========================= */
 
 async function renderCoach(page) {
-
-  const players =
-    await connectedPlayers();
-
+  const players = await connectedPlayers();
 
   if (page === "overview") {
 
     $("app").innerHTML = `
-
       <div class="dash-head">
-
         <div>
-
-          <span class="eyebrow">
-            COACH DASHBOARD
-          </span>
-
-          <h1>
-            Overview
-          </h1>
-
+          <span class="eyebrow">COACH DASHBOARD</span>
+          <h1>Overview</h1>
         </div>
 
-
-        <button
-          class="btn"
+        <button class="btn"
           onclick="render('players')">
-
           View players
-
         </button>
-
       </div>
-
 
       <div class="grid">
 
         <div class="card">
-
-          <span class="muted">
-            Players
-          </span>
-
+          <span class="muted">Players</span>
           <div class="stat">
             ${players.length}
           </div>
-
         </div>
 
-
         <div class="card">
-
           <span class="muted">
             Connection code
           </span>
 
           <div class="stat">
-            ${esc(
-              profile.coach_code || "—"
-            )}
+            ${esc(profile.coach_code || "—")}
           </div>
-
         </div>
 
-
         <div class="card">
-
-          <span class="muted">
-            System
-          </span>
-
-          <div class="stat">
-            Live
-          </div>
-
+          <span class="muted">System</span>
+          <div class="stat">Live</div>
         </div>
 
       </div>
 
-
-      <div
-        class="card"
+      <div class="card"
         style="margin-top:18px">
 
-        <h3>
-          Players
-        </h3>
+        <h3>Players</h3>
 
         ${
           players.length
-
-            ? players
-                .map(
-                  p => `
-                    <div class="list-item">
-
-                      <b>
-                        ${esc(
-                          p.full_name
-                        )}
-                      </b>
-
-                      <span
-                        class="pill"
-                        style="float:right">
-
-                        Connected
-
-                      </span>
-
-                    </div>
-                  `
-                )
-                .join("")
-
-            : `
-              <div class="empty">
-                No players connected yet.
-              </div>
-            `
+            ? players.map(p => `
+                <div class="list-item">
+                  <b>${esc(p.full_name)}</b>
+                  <span class="pill"
+                    style="float:right">
+                    Connected
+                  </span>
+                </div>
+              `).join("")
+            : "<div class='empty'>No players connected yet.</div>"
         }
 
       </div>
     `;
   }
 
-
   else if (page === "players") {
 
     $("app").innerHTML = `
-
       <div class="dash-head">
-
         <div>
-
           <span class="eyebrow">
             YOUR PLAYERS
           </span>
-
-          <h1>
-            Players
-          </h1>
-
+          <h1>Players</h1>
         </div>
-
       </div>
-
 
       ${
         players.length
-
           ? `
             <div class="grid">
+              ${players.map(p => `
+                <div class="card">
 
-              ${
-                players
-                  .map(
-                    p => `
+                  <h3>
+                    ${esc(p.full_name)}
+                  </h3>
 
-                      <div class="card">
+                  <p class="muted">
+                    Player account
+                  </p>
 
-                        <h3>
-                          ${esc(
-                            p.full_name
-                          )}
-                        </h3>
+                  <button
+                    class="btn small"
+                    onclick="viewPlayer('${p.id}')">
+                    Open player
+                  </button>
 
-                        <p class="muted">
-                          Player account
-                        </p>
-
-                        <button
-                          class="btn small"
-                          onclick="viewPlayer('${p.id}')">
-
-                          Open player
-
-                        </button>
-
-                      </div>
-
-                    `
-                  )
-                  .join("")
-              }
-
+                </div>
+              `).join("")}
             </div>
           `
-
           : `
             <div class="empty">
               No players yet.
@@ -759,82 +500,46 @@ async function renderCoach(page) {
             </div>
           `
       }
-
     `;
   }
 
-
-  else if (
-    page === "requests"
-  ) {
-
+  else if (page === "requests") {
     await renderRequests();
-
   }
 
-
-  else if (
-    page === "matches"
-  ) {
-
-    await renderCoachMatches(
-      players
-    );
-
+  else if (page === "matches") {
+    await renderCoachMatches(players);
   }
 }
 
-
 /* =========================
-   REQUESTS
+   CONNECTION REQUESTS
 ========================= */
 
 async function renderRequests() {
 
-  const {
-    data,
-    error
-  } =
-    await sb
-      .from("connection_requests")
+  const { data, error } =
+    await sb.from("connection_requests")
       .select("*")
-      .eq(
-        "coach_id",
-        currentUser.id
-      )
-      .eq(
-        "status",
-        "pending"
-      )
-      .order(
-        "created_at",
-        {
-          ascending: false
-        }
-      );
+      .eq("coach_id", currentUser.id)
+      .eq("status", "pending")
+      .order("created_at", {
+        ascending: false
+      });
 
   if (error) throw error;
 
-
   let html = `
-
     <div class="dash-head">
-
       <div>
-
         <span class="eyebrow">
           CONNECTIONS
         </span>
 
-        <h1>
-          Requests
-        </h1>
-
+        <h1>Requests</h1>
       </div>
-
     </div>
   `;
-
 
   if (!data.length) {
 
@@ -848,70 +553,47 @@ async function renderRequests() {
 
     for (const r of data) {
 
-      const {
-        data: p
-      } =
-        await sb
-          .from("profiles")
+      const { data: p } =
+        await sb.from("profiles")
           .select("full_name")
-          .eq(
-            "id",
-            r.player_id
-          )
+          .eq("id", r.player_id)
           .single();
 
-
       html += `
-
-        <div
-          class="card"
+        <div class="card"
           style="margin:10px 0">
 
           <b>
-            ${esc(
-              p?.full_name ||
-              "Player"
-            )}
+            ${esc(p?.full_name || "Player")}
           </b>
-
 
           <div class="modal-actions">
 
             <button
               class="btn small"
               onclick="acceptReq('${r.id}')">
-
               Accept
-
             </button>
-
 
             <button
               class="btn small ghost"
               onclick="declineReq('${r.id}')">
-
               Decline
-
             </button>
 
           </div>
 
         </div>
-
       `;
     }
   }
 
-
   $("app").innerHTML = html;
 }
 
-
 async function acceptReq(id) {
 
-  const {
-    error
-  } =
+  const { error } =
     await sb.rpc(
       "accept_connection_request",
       {
@@ -926,12 +608,9 @@ async function acceptReq(id) {
   }
 }
 
-
 async function declineReq(id) {
 
-  const {
-    error
-  } =
+  const { error } =
     await sb.rpc(
       "decline_connection_request",
       {
@@ -946,181 +625,97 @@ async function declineReq(id) {
   }
 }
 
-
 /* =========================
-   COACH MATCH REVIEWS
+   COACH MATCHES
 ========================= */
 
-async function renderCoachMatches(
-  players
-) {
+async function renderCoachMatches(players) {
 
-  const ids =
-    players.map(
-      p => p.id
-    );
-
+  const ids = players.map(p => p.id);
   let data = [];
-
 
   if (ids.length) {
 
     const {
-      data: matches,
+      data: d,
       error
-    } =
-      await sb
-        .from("matches")
-        .select("*")
-        .in(
-          "player_id",
-          ids
-        )
-        .order(
-          "match_date",
-          {
-            ascending: false
-          }
-        );
+    } = await sb.from("matches")
+      .select("*")
+      .in("player_id", ids)
+      .order("match_date", {
+        ascending: false
+      });
 
     if (error) throw error;
 
-    data = matches || [];
+    data = d || [];
   }
 
-
   $("app").innerHTML = `
-
     <div class="dash-head">
-
       <div>
-
         <span class="eyebrow">
           MATCH HISTORY
         </span>
 
-        <h1>
-          Match Reviews
-        </h1>
-
+        <h1>Match Reviews</h1>
       </div>
-
     </div>
-
 
     ${
       data.length
+        ? data.map(m => {
 
-        ? data
-            .map(m => {
+            const p =
+              players.find(
+                x => x.id === m.player_id
+              );
 
-              const p =
-                players.find(
-                  x =>
-                    x.id ===
-                    m.player_id
-                );
+            return `
+              <div class="match">
 
-              return `
+                <b>
+                  ${esc(p?.full_name || "Player")}
+                </b>
 
-                <div class="match">
+                · ${esc(m.result)}
 
-                  <b>
-                    ${esc(
-                      p?.full_name ||
-                      "Player"
-                    )}
-                  </b>
+                <h3>
+                  vs ${esc(m.opponent)}
+                </h3>
 
+                <div class="muted">
+                  ${esc(m.match_date)}
                   ·
-
-                  ${esc(
-                    m.result
-                  )}
-
-
-                  <h3>
-                    vs
-                    ${esc(
-                      m.opponent
-                    )}
-                  </h3>
-
-
-                  <div class="muted">
-
-                    ${esc(
-                      m.match_date
-                    )}
-
-                    ·
-
-                    ${esc(
-                      m.surface ||
-                      "Unknown surface"
-                    )}
-
-                    ·
-
-                    ${esc(
-                      m.score ||
-                      "No score"
-                    )}
-
-                  </div>
-
-
-                  <p>
-
-                    <b>
-                      Problem:
-                    </b>
-
-                    ${esc(
-                      m.biggest_problem ||
-                      "None"
-                    )}
-
-                  </p>
-
-
-                  <p>
-
-                    <b>
-                      Positive:
-                    </b>
-
-                    ${esc(
-                      m.biggest_positive ||
-                      "None"
-                    )}
-
-                  </p>
-
-
-                  <p>
-                    ${esc(
-                      m.notes ||
-                      ""
-                    )}
-                  </p>
-
+                  ${esc(m.score || "No score")}
                 </div>
 
-              `;
-            })
-            .join("")
+                <p>
+                  <b>Problem:</b>
+                  ${esc(m.biggest_problem || "None")}
+                </p>
 
+                <p>
+                  <b>Positive:</b>
+                  ${esc(m.biggest_positive || "None")}
+                </p>
+
+                <p>
+                  ${esc(m.notes || "")}
+                </p>
+
+              </div>
+            `;
+
+          }).join("")
         : `
           <div class="empty">
             No match reviews yet.
           </div>
         `
     }
-
   `;
 }
-
 
 /* =========================
    VIEW PLAYER
@@ -1132,226 +727,37 @@ async function viewPlayer(id) {
     await connectedPlayers();
 
   const p =
-    players.find(
-      x => x.id === id
-    );
+    players.find(x => x.id === id);
 
   if (!p) return;
-
 
   const matches =
     await playerMatches(id);
 
-
-  const photo =
-    await signedProfilePhoto(
-      p.profile_picture_path
-    );
-
-
   $("app").innerHTML = `
-
     <div class="dash-head">
 
       <div>
-
         <span class="eyebrow">
           PLAYER
         </span>
 
         <h1>
-          ${esc(
-            p.full_name
-          )}
+          ${esc(p.full_name)}
         </h1>
-
       </div>
-
 
       <button
         class="btn ghost"
         onclick="render('players')">
-
         ← Players
-
       </button>
 
     </div>
 
-
-    <div class="profile-hero card">
-
-      ${photoHTML(
-        photo,
-        p.full_name,
-        "avatar profile-avatar"
-      )}
-
-
-      <div>
-
-        <h2>
-          ${esc(
-            p.full_name
-          )}
-        </h2>
-
-
-        <p class="muted">
-
-          ${esc(
-            p.age || ""
-          )}
-
-          ${
-            p.age
-              ? " years old · "
-              : ""
-          }
-
-          ${esc(
-            p.dominant_hand || ""
-          )}
-
-          ${
-            p.dominant_hand
-              ? "-handed · "
-              : ""
-          }
-
-          ${
-            p.years_playing != null
-              ? esc(
-                  p.years_playing
-                ) +
-                " years playing · "
-              : ""
-          }
-
-          ${esc(
-            p.playing_level ||
-            "Player"
-          )}
-
-        </p>
-
-
-        ${
-          p.bio
-            ? `<p>${esc(
-                p.bio
-              )}</p>`
-            : ""
-        }
-
-      </div>
-
-    </div>
-
-
-    <div
-      class="card"
-      style="margin-top:18px">
-
-      <h3>
-        Player Bio
-      </h3>
-
-
-      <div class="bio-grid">
-
-        <div>
-          <span class="muted">
-            Age
-          </span>
-
-          <b>
-            ${esc(
-              p.age ||
-              "Not added"
-            )}
-          </b>
-        </div>
-
-
-        <div>
-          <span class="muted">
-            Dominant hand
-          </span>
-
-          <b>
-            ${esc(
-              p.dominant_hand ||
-              "Not added"
-            )}
-          </b>
-        </div>
-
-
-        <div>
-          <span class="muted">
-            Years playing
-          </span>
-
-          <b>
-            ${esc(
-              p.years_playing ??
-              "Not added"
-            )}
-          </b>
-        </div>
-
-
-        <div>
-          <span class="muted">
-            Level
-          </span>
-
-          <b>
-            ${esc(
-              p.playing_level ||
-              "Not added"
-            )}
-          </b>
-        </div>
-
-
-        <div>
-          <span class="muted">
-            Playing style
-          </span>
-
-          <b>
-            ${esc(
-              p.playing_style ||
-              "Not added"
-            )}
-          </b>
-        </div>
-
-
-        <div>
-          <span class="muted">
-            Height
-          </span>
-
-          <b>
-            ${esc(
-              p.height ||
-              "Not added"
-            )}
-          </b>
-        </div>
-
-      </div>
-
-    </div>
-
-
     <div class="grid">
 
       <div class="card">
-
         <span class="muted">
           Matches reviewed
         </span>
@@ -1359,134 +765,77 @@ async function viewPlayer(id) {
         <div class="stat">
           ${matches.length}
         </div>
-
       </div>
 
-
       <div class="card">
-
         <span class="muted">
           Wins
         </span>
 
         <div class="stat">
-
-          ${
-            matches.filter(
-              m =>
-                m.result ===
-                "win"
-            ).length
-          }
-
+          ${matches.filter(
+            m => m.result === "win"
+          ).length}
         </div>
-
       </div>
 
-
       <div class="card">
-
         <span class="muted">
           Losses
         </span>
 
         <div class="stat">
-
-          ${
-            matches.filter(
-              m =>
-                m.result ===
-                "loss"
-            ).length
-          }
-
+          ${matches.filter(
+            m => m.result === "loss"
+          ).length}
         </div>
-
       </div>
 
     </div>
 
-
-    <div
-      class="card"
+    <div class="card"
       style="margin-top:18px">
 
-      <h3>
-        Match history
-      </h3>
-
+      <h3>Match history</h3>
 
       ${
         matches.length
+          ? matches.map(m => `
+              <div class="match">
 
-          ? matches
-              .map(
-                m => `
+                <b>
+                  ${esc(m.match_date)}
+                  —
+                  ${esc(m.result)}
+                </b>
 
-                  <div class="match">
+                vs
+                ${esc(m.opponent)}
 
-                    <b>
-                      ${esc(
-                        m.match_date
-                      )}
+                <br>
 
-                      —
+                <span class="muted">
+                  ${esc(m.score || "")}
+                </span>
 
-                      ${esc(
-                        m.result
-                      )}
-                    </b>
+                <p>
+                  Problem:
+                  ${esc(
+                    m.biggest_problem ||
+                    "None"
+                  )}
+                </p>
 
-                    vs
+                <p>
+                  Positive:
+                  ${esc(
+                    m.biggest_positive ||
+                    "None"
+                  )}
+                </p>
 
-                    ${esc(
-                      m.opponent
-                    )}
-
-
-                    <br>
-
-
-                    <span class="muted">
-
-                      ${esc(
-                        m.surface ||
-                        "Unknown surface"
-                      )}
-
-                      ·
-
-                      ${esc(
-                        m.score ||
-                        ""
-                      )}
-
-                    </span>
-
-
-                    <p>
-                      Problem:
-                      ${esc(
-                        m.biggest_problem ||
-                        "None"
-                      )}
-                    </p>
-
-
-                    <p>
-                      Positive:
-                      ${esc(
-                        m.biggest_positive ||
-                        "None"
-                      )}
-                    </p>
-
-                  </div>
-
-                `
-              )
-              .join("")
-
+              </div>
+            `).join("")
           : `
             <p class="muted">
               No matches yet.
@@ -1495,10 +844,8 @@ async function viewPlayer(id) {
       }
 
     </div>
-
   `;
 }
-
 
 /* =========================
    PLAYER DASHBOARD
@@ -1511,35 +858,10 @@ async function renderPlayer(page) {
     const matches =
       await playerMatches();
 
-
-    const wins =
-      matches.filter(
-        m => m.result === "win"
-      ).length;
-
-
-    const losses =
-      matches.filter(
-        m => m.result === "loss"
-      ).length;
-
-
-    const winRate =
-      matches.length
-        ? Math.round(
-            (wins /
-              matches.length) *
-            100
-          )
-        : 0;
-
-
     $("app").innerHTML = `
-
       <div class="dash-head">
 
         <div>
-
           <span class="eyebrow">
             PLAYER DASHBOARD
           </span>
@@ -1551,25 +873,19 @@ async function renderPlayer(page) {
                 .split(" ")[0]
             )}
           </h1>
-
         </div>
-
 
         <button
           class="btn"
-          onclick="render('logmatch')">
-
-          Match History
-
+          onclick="openMatch()">
+          + Log Match
         </button>
 
       </div>
 
-
       <div class="grid">
 
         <div class="card">
-
           <span class="muted">
             Matches
           </span>
@@ -1577,280 +893,248 @@ async function renderPlayer(page) {
           <div class="stat">
             ${matches.length}
           </div>
-
         </div>
 
-
         <div class="card">
-
           <span class="muted">
             Wins
           </span>
 
           <div class="stat">
-            ${wins}
+            ${matches.filter(
+              m => m.result === "win"
+            ).length}
           </div>
-
         </div>
 
-
         <div class="card">
-
           <span class="muted">
-            Win Rate
+            Losses
           </span>
 
           <div class="stat">
-            ${winRate}%
+            ${matches.filter(
+              m => m.result === "loss"
+            ).length}
           </div>
-
         </div>
 
       </div>
 
-
-      <div
-        class="card"
+      <div class="card"
         style="margin-top:18px">
 
-        <h3>
-          Recent matches
-        </h3>
-
+        <h3>Recent matches</h3>
 
         ${
-          matches
-            .slice(0, 5)
-            .map(
-              m => `
+          matches.slice(0, 5).map(m => `
+            <div class="list-item">
 
-                <div class="list-item">
+              <b>
+                ${esc(m.result).toUpperCase()}
+                vs
+                ${esc(m.opponent)}
+              </b>
 
-                  <b>
+              <span
+                class="muted"
+                style="float:right">
 
-                    ${esc(
-                      m.result
-                    ).toUpperCase()}
+                ${esc(m.match_date)}
 
-                    vs
+              </span>
 
-                    ${esc(
-                      m.opponent
-                    )}
-
-                  </b>
-
-
-                  <span
-                    class="muted"
-                    style="float:right">
-
-                    ${esc(
-                      m.match_date
-                    )}
-
-                  </span>
-
-
-                  <div
-                    class="muted"
-                    style="margin-top:5px">
-
-                    ${esc(
-                      m.surface ||
-                      "Unknown surface"
-                    )}
-
-                    ·
-
-                    ${esc(
-                      m.score ||
-                      "No score"
-                    )}
-
-                  </div>
-
-                </div>
-
-              `
-            )
-            .join("")
-
+            </div>
+          `).join("")
           ||
-
-          "<p class='muted'>No matches yet.</p>"
+          "<p class='muted'>Log your first match.</p>"
         }
 
-
-        <button
-          class="btn small ghost"
-          style="margin-top:12px"
-          onclick="render('logmatch')">
-
-          View Match History
-
-        </button>
-
       </div>
-
     `;
   }
 
+  /* =========================
+     MY COACH — UPDATED
+  ========================= */
 
-  else if (
-    page === "logmatch"
-  ) {
+  else if (page === "coach") {
 
-    await renderMatchHistory();
-
-  }
-
-
-  else if (
-    page === "coach"
-  ) {
-
-    let coach = null;
-
-
-    if (
-      profile.connected_coach_id
-    ) {
-
-      coach =
-        (
-          await sb
-            .from("profiles")
-            .select(
-              "full_name,coach_code"
-            )
-            .eq(
-              "id",
-              profile.connected_coach_id
-            )
-            .single()
-        ).data;
-
-    }
-
-
-    $("app").innerHTML = coach
-
-      ? `
-
-        <div class="dash-head">
-
-          <div>
-
-            <span class="eyebrow">
-              CONNECTION
-            </span>
-
-            <h1>
-              My Coach
-            </h1>
-
-          </div>
-
-        </div>
-
-
-        <div class="card">
-
-          <h2>
-            ${esc(
-              coach.full_name
-            )}
-          </h2>
-
-          <p class="muted">
-            Your connected coach
-          </p>
-
-        </div>
-
-      `
-
-      : `
-
-        <div class="dash-head">
-
-          <div>
-
-            <span class="eyebrow">
-              CONNECTION
-            </span>
-
-            <h1>
-              My Coach
-            </h1>
-
-          </div>
-
-        </div>
-
-
-        <div class="card">
-
-          <h3>
-            No coach connected
-          </h3>
-
-          <p class="muted">
-            Ask your coach for their
-            3 letters + 3 numbers
-            connection code.
-          </p>
-
-
-          <button
-            class="btn"
-            onclick="openConnect()">
-
-            Connect to Coach
-
-          </button>
-
-        </div>
-
-      `;
-  }
-
-
-  else if (
-    page === "bio"
-  ) {
-
-    await renderBio();
+    await renderMyCoach();
 
   }
 
+  /* =========================
+     LOG MATCH
+  ========================= */
 
-  else if (
-    page === "training"
-  ) {
+  else if (page === "logmatch") {
+
+    openMatch();
+
+  }
+
+  /* =========================
+     TRAINING
+  ========================= */
+
+  else if (page === "training") {
 
     const {
       data,
       error
-    } =
-      await sb
-        .from("training_sessions")
-        .select("*")
-        .eq(
-          "player_id",
-          currentUser.id
-        )
-        .order(
-          "session_date",
-          {
-            ascending: false
-          }
-        );
-
+    } = await sb.from("training_sessions")
+      .select("*")
+      .eq("player_id", currentUser.id)
+      .order("session_date", {
+        ascending: false
+      });
 
     if (error) throw error;
 
+    $("app").innerHTML = `
+      <div class="dash-head">
+
+        <div>
+          <span class="eyebrow">
+            TRAINING
+          </span>
+
+          <h1>My Training</h1>
+        </div>
+
+        <button
+          class="btn"
+          onclick="openSession()">
+          + Add Session
+        </button>
+
+      </div>
+
+      ${
+        data?.length
+          ? data.map(s => `
+              <div class="match">
+
+                <b>
+                  ${esc(s.session_name)}
+                </b>
+
+                <span
+                  class="pill"
+                  style="float:right">
+
+                  ${
+                    s.completed
+                      ? "Completed"
+                      : "Planned"
+                  }
+
+                </span>
+
+                <p class="muted">
+
+                  ${esc(s.session_date)}
+                  ·
+                  ${esc(
+                    s.duration_minutes ||
+                    "—"
+                  )}
+                  min
+                  ·
+                  ${esc(
+                    s.focus ||
+                    "No focus"
+                  )}
+
+                </p>
+
+                <p>
+                  ${esc(s.notes || "")}
+                </p>
+
+              </div>
+            `).join("")
+          : `
+            <div class="empty">
+              No training sessions yet.
+            </div>
+          `
+      }
+    `;
+  }
+}
+
+/* =========================
+   MY COACH PAGE
+========================= */
+
+async function renderMyCoach() {
+
+  let coach = null;
+
+  /* Check if player is already connected */
+  if (profile.connected_coach_id) {
+
+    const {
+      data,
+      error
+    } = await sb.from("profiles")
+      .select(
+        "id,full_name,role,coach_code"
+      )
+      .eq(
+        "id",
+        profile.connected_coach_id
+      )
+      .single();
+
+    if (error) throw error;
+
+    coach = data;
+  }
+
+  /* Check for pending request */
+  const {
+    data: pendingRequests,
+    error: pendingError
+  } = await sb.from("connection_requests")
+    .select(
+      "id,coach_id,status,created_at"
+    )
+    .eq(
+      "player_id",
+      currentUser.id
+    )
+    .eq(
+      "status",
+      "pending"
+    )
+    .order("created_at", {
+      ascending: false
+    });
+
+  if (pendingError) {
+    throw pendingError;
+  }
+
+  const pending =
+    pendingRequests &&
+    pendingRequests.length > 0;
+
+  /* =========================
+     CONNECTED STATE
+  ========================= */
+
+  if (coach) {
+
+    const initials =
+      coach.full_name
+        .split(" ")
+        .map(x => x[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
 
     $("app").innerHTML = `
 
@@ -1859,422 +1143,168 @@ async function renderPlayer(page) {
         <div>
 
           <span class="eyebrow">
-            TRAINING
+            CONNECTION
           </span>
 
           <h1>
-            My Training
+            My Coach
           </h1>
 
         </div>
 
-
-        <button
-          class="btn"
-          onclick="openSession()">
-
-          + Add Session
-
-        </button>
-
       </div>
 
-
-      ${
-        data?.length
-
-          ? data
-              .map(
-                s => `
-
-                  <div class="match">
-
-                    <b>
-                      ${esc(
-                        s.session_name
-                      )}
-                    </b>
-
-
-                    <span
-                      class="pill"
-                      style="float:right">
-
-                      ${
-                        s.completed
-                          ? "Completed"
-                          : "Planned"
-                      }
-
-                    </span>
-
-
-                    <p class="muted">
-
-                      ${esc(
-                        s.session_date
-                      )}
-
-                      ·
-
-                      ${esc(
-                        s.duration_minutes ||
-                        "—"
-                      )}
-
-                      min
-
-                      ·
-
-                      ${esc(
-                        s.focus ||
-                        "No focus"
-                      )}
-
-                    </p>
-
-
-                    <p>
-
-                      ${esc(
-                        s.notes ||
-                        ""
-                      )}
-
-                    </p>
-
-                  </div>
-
-                `
-              )
-              .join("")
-
-          : `
-            <div class="empty">
-              No training sessions yet.
-            </div>
-          `
-      }
-
-    `;
-  }
-}
-
-
-/* =========================
-   MATCH HISTORY
-========================= */
-
-async function renderMatchHistory() {
-
-  const matches =
-    await playerMatches();
-
-
-  const wins =
-    matches.filter(
-      m => m.result === "win"
-    ).length;
-
-
-  const losses =
-    matches.filter(
-      m => m.result === "loss"
-    ).length;
-
-
-  const winRate =
-    matches.length
-      ? Math.round(
-          (wins /
-            matches.length) *
-          100
-        )
-      : 0;
-
-
-  $("app").innerHTML = `
-
-    <div class="dash-head">
-
-      <div>
-
-        <span class="eyebrow">
-          MATCHES
-        </span>
-
-        <h1>
-          Match History
-        </h1>
-
-        <p class="muted">
-          Keep track of every match you've played.
-        </p>
-
-      </div>
-
-
-      <button
-        class="btn"
-        onclick="openMatch()">
-
-        + Add Match
-
-      </button>
-
-    </div>
-
-
-    <div class="grid">
-
-      <div class="card">
-
-        <span class="muted">
-          Matches
-        </span>
-
-        <div class="stat">
-          ${matches.length}
-        </div>
-
-      </div>
-
-
-      <div class="card">
-
-        <span class="muted">
-          Wins
-        </span>
-
-        <div class="stat">
-          ${wins}
-        </div>
-
-      </div>
-
-
-      <div class="card">
-
-        <span class="muted">
-          Win Rate
-        </span>
-
-        <div class="stat">
-          ${winRate}%
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <div
-      class="card"
-      style="margin-top:18px">
-
-      <div
+      <div class="card"
         style="
-          display:flex;
-          gap:10px;
-          flex-wrap:wrap;
-          align-items:center;
+          padding:28px;
           margin-bottom:18px;
         ">
 
-        <input
-          id="matchSearch"
-          placeholder="Search opponent..."
+        <div
           style="
-            flex:1;
-            min-width:200px;
-            padding:12px;
-            border:1px solid #d7dee7;
-            border-radius:10px;
+            display:flex;
+            align-items:center;
+            gap:22px;
+            flex-wrap:wrap;
           ">
 
+          <div
+            style="
+              width:82px;
+              height:82px;
+              border-radius:50%;
+              background:#e5edff;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              font-size:28px;
+              font-weight:800;
+              color:#132c47;
+            ">
 
-        <select
-          id="matchFilter"
+            ${esc(initials)}
+
+          </div>
+
+          <div style="flex:1">
+
+            <span
+              class="muted"
+              style="
+                text-transform:uppercase;
+                font-size:12px;
+                font-weight:800;
+                letter-spacing:1px;
+              ">
+
+              YOUR COACH
+
+            </span>
+
+            <h2
+              style="
+                margin:5px 0 3px;
+              ">
+
+              ${esc(coach.full_name)}
+
+            </h2>
+
+            <p
+              class="muted"
+              style="margin:0">
+
+              Tennis Coach
+
+            </p>
+
+            <div style="margin-top:12px">
+
+              <span
+                class="pill"
+                style="
+                  background:#dcfce7;
+                  color:#15803d;
+                ">
+
+                ● Connected
+
+              </span>
+
+            </div>
+
+          </div>
+
+          <div
+            style="
+              min-width:190px;
+              padding-left:20px;
+              border-left:1px solid #e5e7eb;
+            ">
+
+            <span class="muted">
+              Coach Code
+            </span>
+
+            <div
+              style="
+                font-size:22px;
+                font-weight:800;
+                margin-top:5px;
+                letter-spacing:1px;
+              ">
+
+              ${esc(
+                coach.coach_code || "—"
+              )}
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div
           style="
-            padding:12px;
-            border:1px solid #d7dee7;
-            border-radius:10px;
+            display:flex;
+            gap:10px;
+            margin-top:25px;
+            flex-wrap:wrap;
           ">
 
-          <option value="all">
-            All
-          </option>
+          <button
+            class="btn"
+            onclick="viewCoachProfile()">
 
-          <option value="win">
-            Wins
-          </option>
+            View Coach Profile
 
-          <option value="loss">
-            Losses
-          </option>
+          </button>
 
-          <option value="Hard">
-            Hard
-          </option>
+          <button
+            class="btn ghost"
+            onclick="disconnectCoach()"
+            style="color:#b91c1c">
 
-          <option value="Clay">
-            Clay
-          </option>
+            Disconnect Coach
 
-          <option value="Grass">
-            Grass
-          </option>
+          </button>
 
-          <option value="Carpet">
-            Carpet
-          </option>
-
-          <option value="Other">
-            Other
-          </option>
-
-        </select>
+        </div>
 
       </div>
 
+      <div class="card">
 
-      <div id="matchHistoryList"></div>
+        <h3>
+          Your TennisPilot connection
+        </h3>
 
-    </div>
-
-  `;
-
-
-  const search =
-    $("matchSearch");
-
-  const filter =
-    $("matchFilter");
-
-
-  function updateMatches() {
-
-    const query =
-      search.value
-        .trim()
-        .toLowerCase();
-
-
-    const selected =
-      filter.value;
-
-
-    const filtered =
-      matches.filter(m => {
-
-        const opponent =
-          String(
-            m.opponent || ""
-          ).toLowerCase();
-
-
-        const surface =
-          m.surface ||
-          "Hard";
-
-
-        const searchMatches =
-          !query ||
-          opponent.includes(
-            query
-          );
-
-
-        let filterMatches =
-          true;
-
-
-        if (
-          selected ===
-          "win"
-        ) {
-
-          filterMatches =
-            m.result ===
-            "win";
-
-        }
-
-
-        else if (
-          selected ===
-          "loss"
-        ) {
-
-          filterMatches =
-            m.result ===
-            "loss";
-
-        }
-
-
-        else if (
-          [
-            "Hard",
-            "Clay",
-            "Grass",
-            "Carpet",
-            "Other"
-          ].includes(selected)
-        ) {
-
-          filterMatches =
-            surface ===
-            selected;
-
-        }
-
-
-        return (
-          searchMatches &&
-          filterMatches
-        );
-
-      });
-
-
-    renderMatchCards(
-      filtered
-    );
-
-  }
-
-
-  search.oninput =
-    updateMatches;
-
-  filter.onchange =
-    updateMatches;
-
-
-  updateMatches();
-}
-
-
-/* =========================
-   MATCH CARDS
-========================= */
-
-function renderMatchCards(
-  matches
-) {
-
-  const container =
-    $("matchHistoryList");
-
-
-  if (!matches.length) {
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        No matches found.
+        <p class="muted">
+          Your coach can see the information
+          connected to your player account,
+          including your match reviews and
+          training progress.
+        </p>
 
       </div>
 
@@ -2283,345 +1313,131 @@ function renderMatchCards(
     return;
   }
 
+  /* =========================
+     PENDING STATE
+  ========================= */
 
-  const years = {};
+  if (pending) {
 
+    const request =
+      pendingRequests[0];
 
-  matches.forEach(m => {
+    let pendingCoach = null;
 
-    const year =
-      String(
-        m.match_date || ""
-      ).slice(0, 4) ||
-      "Other";
+    const {
+      data: coachData
+    } = await sb.from("profiles")
+      .select(
+        "full_name,role,coach_code"
+      )
+      .eq(
+        "id",
+        request.coach_id
+      )
+      .single();
 
+    pendingCoach = coachData;
 
-    if (!years[year]) {
-      years[year] = [];
-    }
+    $("app").innerHTML = `
 
+      <div class="dash-head">
 
-    years[year].push(m);
+        <div>
 
-  });
+          <span class="eyebrow">
+            CONNECTION
+          </span>
 
+          <h1>
+            My Coach
+          </h1>
 
-  const sortedYears =
-    Object.keys(years)
-      .sort(
-        (a, b) =>
-          Number(b) -
-          Number(a)
-      );
+        </div>
 
+      </div>
 
-  container.innerHTML =
-    sortedYears
-      .map(year => {
+      <div class="card"
+        style="padding:30px">
 
-        return `
+        <div
+          style="
+            width:64px;
+            height:64px;
+            border-radius:50%;
+            background:#fff7ed;
+            color:#c2410c;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:26px;
+            margin-bottom:18px;
+          ">
 
-          <section
-            style="margin-bottom:28px">
+          ⏳
 
-            <h2
-              style="
-                margin:0 0 12px;
-                font-size:24px;
-              ">
+        </div>
 
-              ${esc(year)}
+        <span
+          class="eyebrow"
+          style="color:#c2410c">
 
-            </h2>
+          REQUEST SENT
 
+        </span>
 
-            ${years[year]
-              .map(
-                m => {
+        <h2 style="margin:6px 0">
 
-                  const isWin =
-                    m.result ===
-                    "win";
+          ${
+            esc(
+              pendingCoach?.full_name ||
+              "Your coach"
+            )
+          }
 
+        </h2>
 
-                  const surface =
-                    m.surface ||
-                    "Hard";
+        <p class="muted">
 
+          Your connection request is waiting
+          for your coach to accept it.
 
-                  return `
+        </p>
 
-                    <div
-                      class="match"
-                      style="
-                        cursor:pointer;
-                        margin-bottom:10px;
-                      "
-                      onclick="toggleMatchDetails('${m.id}')">
+        <div
+          style="
+            background:#f8fafc;
+            border-radius:12px;
+            padding:16px;
+            margin-top:20px;
+          ">
 
+          <b>
+            What happens next?
+          </b>
 
-                      <div
-                        style="
-                          display:flex;
-                          justify-content:space-between;
-                          gap:12px;
-                          flex-wrap:wrap;
-                        ">
+          <p
+            class="muted"
+            style="margin-bottom:0">
 
+            Your coach will see your request
+            in their Requests section.
+            Once they accept, their profile
+            will appear here.
 
-                        <div>
+          </p>
 
-                          <strong>
+        </div>
 
-                            <span
-                              class="pill">
+      </div>
 
-                              ${
-                                isWin
-                                  ? "WIN"
-                                  : "LOSS"
-                              }
+    `;
 
-                            </span>
-
-                            vs
-                            ${esc(
-                              m.opponent
-                            )}
-
-                          </strong>
-
-
-                          <div
-                            class="muted"
-                            style="margin-top:7px">
-
-                            ${esc(
-                              formatMatchDate(
-                                m.match_date
-                              )
-                            )}
-
-                            ·
-
-                            ${esc(
-                              surface
-                            )}
-
-                            ·
-
-                            ${esc(
-                              m.score ||
-                              "No score"
-                            )}
-
-                          </div>
-
-                        </div>
-
-
-                        <span
-                          class="muted">
-
-                          View details
-                          ↓
-
-                        </span>
-
-                      </div>
-
-
-                      <div
-                        id="match-details-${esc(m.id)}"
-                        class="hidden"
-                        style="
-                          border-top:1px solid #e5e9ef;
-                          margin-top:15px;
-                          padding-top:15px;
-                        ">
-
-
-                        <p>
-
-                          <b>
-                            Surface:
-                          </b>
-
-                          ${esc(
-                            surface
-                          )}
-
-                        </p>
-
-
-                        <p>
-
-                          <b>
-                            Result:
-                          </b>
-
-                          ${esc(
-                            m.result
-                              .charAt(0)
-                              .toUpperCase() +
-                            m.result.slice(1)
-                          )}
-
-                        </p>
-
-
-                        <p>
-
-                          <b>
-                            Score:
-                          </b>
-
-                          ${esc(
-                            m.score ||
-                            "Not added"
-                          )}
-
-                        </p>
-
-
-                        <p>
-
-                          <b>
-                            Biggest problem:
-                          </b>
-
-                          ${esc(
-                            m.biggest_problem ||
-                            "None"
-                          )}
-
-                        </p>
-
-
-                        <p>
-
-                          <b>
-                            Biggest positive:
-                          </b>
-
-                          ${esc(
-                            m.biggest_positive ||
-                            "None"
-                          )}
-
-                        </p>
-
-
-                        ${
-                          m.notes
-                            ? `
-                              <p>
-
-                                <b>
-                                  Notes:
-                                </b>
-
-                                ${esc(
-                                  m.notes
-                                )}
-
-                              </p>
-                            `
-                            : ""
-                        }
-
-                      </div>
-
-                    </div>
-
-                  `;
-                }
-              )
-              .join("")}
-
-          </section>
-
-        `;
-      })
-      .join("");
-}
-
-
-function formatMatchDate(
-  date
-) {
-
-  if (!date) return "";
-
-  const parts =
-    date.split("-");
-
-  if (
-    parts.length !== 3
-  ) {
-    return date;
+    return;
   }
 
-
-  const [
-    year,
-    month,
-    day
-  ] = parts;
-
-
-  const names = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec"
-  ];
-
-
-  return `${names[
-    Number(month) - 1
-  ] || month} ${Number(day)}, ${year}`;
-}
-
-
-function toggleMatchDetails(
-  id
-) {
-
-  const el =
-    document.getElementById(
-      `match-details-${id}`
-    );
-
-
-  if (!el) return;
-
-
-  el.classList.toggle(
-    "hidden"
-  );
-}
-
-
-/* =========================
-   VIEW PLAYER
-========================= */
-
-async function renderBio() {
-
-  const photo =
-    await signedProfilePhoto(
-      profile.profile_picture_path
-    );
-
+  /* =========================
+     NO COACH
+  ========================= */
 
   $("app").innerHTML = `
 
@@ -2630,607 +1446,585 @@ async function renderBio() {
       <div>
 
         <span class="eyebrow">
-          PLAYER PROFILE
+          CONNECTION
         </span>
 
         <h1>
-          My Bio
+          My Coach
         </h1>
 
       </div>
 
     </div>
 
+    <div class="card"
+      style="
+        padding:30px;
+        margin-bottom:18px;
+      ">
 
-    <div class="card bio-profile-card">
+      <span class="eyebrow">
+        NO COACH CONNECTED
+      </span>
 
-      <div class="bio-photo-wrap">
+      <h2
+        style="
+          margin:7px 0;
+        ">
 
-        ${photoHTML(
-          photo,
-          profile.full_name,
-          "avatar profile-avatar"
-        )}
+        Add Your Coach
 
+      </h2>
 
-        <div class="photo-actions">
+      <p class="muted">
+
+        Connect your TennisPilot account
+        to your coach using their
+        3 letters + 3 numbers code.
+
+      </p>
+
+      <div
+        style="
+          display:flex;
+          gap:12px;
+          max-width:700px;
+          margin-top:24px;
+          flex-wrap:wrap;
+        ">
+
+        <div style="flex:1;min-width:220px">
 
           <label
-            class="btn small ghost photo-btn">
+            style="
+              display:block;
+              font-weight:700;
+              margin-bottom:7px;
+            ">
 
-            Choose from Gallery
-
-            <input
-              id="galleryPhoto"
-              type="file"
-              accept="image/*">
+            Coach Code
 
           </label>
 
-
-          <label
-            class="btn small photo-btn">
-
-            Take a Photo
-
-            <input
-              id="cameraPhoto"
-              type="file"
-              accept="image/*"
-              capture="environment">
-
-          </label>
+          <input
+            id="coachSearchCode"
+            maxlength="6"
+            placeholder="e.g. ABC123"
+            autocomplete="off"
+            style="
+              width:100%;
+              box-sizing:border-box;
+              text-transform:uppercase;
+            "
+          >
 
         </div>
 
-
-        <button
-          id="removePhoto"
-          class="btn small ghost"
-          type="button"
-          ${
-            profile.profile_picture_path
-              ? ""
-              : "disabled"
-          }>
-
-          Remove Photo
-
-        </button>
-
-      </div>
-
-
-      <form
-        id="bioForm"
-        class="bio-form">
-
-
-        <label>
-
-          Age
-
-          <input
-            id="bioAge"
-            type="number"
-            min="1"
-            max="100"
-            value="${esc(
-              profile.age ?? ""
-            )}"
-            placeholder="17">
-
-        </label>
-
-
-        <label>
-
-          Dominant Hand
-
-          <select id="bioHand">
-
-            <option value="">
-              Select
-            </option>
-
-            <option
-              ${
-                profile.dominant_hand ===
-                "Right"
-                  ? "selected"
-                  : ""
-              }>
-
-              Right
-
-            </option>
-
-            <option
-              ${
-                profile.dominant_hand ===
-                "Left"
-                  ? "selected"
-                  : ""
-              }>
-
-              Left
-
-            </option>
-
-          </select>
-
-        </label>
-
-
-        <label>
-
-          Years Playing Tennis
-
-          <input
-            id="bioYears"
-            type="number"
-            min="0"
-            max="100"
-            value="${esc(
-              profile.years_playing ?? ""
-            )}"
-            placeholder="10">
-
-        </label>
-
-
-        <label>
-
-          Playing Level
-
-          <select id="bioLevel">
-
-            <option value="">
-              Select
-            </option>
-
-            <option
-              ${
-                profile.playing_level ===
-                "Beginner"
-                  ? "selected"
-                  : ""
-              }>
-
-              Beginner
-
-            </option>
-
-            <option
-              ${
-                profile.playing_level ===
-                "Recreational"
-                  ? "selected"
-                  : ""
-              }>
-
-              Recreational
-
-            </option>
-
-            <option
-              ${
-                profile.playing_level ===
-                "Competitive"
-                  ? "selected"
-                  : ""
-              }>
-
-              Competitive
-
-            </option>
-
-            <option
-              ${
-                profile.playing_level ===
-                "Tournament"
-                  ? "selected"
-                  : ""
-              }>
-
-              Tournament
-
-            </option>
-
-          </select>
-
-        </label>
-
-
-        <label>
-
-          Playing Style
-
-          <select id="bioStyle">
-
-            <option value="">
-              Select
-            </option>
-
-            <option
-              ${
-                profile.playing_style ===
-                "Aggressive"
-                  ? "selected"
-                  : ""
-              }>
-
-              Aggressive
-
-            </option>
-
-            <option
-              ${
-                profile.playing_style ===
-                "Defensive"
-                  ? "selected"
-                  : ""
-              }>
-
-              Defensive
-
-            </option>
-
-            <option
-              ${
-                profile.playing_style ===
-                "All-court"
-                  ? "selected"
-                  : ""
-              }>
-
-              All-court
-
-            </option>
-
-            <option
-              ${
-                profile.playing_style ===
-                "Serve & volley"
-                  ? "selected"
-                  : ""
-              }>
-
-              Serve & volley
-
-            </option>
-
-            <option
-              ${
-                profile.playing_style ===
-                "Other"
-                  ? "selected"
-                  : ""
-              }>
-
-              Other
-
-            </option>
-
-          </select>
-
-        </label>
-
-
-        <label>
-
-          Height
-          <span class="muted">
-            (optional)
-          </span>
-
-          <input
-            id="bioHeight"
-            value="${esc(
-              profile.height ?? ""
-            )}"
-            placeholder="6'1">
-
-        </label>
-
-
-        <label
-          class="bio-wide">
-
-          Short Bio
-          <span class="muted">
-            (optional)
-          </span>
-
-          <textarea
-            id="bioText"
-            rows="4"
-            placeholder="Tell your coach a little about your game...">${esc(
-              profile.bio ?? ""
-            )}</textarea>
-
-        </label>
-
-
         <div
-          class="modal-actions bio-wide">
+          style="
+            display:flex;
+            align-items:flex-end;
+          ">
 
-          <button class="btn">
+          <button
+            class="btn"
+            onclick="findCoach()">
 
-            Save Bio
+            Find Coach
 
           </button>
 
         </div>
 
+      </div>
 
-      </form>
+    </div>
+
+    <div class="card">
+
+      <h3>
+        Why connect with a coach?
+      </h3>
+
+      <div
+        style="
+          display:grid;
+          gap:14px;
+          margin-top:15px;
+        ">
+
+        <div>
+          ✓ Share your match history
+        </div>
+
+        <div>
+          ✓ Get personalized feedback
+        </div>
+
+        <div>
+          ✓ Track your development together
+        </div>
+
+      </div>
 
     </div>
 
   `;
 
+  const input =
+    $("coachSearchCode");
 
-  const upload = async file => {
+  if (input) {
 
-    if (!file) return;
+    input.addEventListener(
+      "input",
+      () => {
+        input.value =
+          input.value
+            .replace(/[^a-zA-Z0-9]/g, "")
+            .toUpperCase();
+      }
+    );
 
+    input.addEventListener(
+      "keydown",
+      e => {
+        if (e.key === "Enter") {
+          findCoach();
+        }
+      }
+    );
+  }
+}
 
-    if (
-      !file.type.startsWith(
-        "image/"
-      )
-    ) {
+/* =========================
+   FIND COACH
+========================= */
 
-      return alert(
-        "Please choose an image."
+async function findCoach() {
+
+  const input =
+    $("coachSearchCode");
+
+  if (!input) return;
+
+  const code =
+    input.value
+      .trim()
+      .toUpperCase();
+
+  if (!/^[A-Z]{3}[0-9]{3}$/.test(code)) {
+
+    alert(
+      "Enter a valid coach code with 3 letters and 3 numbers, for example ABC123."
+    );
+
+    return;
+  }
+
+  try {
+
+    const {
+      data,
+      error
+    } = await sb.rpc(
+      "find_coach_by_code",
+      {
+        code_input: code
+      }
+    );
+
+    if (error) throw error;
+
+    if (!data || !data.length) {
+
+      alert(
+        "No coach was found with that code."
       );
 
+      return;
     }
 
+    const coach = data[0];
 
-    if (
-      file.size >
-      5 * 1024 * 1024
-    ) {
+    if (coach.role !== "coach") {
 
-      return alert(
-        "Please choose an image smaller than 5 MB."
+      alert(
+        "That code does not belong to a coach."
       );
 
+      return;
     }
 
+    openCoachConfirmation(coach);
 
-    const ext =
-      (
-        file.name
-          .split(".")
-          .pop() ||
-        "jpg"
+  } catch (err) {
+
+    alert(
+      err.message ||
+      "Could not find coach."
+    );
+  }
+}
+
+/* =========================
+   COACH CONFIRMATION
+========================= */
+
+function openCoachConfirmation(coach) {
+
+  const initials =
+    coach.full_name
+      .split(" ")
+      .map(x => x[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
+  $("modalRoot").innerHTML = `
+
+    <div class="modal-back">
+
+      <div
+        class="modal"
+        style="
+          max-width:620px;
+        ">
+
+        <button
+          type="button"
+          onclick="closeModal()"
+          style="
+            float:right;
+            border:0;
+            background:none;
+            font-size:26px;
+            cursor:pointer;
+            color:#64748b;
+          ">
+
+          ×
+
+        </button>
+
+        <span class="eyebrow">
+          COACH FOUND
+        </span>
+
+        <h2>
+          ${esc(coach.full_name)}
+        </h2>
+
+        <p class="muted">
+
+          We found a coach with this code.
+          Send them a connection request?
+
+        </p>
+
+        <div
+          style="
+            display:flex;
+            align-items:center;
+            gap:18px;
+            background:#f8fafc;
+            border-radius:14px;
+            padding:18px;
+            margin:22px 0;
+          ">
+
+          <div
+            style="
+              width:64px;
+              height:64px;
+              border-radius:50%;
+              background:#e5edff;
+              color:#132c47;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              font-weight:800;
+              font-size:22px;
+            ">
+
+            ${esc(initials)}
+
+          </div>
+
+          <div>
+
+            <h3
+              style="
+                margin:0 0 4px;
+              ">
+
+              ${esc(coach.full_name)}
+
+            </h3>
+
+            <p
+              class="muted"
+              style="margin:0">
+
+              Tennis Coach
+
+            </p>
+
+            <p
+              class="muted"
+              style="margin:4px 0 0">
+
+              Code:
+              <b>
+                ${esc(coach.coach_code)}
+              </b>
+
+            </p>
+
+          </div>
+
+        </div>
+
+        <div class="modal-actions">
+
+          <button
+            type="button"
+            class="btn ghost"
+            onclick="closeModal()">
+
+            Cancel
+
+          </button>
+
+          <button
+            type="button"
+            class="btn"
+            onclick="sendCoachRequest('${coach.id}')">
+
+            Send Connection Request
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+}
+
+/* =========================
+   SEND COACH REQUEST
+========================= */
+
+async function sendCoachRequest(
+  coachId
+) {
+
+  try {
+
+    /* Prevent connecting to yourself */
+    if (coachId === currentUser.id) {
+
+      alert(
+        "You cannot connect to yourself."
+      );
+
+      return;
+    }
+
+    /* Check if request already exists */
+    const {
+      data: existing,
+      error: existingError
+    } = await sb.from("connection_requests")
+      .select("id,status")
+      .eq(
+        "player_id",
+        currentUser.id
       )
-        .toLowerCase()
-        .replace(
-          /[^a-z0-9]/g,
-          ""
-        ) ||
-      "jpg";
+      .eq(
+        "coach_id",
+        coachId
+      )
+      .maybeSingle();
 
+    if (existingError) {
+      throw existingError;
+    }
 
-    const path =
-      `${currentUser.id}/profile-${Date.now()}.${ext}`;
+    if (existing?.status === "pending") {
 
+      closeModal();
+
+      await render("coach");
+
+      return;
+    }
 
     const {
       error
-    } =
-      await sb
-        .storage
-        .from("profile-pictures")
-        .upload(
-          path,
-          file,
-          {
-            upsert: false,
-            contentType:
-              file.type
-          }
-        );
+    } = await sb.from(
+      "connection_requests"
+    ).insert({
 
+      player_id:
+        currentUser.id,
 
-    if (error)
-      return alert(
-        error.message
-      );
+      coach_id:
+        coachId,
 
+      status:
+        "pending"
 
-    const {
-      error: updateError
-    } =
-      await sb
-        .from("profiles")
-        .update({
-          profile_picture_path:
-            path
-        })
-        .eq(
-          "id",
-          currentUser.id
-        );
+    });
 
+    if (error) throw error;
 
-    if (updateError) {
+    closeModal();
 
-      await sb
-        .storage
-        .from("profile-pictures")
-        .remove([path]);
+    await render("coach");
 
-      return alert(
-        updateError.message
-      );
+  } catch (err) {
 
-    }
-
-
-    profile.profile_picture_path =
-      path;
-
-
-    render("bio");
-
-  };
-
-
-  $("galleryPhoto").onchange =
-    e =>
-      upload(
-        e.target.files[0]
-      );
-
-
-  $("cameraPhoto").onchange =
-    e =>
-      upload(
-        e.target.files[0]
-      );
-
-
-  $("removePhoto").onclick =
-    async () => {
-
-      if (
-        !profile.profile_picture_path
-      )
-        return;
-
-
-      const old =
-        profile.profile_picture_path;
-
-
-      const {
-        error
-      } =
-        await sb
-          .storage
-          .from("profile-pictures")
-          .remove([old]);
-
-
-      if (error)
-        return alert(
-          error.message
-        );
-
-
-      const {
-        error: updateError
-      } =
-        await sb
-          .from("profiles")
-          .update({
-            profile_picture_path:
-              null
-          })
-          .eq(
-            "id",
-            currentUser.id
-          );
-
-
-      if (updateError)
-        return alert(
-          updateError.message
-        );
-
-
-      profile.profile_picture_path =
-        null;
-
-
-      render("bio");
-
-    };
-
-
-  $("bioForm").onsubmit =
-    async e => {
-
-      e.preventDefault();
-
-
-      const payload = {
-
-        age:
-          Number(
-            $("bioAge").value
-          ) || null,
-
-        dominant_hand:
-          $("bioHand").value ||
-          null,
-
-        years_playing:
-          Number(
-            $("bioYears").value
-          ) || 0,
-
-        playing_level:
-          $("bioLevel").value ||
-          null,
-
-        playing_style:
-          $("bioStyle").value ||
-          null,
-
-        height:
-          $("bioHeight").value.trim() ||
-          null,
-
-        bio:
-          $("bioText").value.trim() ||
-          null
-
-      };
-
-
-      const {
-        data,
-        error
-      } =
-        await sb
-          .from("profiles")
-          .update(payload)
-          .eq(
-            "id",
-            currentUser.id
-          )
-          .select("*")
-          .single();
-
-
-      if (error)
-        return alert(
-          error.message
-        );
-
-
-      profile = data;
-
-
-      alert(
-        "Bio saved."
-      );
-
-
-      render("bio");
-
-    };
+    alert(
+      err.message ||
+      "Could not send connection request."
+    );
+  }
 }
 
+/* =========================
+   VIEW COACH PROFILE
+========================= */
+
+async function viewCoachProfile() {
+
+  if (!profile.connected_coach_id)
+    return;
+
+  const {
+    data: coach,
+    error
+  } = await sb.from("profiles")
+    .select(
+      "full_name,role,coach_code"
+    )
+    .eq(
+      "id",
+      profile.connected_coach_id
+    )
+    .single();
+
+  if (error) {
+
+    alert(error.message);
+    return;
+
+  }
+
+  $("modalRoot").innerHTML = `
+
+    <div class="modal-back">
+
+      <div class="modal">
+
+        <h2>
+          ${esc(coach.full_name)}
+        </h2>
+
+        <p class="muted">
+          Tennis Coach
+        </p>
+
+        <div
+          class="card"
+          style="
+            margin:20px 0;
+            box-shadow:none;
+          ">
+
+          <span class="muted">
+            Coach Code
+          </span>
+
+          <h2
+            style="
+              margin:5px 0 0;
+              letter-spacing:1px;
+            ">
+
+            ${esc(
+              coach.coach_code || "—"
+            )}
+
+          </h2>
+
+        </div>
+
+        <div class="modal-actions">
+
+          <button
+            class="btn"
+            onclick="closeModal()">
+
+            Done
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+}
 
 /* =========================
-   ADD MATCH
+   DISCONNECT COACH
+========================= */
+
+async function disconnectCoach() {
+
+  const confirmed =
+    confirm(
+      "Are you sure you want to disconnect from your coach?"
+    );
+
+  if (!confirmed) return;
+
+  try {
+
+    const {
+      error
+    } = await sb.from("profiles")
+      .update({
+        connected_coach_id: null
+      })
+      .eq(
+        "id",
+        currentUser.id
+      );
+
+    if (error) throw error;
+
+    profile.connected_coach_id = null;
+
+    await render("coach");
+
+  } catch (err) {
+
+    alert(
+      err.message ||
+      "Could not disconnect coach."
+    );
+  }
+}
+
+/* =========================
+   MATCH MODAL
 ========================= */
 
 function openMatch() {
@@ -3241,45 +2035,22 @@ function openMatch() {
 
       <div class="modal">
 
+        <h2>
+          Log Match
+        </h2>
 
-        <div class="modal-top">
-
-          <button
-            type="button"
-            class="btn ghost modal-back-btn"
-            onclick="closeModal();render('logmatch')">
-
-            ← Back
-
-          </button>
-
-
-          <h2>
-            Add Match
-          </h2>
-
-        </div>
-
-
-        <form
-          id="matchForm">
-
+        <form id="matchForm">
 
           <label>
-
             Opponent
-
             <input
               id="opponent"
-              required>
-
+              required
+            >
           </label>
 
-
           <label>
-
             Date
-
             <input
               id="matchDate"
               type="date"
@@ -3288,55 +2059,11 @@ function openMatch() {
                   .toISOString()
                   .slice(0, 10)
               }"
-              required>
-
+              required
+            >
           </label>
 
-
           <label>
-
-            Surface
-
-            <select
-              id="surface"
-              required>
-
-              <option
-                value=""
-                selected
-                disabled>
-
-                Select surface
-
-              </option>
-
-              <option>
-                Hard
-              </option>
-
-              <option>
-                Clay
-              </option>
-
-              <option>
-                Grass
-              </option>
-
-              <option>
-                Carpet
-              </option>
-
-              <option>
-                Other
-              </option>
-
-            </select>
-
-          </label>
-
-
-          <label>
-
             Result
 
             <select id="result">
@@ -3353,289 +2080,65 @@ function openMatch() {
 
           </label>
 
-
           <label>
-
             Score
 
             <input
               id="score"
-              placeholder="6-4, 3-6, 10-8">
+              placeholder="6-4, 3-6, 10-8"
+            >
 
           </label>
 
-
           <label>
-
             Biggest problem
 
             <select id="problem">
 
-              <option>
-                None
-              </option>
-
-              <option>
-                Serve
-              </option>
-
-              <option>
-                Return
-              </option>
-
-              <option>
-                Forehand
-              </option>
-
-              <option>
-                Backhand
-              </option>
-
-              <option>
-                Movement
-              </option>
-
-              <option>
-                Mental game
-              </option>
-
-              <option>
-                Consistency
-              </option>
-
-              <option>
-                Other
-              </option>
+              <option>None</option>
+              <option>Serve</option>
+              <option>Return</option>
+              <option>Forehand</option>
+              <option>Backhand</option>
+              <option>Movement</option>
+              <option>Mental game</option>
+              <option>Consistency</option>
+              <option>Other</option>
 
             </select>
 
           </label>
 
-
           <label>
-
             Biggest positive
 
             <select id="positive">
 
-              <option>
-                None
-              </option>
-
-              <option>
-                Serve
-              </option>
-
-              <option>
-                Return
-              </option>
-
-              <option>
-                Forehand
-              </option>
-
-              <option>
-                Backhand
-              </option>
-
-              <option>
-                Movement
-              </option>
-
-              <option>
-                Mental game
-              </option>
-
-              <option>
-                Consistency
-              </option>
-
-              <option>
-                Other
-              </option>
+              <option>None</option>
+              <option>Serve</option>
+              <option>Return</option>
+              <option>Forehand</option>
+              <option>Backhand</option>
+              <option>Movement</option>
+              <option>Mental game</option>
+              <option>Consistency</option>
+              <option>Other</option>
 
             </select>
 
           </label>
 
-
           <label>
-
             Notes
 
             <textarea
               id="notes"
-              rows="4"></textarea>
+              rows="4">
+            </textarea>
 
           </label>
 
-
-          <div
-            class="modal-actions">
-
-
-            <button
-              type="button"
-              class="btn ghost"
-              onclick="closeModal();render('logmatch')">
-
-              Cancel
-
-            </button>
-
-
-            <button
-              class="btn">
-
-              Save Match
-
-            </button>
-
-          </div>
-
-
-        </form>
-
-
-      </div>
-
-    </div>
-
-  `;
-
-
-  $("matchForm").onsubmit =
-    async e => {
-
-      e.preventDefault();
-
-
-      const {
-        error
-      } =
-        await sb
-          .from("matches")
-          .insert({
-
-            player_id:
-              currentUser.id,
-
-            opponent:
-              $("opponent")
-                .value
-                .trim(),
-
-            match_date:
-              $("matchDate")
-                .value,
-
-            surface:
-              $("surface")
-                .value,
-
-            result:
-              $("result")
-                .value,
-
-            score:
-              $("score")
-                .value
-                .trim(),
-
-            biggest_problem:
-              $("problem")
-                .value,
-
-            biggest_positive:
-              $("positive")
-                .value,
-
-            notes:
-              $("notes")
-                .value
-                .trim()
-
-          });
-
-
-      if (error) {
-
-        alert(
-          error.message
-        );
-
-      } else {
-
-        closeModal();
-
-        render(
-          "logmatch"
-        );
-
-      }
-
-    };
-}
-
-
-/* =========================
-   CONNECT TO COACH
-========================= */
-
-function openConnect() {
-
-  $("modalRoot").innerHTML = `
-
-    <div class="modal-back">
-
-      <div class="modal">
-
-
-        <div class="modal-top">
-
-          <button
-            type="button"
-            class="btn ghost modal-back-btn"
-            onclick="closeModal()">
-
-            ← Back
-
-          </button>
-
-
-          <h2>
-            Connect to Coach
-          </h2>
-
-        </div>
-
-
-        <p class="muted">
-
-          Enter the coach's
-          3 letters + 3 numbers.
-
-        </p>
-
-
-        <form
-          id="connectForm">
-
-
-          <input
-            id="newCode"
-            maxlength="6"
-            placeholder="ABC123"
-            autocomplete="off"
-            autocapitalize="characters"
-            spellcheck="false"
-            style="text-transform:uppercase"
-            required>
-
-
-          <div
-            class="modal-actions">
-
+          <div class="modal-actions">
 
             <button
               type="button"
@@ -3646,18 +2149,15 @@ function openConnect() {
 
             </button>
 
-
             <button class="btn">
 
-              Send Request
+              Save Match
 
             </button>
 
           </div>
 
-
         </form>
-
 
       </div>
 
@@ -3665,122 +2165,67 @@ function openConnect() {
 
   `;
 
-
-  $("newCode").addEventListener(
-    "input",
-    () => {
-
-      $("newCode").value =
-        $("newCode")
-          .value
-          .replace(
-            /[^a-zA-Z0-9]/g,
-            ""
-          )
-          .slice(0, 6)
-          .toUpperCase();
-
-    }
-  );
-
-
-  $("connectForm").onsubmit =
+  $("matchForm").onsubmit =
     async e => {
 
       e.preventDefault();
 
-
-      const code =
-        $("newCode")
-          .value
-          .trim()
-          .toUpperCase();
-
-
       const {
-        data,
         error
-      } =
-        await sb.rpc(
-          "find_coach_by_code",
-          {
-            code_input:
-              code
-          }
-        );
+      } = await sb.from("matches")
+        .insert({
 
+          player_id:
+            currentUser.id,
+
+          opponent:
+            $("opponent")
+              .value
+              .trim(),
+
+          match_date:
+            $("matchDate")
+              .value,
+
+          result:
+            $("result")
+              .value,
+
+          score:
+            $("score")
+              .value
+              .trim(),
+
+          biggest_problem:
+            $("problem")
+              .value,
+
+          biggest_positive:
+            $("positive")
+              .value,
+
+          notes:
+            $("notes")
+              .value
+              .trim()
+
+        });
 
       if (error) {
 
-        alert(
-          error.message
-        );
+        alert(error.message);
+
+      } else {
+
+        closeModal();
+        render("overview");
 
       }
-
-
-      else if (
-        !data?.length
-      ) {
-
-        alert(
-          "Coach code not found."
-        );
-
-      }
-
-
-      else {
-
-        const {
-          error: re
-        } =
-          await sb
-            .from(
-              "connection_requests"
-            )
-            .insert({
-
-              player_id:
-                currentUser.id,
-
-              coach_id:
-                data[0].id,
-
-              status:
-                "pending"
-
-            });
-
-
-        if (re) {
-
-          alert(
-            re.message
-          );
-
-        } else {
-
-          closeModal();
-
-          alert(
-            "Connection request sent."
-          );
-
-          render(
-            "coach"
-          );
-
-        }
-
-      }
-
     };
 }
 
-
 /* =========================
-   TRAINING SESSION
+   TRAINING MODAL
 ========================= */
 
 function openSession() {
@@ -3795,24 +2240,19 @@ function openSession() {
           Add Training Session
         </h2>
 
-
-        <form
-          id="sessionForm">
-
+        <form id="sessionForm">
 
           <label>
-
             Session name
 
             <input
               id="sessionName"
-              required>
+              required
+            >
 
           </label>
 
-
           <label>
-
             Date
 
             <input
@@ -3822,80 +2262,51 @@ function openSession() {
                 new Date()
                   .toISOString()
                   .slice(0, 10)
-              }">
+              }"
+            >
 
           </label>
 
-
           <label>
-
             Duration (minutes)
 
             <input
               id="duration"
               type="number"
-              min="1">
+              min="1"
+            >
 
           </label>
 
-
           <label>
-
             Focus
 
             <select id="focus">
 
-              <option>
-                None
-              </option>
-
-              <option>
-                Serve
-              </option>
-
-              <option>
-                Return
-              </option>
-
-              <option>
-                Forehand
-              </option>
-
-              <option>
-                Backhand
-              </option>
-
-              <option>
-                Movement
-              </option>
-
-              <option>
-                Mental game
-              </option>
-
-              <option>
-                Consistency
-              </option>
+              <option>None</option>
+              <option>Serve</option>
+              <option>Return</option>
+              <option>Forehand</option>
+              <option>Backhand</option>
+              <option>Movement</option>
+              <option>Mental game</option>
+              <option>Consistency</option>
 
             </select>
 
           </label>
 
-
           <label>
-
             Notes
 
             <textarea
               id="sessionNotes"
-              rows="3"></textarea>
+              rows="3">
+            </textarea>
 
           </label>
 
-
-          <div
-            class="modal-actions">
-
+          <div class="modal-actions">
 
             <button
               type="button"
@@ -3906,9 +2317,7 @@ function openSession() {
 
             </button>
 
-
-            <button
-              class="btn">
+            <button class="btn">
 
               Add Session
 
@@ -3916,9 +2325,7 @@ function openSession() {
 
           </div>
 
-
         </form>
-
 
       </div>
 
@@ -3926,82 +2333,66 @@ function openSession() {
 
   `;
 
-
   $("sessionForm").onsubmit =
     async e => {
 
       e.preventDefault();
 
-
       const {
         error
-      } =
-        await sb
-          .from(
-            "training_sessions"
-          )
-          .insert({
+      } = await sb.from(
+        "training_sessions"
+      ).insert({
 
-            player_id:
-              currentUser.id,
+        player_id:
+          currentUser.id,
 
-            session_name:
-              $("sessionName")
-                .value
-                .trim(),
+        session_name:
+          $("sessionName")
+            .value
+            .trim(),
 
-            session_date:
-              $("sessionDate")
-                .value,
+        session_date:
+          $("sessionDate")
+            .value,
 
-            duration_minutes:
-              Number(
-                $("duration")
-                  .value
-              ) || null,
+        duration_minutes:
+          Number(
+            $("duration")
+              .value
+          ) || null,
 
-            focus:
-              $("focus")
-                .value,
+        focus:
+          $("focus")
+            .value,
 
-            notes:
-              $("sessionNotes")
-                .value
-                .trim()
+        notes:
+          $("sessionNotes")
+            .value
+            .trim()
 
-          });
-
+      });
 
       if (error) {
 
-        alert(
-          error.message
-        );
+        alert(error.message);
 
       } else {
 
         closeModal();
-
-        render(
-          "training"
-        );
+        render("training");
 
       }
-
     };
 }
 
-
 /* =========================
-   CLOSE MODAL
+   MODAL
 ========================= */
 
 function closeModal() {
-
   $("modalRoot").innerHTML = "";
-
 }
-
 
 /* =========================
    START
@@ -4016,11 +2407,9 @@ async function start() {
   ) {
 
     setupAuth();
-
     return;
 
   }
-
 
   if (
     document.getElementById(
@@ -4028,21 +2417,14 @@ async function start() {
     )
   ) {
 
-    if (
-      await loadProfile()
-    ) {
+    if (await loadProfile()) {
 
       shell();
-
-      render(
-        "overview"
-      );
+      render("overview");
 
     }
 
   }
-
 }
-
 
 start();
